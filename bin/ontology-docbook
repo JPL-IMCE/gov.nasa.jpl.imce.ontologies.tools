@@ -1,0 +1,1916 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $Revision$
+#    $Date$
+#
+#    $Author$
+#
+#    Copyright (c) 2009-2013 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'graphviz'
+require 'logger'
+require 'rexml/document'
+require 'set'
+require 'time'
+require 'jpl/docbook'
+require 'jpl/rdf/sesame'
+
+module Enumerable
+  def indexed_struct_list(pri, raggedright = true)
+    return Text.new('') if empty?
+    result = SimpleList.new
+    each do |item|
+      qname = item.uri.qname
+      text = Text.new(qname)
+      result << m = Member.new
+      if item.used
+        m << Link.new(item.id) << text
+      else
+        m << text
+      end
+      m << IndexTerm.new(pri, nil, qname)
+    end
+    result << Instruction.new('dblatex', 'raggedright=true') if raggedright
+    result
+  end
+
+  def indexed_string_list(pri)
+    return Text.new('') if empty?
+    text_list = map { |i| Text.new(i) }
+    term_list = map { |i| IndexTerm.new(pri, nil, i.strip_parens) }
+    result = SimpleList.new
+    text_list.zip(term_list) do |text, term|
+      result << m = Member.new
+      m << text
+      m << term
+    end
+    result
+  end
+
+  def indexed_property_chain
+    result = SimPara.new('')
+    return result if empty?
+    
+    terms = map do |e|
+      name = e.uri.qname
+      t = Element.new
+      text = Text.new(name)
+      if e.used
+        t << Link.new(e.id) << text
+      else
+        t << text
+      end
+      t << IndexTerm.new('object property', nil, name)
+      t
+    end
+    
+    terms[0].children.each { |c| result << c }
+    result << Element.new('superscript') << Text.new('-1')
+    result << t = Text.new(' &compfn; ')
+    t.raw = true
+    terms[1].children.each { |c| result << c }
+
+    result
+  end
+  
+  def concrete_descendants(seen = Set.new)
+    inject(Set.new) do |m, c|
+      cs = OwlClass.by_uri[c]
+      if cs.isAbstract
+        seen << c
+        m += (cs.children - seen).concrete_descendants(seen)
+      else
+        m << c
+      end
+    end
+  end
+
+  def from_clauses(named = '', append = '')
+    map { |c| "from #{named} #{RDF::Uri.new(c + append).to_uriref}" }.join("\n")
+  end
+
+end
+
+class Set
+  def minimize!
+    subtract(inject(Set.new) { |m, u| m += OwlClass.by_uri[u].ancestors })
+  end
+
+end
+
+def class_def_diag(prefix, klass, array_width, diag_path)
+  name = klass.uri.to_prefixed
+  safe_name = name.gsub(/[#\/.:-]/, '_')
+  node_name = 'n' + safe_name
+  filebase = "#{diag_path}/#{prefix}-#{safe_name}-def".gsub(/_/, '-')
+
+  nodes = []
+  edges = []
+
+  g = GraphViz.new('G', (p = ENV['GRAPHVIZ_PATH']) ? { :path => p } : {})
+  g['rankdir'] = 'TB'
+  g['overlap'] = 'scale'
+  g['sep'] = "0.4, 0.2"
+  g.node['shape'] = 'record'
+  g.node['fontname'] = 'Arial'
+  g.node['fontsize'] = '8.0'
+  g.edge['fontname'] = 'Arial'
+  g.edge['fontsize'] = '7.0'
+
+  dt_prop_string = []
+  dt_props = klass.properties['Asserted']['Datatype']
+  dt_props.sort_by { |p| p.to_prefixed.downcase }.each do |p|
+    ps = OwlProperty.by_uri[p]
+    range = ps.range.to_a.first.to_prefixed rescue '[empty]'
+    minc = klass.minc[p] || '0'
+    maxc = klass.maxc[p] || '*'
+    dt_prop_string << "#{p.to_prefixed}: [#{minc}..#{maxc}] #{range}"
+  end
+  node_opts = {:label => "{#{name}|#{dt_prop_string.join('\\n')}}"}
+  g.add_nodes(node_name, node_opts)
+  nodes << Node.new(node_name, {:label => name})
+
+  (klass.parents + klass.equivalent).each do |p|
+    p_name = p.to_prefixed
+    p_node_name = 'n' + p_name.gsub(/[.:-]/, '_')
+    node_opts = {:label => p_name}
+    g.add_nodes(p_node_name, node_opts)
+    nodes << Node.new(p_node_name, node_opts)
+    edge_opts = {:dir => 'back', :arrowtail => 'onormal'}
+    g.add_edges(p_node_name, node_name, edge_opts)
+    edges << Edge.new(p_node_name, node_name, edge_opts)
+  end
+
+  column_superior = []
+  column = 0
+  klass.children.each do |c|
+    c_name = c.to_prefixed
+    c_node_name = 'n' + c_name.gsub(/[.:-]/, '_')
+    node_opts = {:label => c_name}
+    g.add_nodes(c_node_name, node_opts)
+    nodes << Node.new(c_node_name,node_opts)
+
+    # line children up in columns
+
+    if column_superior[column]
+      g.add_edges(column_superior[column], c_node_name, {:style => 'invis'})
+    end
+    column_superior[column] = c_node_name
+    column = (column + 1) % array_width
+
+    edge_opts = {:dir => 'back', :arrowtail => 'onormal'}
+    g.add_edges(node_name, c_node_name, edge_opts)
+    edges << Edge.new(node_name, c_node_name, edge_opts)
+  end
+
+  ob_props = klass.properties['Asserted']['Object']
+  ob_props.sort_by { |p| p.to_prefixed.downcase }.each do |p|
+    p_name = p.to_prefixed
+    ps = OwlProperty.by_uri[p]
+    rl = ps.range
+    if allv = klass.allv[p]
+      rl = allv unless allv.empty?
+    end
+    minc = klass.minc[p] || '0'
+    maxc = klass.maxc[p] || '*'
+    rl.each do |r|
+      r_name = r.to_prefixed
+      p_label = "#{p_name} [#{minc}..#{maxc}]"
+      r_node_name = 'n' + r_name.gsub(/[.:-]/, '_')
+      node_opts = {:label => r_name}
+      unless r_name == node_name
+        g.add_nodes(r_node_name, node_opts)
+        nodes << Node.new(r_node_name, node_opts)
+      end
+      edge_opts = {:arrowhead => 'normal', :label => p_label}
+      g.add_edges(node_name, r_node_name, edge_opts)
+      edges << Edge.new(node_name, r_node_name, edge_opts)
+    end
+  end
+
+  fi = Figure.new("Class definition diagram for #{name}.")
+  fi << mo = MediaObject.new
+
+  %w{ eps png svg }.each do |fmt|
+    outfile = "#{filebase}.#{fmt}"
+    g.output({fmt => outfile})
+    mo << io = ImageObject.new
+    io << id = ImageData.new(outfile, fmt.upcase)
+  end
+
+  [nodes, edges, fi]
+end
+
+def class_usage_diag(prefix, klass, diag_path)
+  name = klass.uri.to_prefixed
+  safe_name = name.gsub(/[#\/.:-]/, '_')
+  node_name = 'n' + safe_name
+  filebase = "#{diag_path}/#{prefix}-#{safe_name}-usage".gsub(/_/, '-')
+
+  g = GraphViz.new('G', (p = ENV['GRAPHVIZ_PATH']) ? { :path => p } : {})
+  g['rankdir'] = 'TB'
+  g['overlap'] = 'scale'
+  g['sep'] = "0.4, 0.2"
+  g.node['shape'] = 'record'
+  g.node['fontname'] = 'Arial'
+  g.node['fontsize'] = '8.0'
+  g.edge['fontname'] = 'Arial'
+  g.edge['fontsize'] = '7.0'
+
+  node_opts = {:label => name}
+  g.add_nodes(node_name, node_opts)
+
+  ob_props = %w{Asserted Inferred}.inject(Set.new) do |m, o|
+    m += klass.properties[o]['Object']
+  end
+  ob_props.sort_by { |p| p.to_prefixed.downcase }.each do |p|
+    p_name = p.to_prefixed
+    ps = OwlProperty.by_uri[p]
+    rl = ps.range
+    if allv = klass.allv[p]
+      rl = allv unless allv.empty?
+    end
+    rl = rl.concrete_descendants
+    minc = klass.minc[p] || '0'
+    maxc = klass.maxc[p] || '*'
+    rl.each do |r|
+      r_name = r.to_prefixed
+      p_label = "#{p_name} [#{minc}..#{maxc}]"
+      r_node_name = 'n' + r_name.gsub(/[.:-]/, '_')
+      node_opts = {:label => r_name}
+      unless r_name == node_name
+        g.add_nodes(r_node_name, node_opts)
+      end
+      edge_opts = {:arrowhead => 'normal', :label => p_label}
+      g.add_edges(node_name, r_node_name, edge_opts)
+    end
+  end
+
+  fi = Figure.new("Class usage diagram for #{name}.")
+  fi << mo = MediaObject.new
+
+  %w{ eps png svg }.each do |fmt|
+    outfile = "#{filebase}.#{fmt}"
+    g.output({:use => 'neato', fmt => outfile})
+    mo << io = ImageObject.new
+    io << id = ImageData.new(outfile, fmt.upcase)
+  end
+
+  fi
+end
+
+def prop_usage_diag(prefix, prop, diag_path)
+
+  return nil if (descendants = prop.domain.concrete_descendants).empty?
+
+  p_uri = prop.uri
+  p_name = p_uri.to_prefixed
+  edge_name = p_name.gsub(/[#\/.:-]/, '_')
+  filebase = "#{diag_path}/#{prefix}-#{edge_name}-usage".gsub(/_/, '-')
+
+  g = GraphViz.new('G', (p = ENV['GRAPHVIZ_PATH']) ? { :path => p } : {})
+  g['rankdir'] = 'LR'
+  g['overlap'] = 'scale'
+  g['sep'] = "0.4, 0.2"
+  g.node['shape'] = 'record'
+  g.node['fontname'] = 'Arial'
+  g.node['fontsize'] = '8.0'
+  g.edge['fontname'] = 'Arial'
+  g.edge['fontsize'] = '7.0'
+
+  descendants.each do |d|
+    d_name = d.to_prefixed
+    d_node_name = 'n' + d_name.gsub(/[.:-]/, '_')
+    node_opts = {:label => d_name}
+    g.add_nodes(d_node_name, node_opts)
+    ds = OwlClass.by_uri[d]
+    rl = prop.range
+    if allv = ds.allv[p_uri]
+      rl = allv unless allv.empty?
+    end
+    rl = rl.concrete_descendants
+    minc = ds.minc[p_uri] || '0'
+    maxc = ds.maxc[p_uri] || '*'
+    rl.each do |r|
+      r_name = r.to_prefixed
+      p_label = "#{p_name} [#{minc}..#{maxc}]"
+      r_node_name = 'n' + r_name.gsub(/[.:-]/, '_')
+      node_opts = {:label => r_name}
+      unless r_name == d_node_name
+        g.add_nodes(r_node_name, node_opts)
+      end
+      edge_opts = {:arrowhead => 'normal', :label => p_label}
+      g.add_edges(d_node_name, r_node_name, edge_opts)
+    end
+  end
+
+  fi = Figure.new("Property usage diagram for #{p_name}.")
+  fi << mo = MediaObject.new
+
+  %w{ eps png svg }.each do |fmt|
+    outfile = "#{filebase}.#{fmt}"
+    g.output({fmt => outfile})
+    mo << io = ImageObject.new
+    io << id = ImageData.new(outfile, fmt.upcase)
+  end
+
+  fi
+end
+
+
+def ontology_diagram(prefix, title, nodes, edges, diag_path)
+  filebase = "#{diag_path}/#{prefix}".gsub(/_/, '-')
+
+  g = GraphViz.new('G', (p = ENV['GRAPHVIZ_PATH']) ? { :path => p } : {})
+  g['rankdir'] = 'TB'
+  g['overlap'] = 'scale'
+  g['ratio'] = '.618'
+  g['splines'] = 'true'
+  g.node['shape'] = 'record'
+  g.node['fontname'] = 'Arial'
+  g.node['fontsize'] = '8.0'
+  g.edge['fontname'] = 'Arial'
+  g.edge['fontsize'] = '7.0'
+
+  nodes.sort_by { |n| n.name } .each do |node|
+    g.add_nodes(node.name, node.options)
+  end
+
+  edges.sort_by { |e| e.from + e.to + (e.options[:label] || '') } .each do |edge|
+    g.add_edges(edge.from, edge.to, edge.options)
+  end
+
+  title += ' diagram'
+  fi = Figure.new(title + '.', {'xml:id' => "fig_#{prefix}"})
+  fi.add_attribute('xreflabel', title)
+  fi << mo = MediaObject.new
+
+  %w{ eps png svg }.each do |fmt|
+    outfile = "#{filebase}.#{fmt}"
+    g.output({fmt => outfile})
+    mo << io = ImageObject.new
+    io << id = ImageData.new(outfile, fmt.upcase)
+  end
+
+  fi
+end
+
+# Process arguments.
+
+def usage
+  warn 'usage: ontology-docbook --host host --port port --path path --repo repo [ --omit_summary ] [ --omit-class-usage ] [ --graph graph_uri ] [ --diag-path diag_path ] ontology_uri'
+end
+
+indent = -1
+pub_number = ''
+log_level = Logger::FATAL
+do_summary = true
+do_class_usage = true
+do_embedding = true
+array_width = 5
+host = port = path = repo = namespace = graph = nil
+diag_path = '.diagrams'
+dbcent = '-//OASIS//ENTITIES DocBook Character Entities V4.5//EN'
+
+GetoptLong.new(
+  [ '--help',    '-h',       GetoptLong::NO_ARGUMENT ],
+  [ '--debug',   '-d',       GetoptLong::NO_ARGUMENT ],
+  [ '--info',    '-i',       GetoptLong::NO_ARGUMENT ],
+  [ '--warn',    '-w',       GetoptLong::NO_ARGUMENT ],
+  [ '--omit-summary',        GetoptLong::NO_ARGUMENT ],
+  [ '--omit-class-usage',    GetoptLong::NO_ARGUMENT ],
+  [ '--omit-embedding',        GetoptLong::NO_ARGUMENT ],
+  [ '--repo',    '-r',       GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--host',                GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--port',                GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--path',                GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--number',              GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--date',                GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--graph',               GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--array-width',         GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--diag-path',           GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--dbcent',              GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt, arg|
+  case opt
+  when "--help"
+    usage
+    exit 0
+  when "--number"
+    pub_number = arg.to_s
+  when "--debug"
+    log_level = Logger::DEBUG
+    indent = 1
+  when "--info"
+    log_level = Logger::INFO
+  when "--warn"
+    log_level = Logger::WARN
+  when "--host"
+    host = arg
+  when "--port"
+    port = arg
+  when "--path"
+    path = arg
+  when "--repo"
+    repo = arg
+  when "--graph"
+    graph = RDF::Uri.new(arg)
+  when "--omit-summary"
+    do_summary = false
+  when "--omit-class-usage"
+    do_class_usage = false
+  when "--omit-embedding"
+    do_embedding = false
+  when '--diag-path'
+    diag_path = arg
+  when '--dbcent'
+    dbcent = arg
+  else
+    warn "invalid argument #{arg}"
+    usage
+    exit 1
+  end
+end
+
+case ARGV.length
+when 1
+  namespace = ARGV.shift
+else
+  usage
+  exit 1
+end
+
+unless host && port && path && repo && namespace && graph
+  usage
+  exit 1
+end
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Define constants.
+
+all_nodes = Set.new
+all_edges = Set.new
+
+DCNS = RDF::NamespaceMap.new('http://purl.org/dc/elements/1.1/')
+SUBTITLE = 'Integrated Model-Centric Engineering'
+COLORS = %w{ #BFDFBF #FFFFFF }
+COPYRIGHT_YEAR = '2013'
+COPYRIGHT_HOLDER = 'California Institute of Technology'
+LEGAL_NOTICE = [
+  'Government sponsorship acknowledged.',
+  'This research was carried out at the Jet Propulsion Laboratory, California Institute of Technology,
+  under a contract with the National Aeronautics and Space Administration.'
+]
+
+OWL2_MOF2_IRI = 'http://imce.jpl.nasa.gov/foundation/owl2-mof2/owl2-mof2'
+
+# Define utility functions.
+
+class String
+  def strip_parens
+    sub(/\A\(?([^)]*)\)?\z/, '\1')
+  end
+
+end
+
+# Define utility classes.
+
+class OwlList < OpenStruct
+
+  @@by_uri = {}
+
+  def self.by_uri
+    @@by_uri
+  end
+
+  def initialize(uri)
+    super()
+    self.uri = uri
+    self.values = nil
+    @@by_uri[uri] = self
+  end
+
+  def collect!
+    unless self.values
+      self.values = Set.new([ first ])
+      if r = @@by_uri[rest]
+        self.values += r.collect!
+      end
+    end
+    self.values
+  end
+
+end
+
+class OwlUnion < OwlList
+end
+
+class OwlRestriction < OpenStruct
+
+  @@by_uri = {}
+
+  def self.by_uri
+    @@by_uri
+  end
+
+  def initialize(uri)
+    super()
+    self.uri = uri
+    self.minc = 0
+    self.maxc = nil
+    self.allv = Set.new
+    @@by_uri[uri] = self
+  end
+end
+
+class OwlClass < OpenStruct
+
+  @@by_uri = {}
+
+  def self.by_uri
+    @@by_uri
+  end
+
+  def initialize(uri)
+    super()
+    self.uri = uri
+    self.parents = Set.new
+    self.ancestors = Set.new
+    self.children = Set.new
+    self.descendants = Set.new
+    self.restrictions = Set.new
+    self.equivalent = Set.new
+    self.minc = Hash.new(0)
+    self.maxc = {}
+    self.allv = Hash.new { |h, k| h[k] = Set.new }
+    self.properties = Hash.new { |h, k| h[k] = Hash.new { |h, k| h[k] = Set.new } }
+    self.isAbstract = false
+    self.comments = []
+    self.omg_embedding = Set.new
+    self.imce_embedding = Set.new
+    self.reification = Set.new
+    self.disjoints = Set.new
+    @@by_uri[uri] = self
+  end
+
+end
+
+class OwlProperty < OpenStruct
+
+  @@by_uri = {}
+
+  def self.by_uri
+    @@by_uri
+  end
+
+  def initialize(uri)
+    super()
+    self.uri = uri
+    self.parents = Set.new
+    self.ancestors = Set.new
+    self.functional = false
+    self.domain = Set.new
+    self.range = Set.new
+    self.inverse = Set.new
+    self.isAbstract = false
+    self.embedding = Set.new
+    @@by_uri[uri] = self
+  end
+
+end
+
+class OwlDatatypeProperty < OwlProperty
+end
+
+class OwlObjectProperty < OwlProperty
+  def initialialize
+    super()
+    self.isDerived = false
+    self.reification = false
+    self.relclass = nil
+    self.chain = nil
+  end
+end
+
+Node = Struct.new(:name, :options)
+Edge = Struct.new(:from, :to, :options)
+
+# Connect to Sesame Server
+
+log.info('connect to sesame server')
+session = RDF::Sesame::Session.new(host, port, path, log)
+model = session.model(repo)
+
+# Find namespaces.
+
+prefix = nil
+log.info('find namespaces')
+namespace_by_prefix = {}
+nsm = {}
+model.namespaces.each do |defn|
+  prf = defn.prefix.to_s
+  ns = defn.namespace.to_s
+  namespace_by_prefix[prf] = ns
+  nsm[prf] = RDF::NamespaceMap.new(ns)
+  namespace_by_prefix[prf] = RDF::NamespaceMap.new(ns)
+  log.debug("namespace_by_prefix[#{prf}] = #{ns}")
+  prefix = RDF::Uri.default_prf = prf if namespace == ns
+end
+RDF::Uri.ns_by_prf = namespace_by_prefix
+log.debug("default namespace prefix #{prefix}")
+
+# Set contexts for essential ontologies.
+
+context = graph.to_uriref
+log.debug("graph = #{graph}")
+log.debug("context = #{context}")
+embedding_graph = RDF::Uri.new(graph.to_s + '-embedding')
+embedding_context = embedding_graph.to_uriref
+log.debug("embedding graph = #{embedding_graph}")
+log.debug("embedding context = #{embedding_context}")
+owl2_mof2_graph = RDF::Uri.new(OWL2_MOF2_IRI)
+owl2_mof2_context = owl2_mof2_graph.to_uriref
+log.debug("owl2-mof2 graph = #{owl2_mof2_graph}")
+log.debug("owl2-mof2 context = #{owl2_mof2_context}")
+
+# Find ontology.
+
+log.info("find ontology")
+options = {'pred' => RDF::RDFNS['type'].to_uriref,
+  'obj' => RDF::OWLNS['Ontology'].to_uriref,
+  'infer' => 'false', 'context' => context
+}
+osl = model.statements(options)
+log.debug("found #{osl.length} statements")
+os = osl.first
+oi = os ? os.subject.individual(model) : RDF::Individual.new(model, RDF::Uri.new(''))
+o_title = (t = oi[DCNS['title']]).empty? ? namespace : t.first.to_s
+log.debug("ontology title #{o_title}")
+o_desc = (d = oi[DCNS['description']]).empty? ? nil : d.first.to_s
+o_version = (v = oi[RDF::OWLNS['versionInfo']]).empty? ? nil : v.first.to_s.gsub(/\$/, '')
+o_date = (d = oi[DCNS['date']]).empty? ? nil : d.first.to_s.sub(/\A.*(\d{4}-\d{2}-\d{2}).*\z/, '\1')
+log.debug("ontology version #{o_version}") if o_version
+
+# Find embedding ontology.
+
+log.info("find embedding ontology")
+options = {'pred' => RDF::RDFNS['type'].to_uriref,
+  'obj' => RDF::OWLNS['Ontology'].to_uriref,
+  'infer' => 'false', 'context' => embedding_context
+}
+mosl = model.statements(options)
+log.debug("found #{osl.length} statements")
+mos = mosl.first
+moi = mos ? mos.subject.individual(model) : RDF::Individual.new(model, RDF::Uri.new(''))
+
+# Get imports.
+
+log.info('get imports')
+imports = Set.new
+all_imports = Set.new
+oi.descend(RDF::OWLNS['imports']) do |item, level|
+  if level > 0
+    is = item.subject
+    all_imports << is
+    imports << is if level == 1
+    log.debug("imports #{item}")
+  end
+  true
+end
+imports.each do |i|
+  log.debug("direct import #{i}")
+end
+(all_imports - imports).each do |i|
+  log.debug("indirect import #{i}")
+end
+
+# Get embedding imports.
+
+log.info('get embedding imports')
+embedding_imports = Set.new
+moi.descend(RDF::OWLNS['imports']) do |item, level|
+  if level > 0
+    is = item.subject
+    embedding_imports << is
+    log.debug("imports #{item}")
+  end
+  true
+end
+
+# Define more constants.
+
+PREFIX_DECLS = namespace_by_prefix.map do |p, n|
+  "prefix #{p}:#{n[''].to_uriref}"
+end .join("\n")
+
+PTYPE_MAP = {}
+%w{Datatype Object}.each { |t| PTYPE_MAP[nsm['owl'][t + 'Property']] = t }
+
+# Find lists.
+
+log.info('find lists')
+list_query = %Q{
+  #{PREFIX_DECLS}
+  select ?list ?first ?rest
+  #{(all_imports.to_a << graph).from_clauses}
+  where {
+    ?list rdf:first ?first .
+    ?list rdf:rest ?rest .
+  }
+}
+log.debug("list query string: #{list_query}")
+model.query({'query' => list_query, 'infer' => 'false'}) do |resp|
+  list = resp.list
+  unless ls = OwlList.by_uri[list]
+    ls = OwlList.new(list)
+    ls.first = resp.first
+    ls.rest = resp.rest
+  end
+end
+
+# Find class unions.
+
+log.info('find class unions')
+union_query = %Q{
+  #{PREFIX_DECLS}
+  select ?uri ?first ?rest
+  where {
+    ?uri owl:unionOf ?list .
+    ?list rdf:first ?first .
+    ?list rdf:rest ?rest .
+  }
+}
+log.debug("union query string: #{union_query}")
+model.query({'query' => union_query, 'infer' => 'false'}) do |resp|
+  uri = resp.uri
+  unless ls = OwlUnion.by_uri[uri]
+    un = OwlUnion.new(uri)
+    un.first = resp.first
+    un.rest = resp.rest
+  end
+end
+
+# Find restrictions.
+
+log.info('find restrictions')
+rest_query = %Q{
+  #{PREFIX_DECLS}
+  select ?rest ?prop ?card ?qcard ?minc ?maxc ?allv ?somv
+  #{(all_imports.to_a << graph).from_clauses}
+  where {
+    ?rest rdf:type owl:Restriction .
+    ?rest owl:onProperty ?prop .
+    optional { ?rest owl:cardinality ?card }
+    optional { ?rest owl:qualifiedCardinality ?qcard }
+    optional { ?rest owl:minCardinality ?minc }
+    optional { ?rest owl:maxCardinality ?maxc }
+    optional { ?rest owl:allValuesFrom ?allv }
+    optional { ?rest owl:someValuesFrom ?somv }
+  }
+}
+log.debug("restriction query string: #{rest_query}")
+model.query({'query' => rest_query, 'infer' => 'false'}) do |resp|
+  rest = resp.rest
+  unless rs = OwlRestriction.by_uri[rest]
+    rs = OwlRestriction.new(rest)
+    rs.prop = resp.prop
+  end
+  rs.minc = rs.maxc = resp.card.to_s.to_i if resp.card
+  rs.minc = rs.maxc = resp.qcard.to_s.to_i if resp.qcard
+  rs.minc = resp.minc.to_s.to_i if resp.minc
+  rs.maxc = resp.maxc.to_s.to_i if resp.maxc
+  rs.allv << resp.allv if resp.allv
+  rs.minc = [rs.minc, 1].max if resp.somv
+end
+
+# Find classes and direct named parents.
+
+log.info('find classes')
+class_query = %Q{
+  #{PREFIX_DECLS}
+  select distinct ?graph ?klass ?desc ?parent ?child ?union ?equiv ?ap ?av ?avl ?isAbstract
+  #{(all_imports.to_a << graph).from_clauses}
+  where {
+    ?klass rdf:type owl:Class .
+    optional { ?klass dc:description ?desc . }
+    optional {
+      { ?klass rdfs:subClassOf ?parent . } union
+      { ?klass owl:equivalentClass ?parent . }
+    }
+    optional {
+      { ?child rdfs:subClassOf ?klass . } union
+      { ?child owl:equivalentClass ?klass . }
+    }
+    optional {
+      ?klass owl:unionOf ?union
+    }
+    optional {
+      ?klass owl:equivalentClass ?equiv
+    }
+    optional {
+      ?klass annotation:isAbstract ?isAbstract .
+    }
+  }
+}
+log.debug("class query string: #{class_query}")
+model.query({'query' => class_query, 'infer' => 'false'}) do |resp|
+  klass = resp.klass
+  unless cs = OwlClass.by_uri[klass]
+    cs = OwlClass.new(klass)
+    cs.graph = resp.graph
+    cs.id = 'class.' + klass.to_qname.gsub(/:/, '_')
+  end
+  cs.description = resp.desc.to_s if resp.desc
+  cs.parents << resp.parent unless resp.parent.blank? if resp.parent
+  cs.children << resp.child unless resp.child.blank? if resp.child
+  cs.union = resp.union if resp.union
+  cs.equivalent << resp.equiv if resp.equiv
+  cs.isAbstract = (resp.isAbstract.to_s == 'true') if resp.isAbstract
+end
+
+# Find class comments.
+
+log.info('find class comments')
+class_cmt_query = %Q{
+  #{PREFIX_DECLS}
+  select distinct ?klass ?comment
+  #{(all_imports.to_a << graph).from_clauses}
+  where {
+    ?klass rdf:type owl:Class .
+    ?klass rdfs:comment ?comment .
+  }
+}
+log.debug("ancestor comment string: #{class_cmt_query}")
+model.query({'query' => class_cmt_query, 'infer' => 'false'}) do |resp|
+  klass = resp.klass
+  raise "unknown class #{cs}" unless cs = OwlClass.by_uri[klass]
+  if resp.comment
+    unless (c = resp.comment.to_s.strip).empty?
+      cs.comments << c
+    end
+  end
+end
+
+# Find class ancestors, including restrictions.
+
+log.info('find class ancestors')
+class_anc_query = %Q{
+  #{PREFIX_DECLS}
+  select distinct ?klass ?ancestor
+  #{(all_imports.to_a << graph).from_clauses}
+  #{(all_imports.to_a << graph).from_clauses('', '/ClassEntailments')}
+  where {
+    { ?klass rdfs:subClassOf ?ancestor . }
+      union { ?klass owl:equivalentClass ?ancestor . }
+    ?klass rdf:type owl:Class .
+      { ?ancestor rdf:type owl:Class } union { ?ancestor rdf:type owl:Restriction }
+    filter ((?klass != ?ancestor) && (?klass != owl:Nothing))
+  }
+}
+log.debug("ancestor query string: #{class_anc_query}")
+model.query({'query' => class_anc_query, 'infer' => 'false'}) do |resp|
+  klass = resp.klass
+  cs = OwlClass.by_uri[klass]
+  if resp.ancestor
+    if OwlRestriction.by_uri[resp.ancestor]
+      cs.restrictions << resp.ancestor
+    elsif as = OwlClass.by_uri[resp.ancestor]
+      cs.ancestors << resp.ancestor
+      as.descendants << klass
+    else
+      log.error("bad type for ancestor #{resp.ancestor}")
+    end
+  end
+end
+
+# Find asserted disjoint classes.
+
+log.info('find asserted disjoint classes')
+disjoints_query = %Q{
+  #{PREFIX_DECLS}
+  select distinct ?klass1 ?klass2
+  #{graph.from_clauses}
+  where {
+    ?klass1 owl:disjointWith ?klass2 .
+  }
+}
+log.debug("asserted disjoints query string: #{disjoints_query}")
+model.query({'query' => disjoints_query, 'infer' => 'false'}) do |resp|
+  klass1 = resp.klass1
+  klass2 = resp.klass2
+  ks1 = OwlClass.by_uri[klass1]
+  ks2 = OwlClass.by_uri[klass2]
+  ks1.disjoints << klass2
+  ks2.disjoints << klass1
+  log.debug("#{klass1} disjoint with #{klass2}")
+end
+
+# Find properties and direct parents.
+
+log.info('find properties')
+property_query = %Q{
+  #{PREFIX_DECLS}
+  select ?graph ?prop ?ptype ?desc ?parent ?domain ?range ?isAbstract ?isDerived
+  #{(all_imports.to_a << graph).from_clauses}
+  where {
+    ?prop rdf:type ?ptype
+    optional { ?prop dc:description ?desc . }
+    optional {
+      { ?prop rdfs:subPropertyOf ?parent } union
+      { ?prop owl:equivalentProperty ?parent }
+    }
+    optional { ?prop rdfs:domain ?domain }
+    optional { ?prop rdfs:range ?range }
+    optional { ?prop annotation:isAbstract ?isAbstract }
+    optional { ?prop annotation:isDerived ?isDerived }
+    filter (!isblank(?prop) && (
+                                ?ptype = owl:DatatypeProperty ||
+                                ?ptype = owl:ObjectProperty ||
+                                ?ptype = owl:FunctionalProperty
+                               ))
+  }
+}
+log.debug("property query string: #{property_query}")
+model.query({'query' => property_query, 'infer' => 'false'}) do |resp|
+  prop = resp.prop
+  unless ps = OwlProperty.by_uri[prop]
+    ps = OwlProperty.new(prop)
+    ps.graph = resp.graph
+    ps.id = 'property.' + prop.to_qname.gsub(/:/, '_')
+  end
+  case resp.ptype
+  when nsm['owl']['FunctionalProperty']
+    ps.functional = true
+  else
+    ps.ptype = resp.ptype
+  end
+  ps.description = resp.desc.to_s if resp.desc
+  ps.isAbstract = (resp.isAbstract.to_s == 'true') if resp.isAbstract
+  unless ps.isAbstract
+    ps.parents << resp.parent if resp.parent
+    ps.domain << resp.domain if resp.domain
+  end
+  ps.isDerived = (resp.isDerived.to_s == 'true') if resp.isDerived
+  ps.propertyChain = resp.propertyChain if resp.propertyChain
+  if resp.range
+    case resp.range
+    when RDF::Bnode
+      # Not sure how to handle this case. For now, use type of first
+      # entry in DataRange.
+      range = RDF::Individual.new(model, resp.range)
+      case range[nsm['rdf']['type']].first
+      when nsm['owl']['Class']
+        ps.range += range.aggregate_elements
+      when nsm['owl']['DataRange']
+        if oneof = range[nsm['owl']['oneOf']].first
+          oneof = RDF::Individual.new(model, oneof)
+          ps.range << oneof[nsm['rdf']['first']].first.datatype
+        else
+          raise "bad DataRange (#{range})"
+        end
+      else
+        raise "bad range type (#{range})"
+      end
+    when RDF::Uri
+      ps.range << resp.range
+    end
+  end
+end
+
+# Find property inverses.
+
+log.info('find properties')
+property_query = %Q{
+  #{PREFIX_DECLS}
+  select ?graph ?prop ?inverse
+  #{(all_imports.to_a << graph).from_clauses}
+  where {
+    ?prop rdf:type ?ptype .
+    ?prop owl:inverseOf ?inverse .
+  }
+}
+log.debug("property query string: #{property_query}")
+model.query({'query' => property_query, 'infer' => 'false'}) do |resp|
+  p = OwlProperty.by_uri[resp.prop]
+  i = OwlProperty.by_uri[resp.inverse]
+  p.inverse << i.uri
+  i.inverse << p.uri
+end
+
+# Find property ancestors.
+
+log.info('find property ancestors')
+prop_anc_query = %Q{
+  #{PREFIX_DECLS}
+  select distinct ?graph ?prop ?ancestor
+  #{(all_imports.to_a << graph).from_clauses}
+  #{(all_imports.to_a << graph).from_clauses('', '/PropertyEntailments')}
+  where {
+    ?prop rdf:type ?ptype
+    optional {
+      { ?prop rdfs:subPropertyOf ?ancestor } union
+        { ?prop owl:equivalentProperty ?ancestor }
+    }
+    filter ((
+              ?ptype = owl:DatatypeProperty ||
+              ?ptype = owl:ObjectProperty ||
+              ?ptype = owl:FunctionalProperty
+           ) && ?prop != ?ancestor &&
+           (
+             ?prop != owl:bottomObjectProperty &&
+             ?prop != owl:bottomDataProperty &&
+             ?ancestor != owl:topObjectProperty &&
+             ?ancestor != owl:topDataProperty
+           ))
+  }
+}
+log.debug("property query string: #{prop_anc_query}")
+model.query({'query' => prop_anc_query, 'infer' => 'false'}) do |resp|
+  prop = resp.prop
+  ps = OwlProperty.by_uri[prop]
+  ps.ancestors << resp.ancestor if resp.ancestor
+end
+
+# Find uml/sysml embeddings.
+
+log.info('find embeddings')
+i = embedding_imports << embedding_graph
+
+# Find class embeddings.
+
+embedding_query = %Q{
+  #{PREFIX_DECLS}
+  select distinct ?klass ?embedding
+  #{i.from_clauses}
+  #{i.from_clauses('named')}
+  #{i.from_clauses(nil, '/ClassEntailments')}
+    where {
+      graph #{context} { ?klass rdf:type owl:Class }
+      optional {
+        ?klass rdfs:subClassOf ?embedding .
+        { ?embedding annotation:isMetaclass true } union { ?embedding annotation:isStereotypeMetaclass true }
+        optional {
+          ?sub rdfs:subClassOf ?embedding .
+          ?klass rdfs:subClassOf ?sub .
+          { ?sub annotation:isMetaclass true } union { ?sub annotation:isStereotypeMetaclass true }
+          filter (?sub != ?embedding)
+        }
+      }
+      filter (!bound(?sub))
+    }
+}
+log.debug("omg class embedding query: #{embedding_query}")
+model.query({ 'query' => embedding_query, 'infer' => 'false' }).each do |resp|
+  klass = resp.klass
+  if embedding = resp.embedding
+    embedding = embedding.to_qname
+    if cs = OwlClass.by_uri[klass]
+      log.debug("#{klass.to_qname} mapped to #{embedding}")
+      cs.omg_embedding << embedding
+    end
+  end
+end
+
+embedding_query = %Q{
+  #{PREFIX_DECLS}
+  select distinct ?klass ?embedding
+  #{i.from_clauses}
+  #{i.from_clauses('named')}
+  #{i.from_clauses(nil, '/ClassEntailments')}
+  from named #{owl2_mof2_context}
+  where {
+    graph #{context} { ?klass rdf:type owl:Class }
+    optional {
+      ?klass rdfs:subClassOf ?embedding .
+      graph #{owl2_mof2_context} { ?embedding rdf:type owl:Class }
+      optional {
+        ?sub rdfs:subClassOf ?embedding .
+        ?klass rdfs:subClassOf ?sub .
+        graph #{owl2_mof2_context} { ?sub rdf:type owl:Class }
+        filter (?sub != ?embedding)
+      }
+    filter (!bound(?sub))
+    }
+  }
+}
+log.debug("imce class embedding query: #{embedding_query}")
+model.query({ 'query' => embedding_query, 'infer' => 'false' }).each do |resp|
+  klass = resp.klass
+  if embedding = resp.embedding
+    embedding = embedding.to_qname
+    if cs = OwlClass.by_uri[klass]
+      log.debug("#{klass.to_qname} mapped to #{embedding}")
+      cs.imce_embedding << embedding
+    end
+  end
+end
+
+# Find property reifications.
+
+reification_query = %Q{
+  #{PREFIX_DECLS}
+  select distinct ?property ?invprop ?embedding ?srcprop ?trgprop ?relclass
+  #{i.from_clauses}
+  #{i.from_clauses('named')}
+  #{i.from_clauses(nil, '/ClassEntailments')}
+  #{i.from_clauses(nil, '/PropertyEntailments')}
+  where {
+    graph #{context} { ?property rdf:type owl:ObjectProperty . }
+
+    optional {
+      ?property owl:inverseOf ?invprop .
+    }
+
+    # find property chain
+
+    ?property owl:propertyChainAxiom [
+      rdf:first [
+        owl:inverseOf ?srcprop ;
+      ] ;
+      rdf:rest [
+        rdf:first ?trgprop ;
+      ] ;
+    ] .
+
+    # find relationship class
+
+    ?srcprop rdfs:domain ?relclass .
+    ?trgprop rdfs:domain ?relclass .
+  }
+}
+log.debug("property reification query: #{reification_query}")
+model.query({ 'query' => reification_query, 'infer' => 'false' }).each do |resp|
+  property = resp.property
+  invprop = resp.invprop
+  relclass = resp.relclass
+  srcprop = resp.srcprop
+  trgprop = resp.trgprop
+  
+  OwlClass.by_uri[relclass].reification << property
+  
+  property_struct = OwlProperty.by_uri[property]
+  property_struct.relclass = relclass
+  property_struct.chain = [srcprop, trgprop]
+  
+  OwlProperty.by_uri[srcprop].reification = true
+  OwlProperty.by_uri[trgprop].reification = true
+end
+
+# Collect and reconcile references.
+
+log.info("collect and reconcile references")
+
+# Collect list values into a set.
+
+OwlList.by_uri.values.each { |l| l.collect! }
+
+# Replace node list in a class union with class uris.
+
+OwlClass.by_uri.values.each do |c|
+  c.union = Set.new(OwlUnion.by_uri[c.union].values) if c.union
+end
+
+# Replace class unions with elements in allValuesFrom restrictions.
+
+OwlRestriction.by_uri.values.each do |r|
+  new_value = r.allv.inject(Set.new) do |m, a|
+    if u = OwlClass.by_uri[a].union
+      m + u
+    else
+      m << a
+    end
+  end
+  r.allv = new_value
+end
+
+# Treat functional attribute of a property like a restriction on its domain.
+
+OwlProperty.by_uri.values.each do |p|
+  if p.functional
+    p.domain.each do |c|
+      cs = OwlClass.by_uri[c]
+      (cs.descendants.to_a << c).each do |t|
+        ts = OwlClass.by_uri[t]
+        ts.maxc[p.uri] = 1
+      end
+    end
+  end
+end
+
+# Propagate domain and range to subproperties. Not yet general; replaces missing domain
+# and range with something from ancestors.
+
+OwlProperty.by_uri.values.each do |p|
+  unless p.ancestors.empty?
+    if p.domain.empty?
+      al = p.ancestors.map { |a| OwlProperty.by_uri[a] } .select { |a| !a.domain.empty? }
+      p.domain = al.first.domain unless al.empty?
+    end
+    if p.range.empty?
+      al = p.ancestors.map { |a| OwlProperty.by_uri[a] } .select { |a| !a.range.empty? }
+      p.range = al.first.range unless al.empty?
+    end
+  end
+end
+
+# Propagate effect of all restrictions on each class.
+
+OwlClass.by_uri.values.each do |cs|
+  app_classes = Set.new([cs]) + cs.ancestors.map { |a| OwlClass.by_uri[a] }
+  app_classes = app_classes.select { |c| c.respond_to?(:restrictions) }
+  app_restric = Set.new(app_classes.map { |c| c.restrictions }).flatten
+  app_restric.each do |r|
+    rs = OwlRestriction.by_uri[r]
+    prop = rs.prop
+    cs.minc[prop] = rs.minc if cs.minc[prop] < rs.minc
+    if rs.maxc
+      if cs.maxc[prop].nil? or cs.maxc[prop] > rs.maxc
+        cs.maxc[prop] = rs.maxc
+      end
+    end
+    cs.allv[prop] += rs.allv unless rs.allv.empty?
+    cs.allv[prop].minimize!
+  end
+end
+
+# Replace class unions with elements in property domains and ranges.
+
+[:domain, :range].each do |rmeth|
+  wmeth = (rmeth.to_s + '=').to_sym
+  OwlProperty.by_uri.values.each do |p|
+    new_value = p.send(rmeth).inject(Set.new) do |m, a|
+      if (c = OwlClass.by_uri[a]) && (u = c.union)
+        m + u
+      else
+        m << a
+      end
+    end
+    p.send(wmeth, new_value)
+  end
+end
+
+# Construct class property lists.
+
+OwlProperty.by_uri.each do |p, ps|
+  ptype = PTYPE_MAP[ps.ptype]
+  ps.domain.each do |c|
+    OwlClass.by_uri[c].properties['Asserted'][ptype] << p
+  end
+end
+
+# Progagate class property lists from ancestors.
+
+OwlClass.by_uri.values.each do |c|
+  (c.parents + c.ancestors).each do |a|
+    as = OwlClass.by_uri[a]
+    as.properties['Asserted'].each do |ptype, set|
+      c.properties['Inferred'][ptype] += set
+    end
+  end
+end
+
+# Emit debugging summaries.
+
+OwlList.by_uri.each do |u, l|
+  log.debug("OwlList.by_uri[#{u}] = #{l}")
+end
+
+OwlRestriction.by_uri.each do |u, r|
+  log.debug("OwlRestriction.by_uri[#{u}] = #{r}")
+end
+
+OwlClass.by_uri.each do |u, c|
+  log.debug("OwlClass.by_uri[#{u}] = #{c}")
+end
+
+OwlProperty.by_uri.each do |u, c|
+  log.debug("OwlProperty.by_uri[#{u}] = #{c}")
+end
+
+# Create GraphViz work directory.
+
+begin
+  Dir.mkdir(diag_path)
+rescue Errno::EEXIST
+end
+
+# Open DocBook document.
+
+log.info('open DocBook document')
+doc = REXML::Document.new
+doc << REXML::XMLDecl.new
+
+# Add DTD declaration for character entity definitions.
+
+entities = %Q{[
+<!ENTITY % sgml.features "IGNORE">
+<!ENTITY % xml.features "INCLUDE">
+<!ENTITY % dbcent PUBLIC "#{dbcent}" "dbcentx.mod">
+%dbcent;
+]}
+doc << doc_type = REXML::DocType.new('article', entities)
+
+# Start article.
+
+options = {}
+options['release_info'] = o_version if o_version
+doc << ar = Article.new
+ar.add_attribute('xmlns', 'http://docbook.org/ns/docbook')
+ar.add_attribute('version', '5.0')
+
+ar << ti = Element.new('title')
+ti.text = o_title
+ar << st = Element.new('subtitle')
+st.text = SUBTITLE
+
+ar << ai = Element.new('info')
+ai << bi = Element.new('biblioid')
+bi.text = pub_number
+ai << pd = Element.new('pubdate')
+pd.text = o_date
+ai << co = Element.new('copyright')
+co << yr = Element.new('year')
+yr.text = COPYRIGHT_YEAR
+co << ho = Element.new('holder')
+ho.text = COPYRIGHT_HOLDER
+ai << ln = Element.new('legalnotice')
+LEGAL_NOTICE.each do |t|
+  ln << Para.new(t)
+end
+
+# Intro section.
+
+log.info('create introduction section')
+ar << id = Section.new('Introduction')
+if o_desc
+  DocBook::Document.parse_fragment(o_desc).each { |f| id << f }
+else
+  id << Para.new
+end
+
+# Imports section.
+
+log.info('create imports section')
+ar << is = Section.new('Imported Ontologies')
+unless imports.empty?
+  is << il = ItemizedList.new
+  imports.each do |i|
+    il << li = ListItem.new
+    li << Para.new(i.to_s)
+  end
+else
+  is << Para.new
+end
+
+# Namespace section.
+
+log.info('create namespace section')
+ar << ns = Section.new('Namespaces')
+unless namespace_by_prefix.empty?
+  ns << vl = VariableList.new
+  namespace_by_prefix.keys.sort.each do |prf|
+    vl << vle = VarListEntry.new
+    vle << te = Term.new
+    te.add_text(prf.to_s)
+    vle << li = ListItem.new
+    li << Para.new(namespace_by_prefix[prf].to_s)
+  end
+else
+  ns << Para.new
+end
+
+# Class definition section.
+
+log.info('create class definition section')
+
+# Select and mark classes and properties to be documented.
+
+class_list = OwlClass.by_uri.values.select do |c|
+  uri = c.uri
+  !uri.blank? && uri.prefix == prefix
+end.sort_by do |c|
+  c.uri.with_prefix[1].downcase
+end
+class_list.each { |c| c.used = true }
+  
+abstract_class_list = class_list.select { |c| c.reification.empty? && c.isAbstract }
+concrete_class_list = class_list.select { |c| c.reification.empty? && !c.isAbstract }
+reification_class_list = class_list.select { |c| !c.reification.empty? }
+
+prop_list = {}
+abstract_prop_list = {}
+concrete_prop_list = {}
+reif_prop_list = {}
+
+%w{Datatype Object}.each do |ptype|
+  prop_list[ptype] = OwlProperty.by_uri.values.select do |p|
+    uri = p.uri
+    uri.prefix == prefix && PTYPE_MAP[p.ptype] == ptype
+  end.sort_by do |p|
+    p.uri.to_prefixed.downcase
+  end
+  prop_list[ptype].each { |p| p.used = true }
+end
+
+%w{Datatype Object}.each do |ptype|
+  abstract_prop_list[ptype] = prop_list[ptype].select { |p| p.isAbstract && !p.reification }
+  concrete_prop_list[ptype] = prop_list[ptype].select { |p| !p.isAbstract && !p.reification }
+  reif_prop_list[ptype] = prop_list[ptype].select { |p| p.reification }
+end
+
+# Create a subsection for each class.
+
+class_map = { 'Abstract Class' => abstract_class_list,
+  'Concrete Class' => concrete_class_list,
+  'Object Property Reification Class' => reification_class_list
+}
+['Abstract Class',
+  'Concrete Class',
+  'Object Property Reification Class'].each do |class_group|
+
+  this_list = class_map[class_group]
+  unless this_list.empty?
+    ar << cd = Section.new("#{class_group} Definitions")
+    this_list.each do |klass|
+
+      pref, class_name = *klass.uri.with_prefix
+
+      cd << cs = Section.new(class_name, {'xml:id' => klass.id})
+      log.debug("Section(#{class_name})")
+      cs << PreferredIndexTerm.new('class', nil, class_name)
+
+      # Print description paragraph.
+
+      desc = klass.description
+      if desc
+        DocBook::Document.parse_fragment(desc).each { |f| cs << f }
+      end
+
+      # Accumulate VarListEntrys for equivalent, parent, and ancestor classes and properties.
+
+      vle_list = []
+
+      # Equivalent classes.
+
+      unless (el = klass.equivalent).empty?
+        vle_list << vle = VarListEntry.new
+        vle << te = Term.new
+        te.text = 'Equivalent Classes:'
+        vle << li = ListItem.new
+        list = el.map { |e| OwlClass.by_uri[e] }.sort_by { |e| e.uri.to_prefixed.downcase }
+        li << list.indexed_struct_list('class')
+      end
+
+      # Asserted superclasses.
+
+      unless (pl = klass.parents).empty?
+        vle_list << vle = VarListEntry.new
+        vle << te = Term.new
+        te.text = 'Asserted Superclasses:'
+        vle << li = ListItem.new
+        list = pl.map { |e| OwlClass.by_uri[e] }.sort_by { |e| e.uri.to_prefixed.downcase }
+        li << list.indexed_struct_list('class')
+      end
+
+      # Inferred superclasses.
+
+      unless (al = klass.ancestors - pl).empty?
+        vle_list << vle = VarListEntry.new
+        vle << te = Term.new
+        te.text = 'Inferred Superclasses:'
+        vle << li = ListItem.new
+        list = al.map { |e| OwlClass.by_uri[e] }.sort_by { |e| e.uri.to_prefixed.downcase }
+        li << list.indexed_struct_list('class')
+      end
+
+      # Asserted subclasses.
+
+      unless (pl = klass.children).empty?
+        vle_list << vle = VarListEntry.new
+        vle << te = Term.new
+        te.text = 'Asserted Subclasses:'
+        vle << li = ListItem.new
+        list = pl.map { |e| OwlClass.by_uri[e] }.sort_by { |e| e.uri.to_prefixed.downcase }
+        li << list.indexed_struct_list('class')
+      end
+
+      # Asserted disjoint classes.
+      
+      unless (dl = klass.disjoints).empty?
+        vle_list << vle = VarListEntry.new
+        vle << te = Term.new
+        te.text = 'Asserted Disjoint Classes:'
+        vle << li = ListItem.new
+        list = dl.map { |e| OwlClass.by_uri[e] }.sort_by { |e| e.uri.to_prefixed.downcase }
+        li << list.indexed_struct_list('class')
+      end
+      
+      # Properties.
+
+      [
+        ['Asserted', 'Datatype'],
+        ['Inferred', 'Datatype'],
+        ['Asserted', 'Object'],
+        ['Inferred', 'Object']
+      ].each do |a0|
+        src, ptype = *a0
+        ap = klass.properties[src][ptype].sort_by { |p| p.to_prefixed.downcase }
+        unless ap.empty?
+          vle_list << vle = VarListEntry.new
+          vle << te = Term.new
+          te.text = "#{src} #{ptype} Properties:"
+          vle << li = ListItem.new
+          li << pvl = VariableList.new
+          ap.sort_by { |p| p.to_prefixed.downcase }.each do |p|
+            prop = OwlProperty.by_uri[p]
+            pname = p.to_prefixed
+            pvl << pvle = VarListEntry.new
+            pvle << pte = Term.new
+            if prop.used
+              pte << Link.new(prop.id) << Text.new(pname)
+            else
+              pte << Text.new(pname)
+            end
+            pte << IndexTerm.new("#{ptype.downcase} property", nil, pname)
+            pvle << pli = ListItem.new
+            minc = klass.minc[p] || '0'
+            maxc = klass.maxc[p] || '*'
+            pli << SimpleList.new << Member.new << Text.new("[#{minc}..#{maxc}] ")
+            range = klass.allv[p].empty? ? OwlProperty.by_uri[p].range : klass.allv[p]
+            case ptype
+            when 'Datatype'
+              rl = range.map { |x| x.to_prefixed }.sort_by { |x| x.downcase }
+              pli << rl.indexed_string_list('type')
+            when 'Object'
+              rl = range.map { |x| OwlClass.by_uri[x] }.sort_by { |x| x.uri.downcase }
+              pli << rl.indexed_struct_list('class')
+            end
+          end
+        end
+      end
+      
+      # Reified Object Properties.
+      
+      unless (rl = klass.reification).empty?
+        vle_list << vle = VarListEntry.new
+        vle << te = Term.new
+        te.text = 'Reified Object Properties:'
+        vle << li = ListItem.new
+        list = rl.map { |e| OwlProperty.by_uri[e] }.sort_by { |e| e.uri.to_prefixed.downcase }
+        li << list.indexed_struct_list('object property')
+      end
+
+      # Insert VariableList if necessary.
+
+      unless vle_list.empty?
+        cs << vl = VariableList.new
+        vle_list.each { |vle| vl << vle }
+      end
+
+      # Insert class definition diagram.
+
+      nodes, edges, figure = *class_def_diag(prefix, klass, array_width, diag_path)
+      all_nodes += nodes
+      all_edges += edges
+      cs << pa = Para.new("The class definition diagram for #{class_name} is shown in ")
+      pa << Xref.new(figure.attributes['xml:id'], nil, 'Figure')
+      pa << Text.new('.')
+      cs << figure
+
+      # Insert class usage diagram (concrete classes only).
+
+      unless klass.isAbstract
+        if do_class_usage
+          figure = class_usage_diag(prefix, klass, diag_path)
+          pa << Text.new(" The class usage diagram for #{class_name} is shown in ")
+          pa << Xref.new(figure.attributes['xml:id'], nil, 'Figure')
+          pa << Text.new('.')
+          cs << figure
+        else
+          pa << Text.new(" The class usage diagram for #{class_name} is too large to include.")
+        end
+      end
+
+      # Insert comments.
+
+      unless klass.comments.empty?
+        cs << vl = VariableList.new({'userlevel' => 'comments'})
+        klass.comments.each do |c|
+          vl << vle = VarListEntry.new
+          vle << Term.new('Comment')
+          vle << li = ListItem.new
+          DocBook::Document.parse_fragment(c).each { |f| li << f }
+        end
+      end
+
+    end
+  end
+end
+
+# End class definition section.
+
+# Property definition sections.
+
+log.info('create property definition section')
+prop_map = { 'Abstract Datatype' => abstract_prop_list['Datatype'],
+  'Concrete Datatype' => concrete_prop_list['Datatype'],
+  'Abstract Object' => abstract_prop_list['Object'],
+  'Concrete Object' => concrete_prop_list['Object'],
+  'Object Property Reification Source/Target Object' => reif_prop_list['Object']
+}
+['Abstract Datatype', 'Concrete Datatype',
+  'Abstract Object',  'Concrete Object',
+  'Object Property Reification Source/Target Object'].each do |prop_group|
+
+  this_list = prop_map[prop_group]
+
+  # Create a subsection for each property.
+
+  unless this_list.empty?
+    ar << dp = Section.new("#{prop_group} Property Definitions")
+    this_list.each do |prop|
+
+      pref, prop_name = *prop.uri.with_prefix
+      ptype = case prop_group
+        when /Datatype/
+          'datatype'
+        when /Object/
+          'object'
+        end
+      pri_term = "#{ptype} property"
+
+      dp << ps = Section.new(prop_name, {'xml:id' => prop.id})
+      log.debug("Section(#{prop_name})")
+      ps << PreferredIndexTerm.new(pri_term, nil, prop_name)
+
+      # Print description paragraph.
+
+      desc = prop.description
+      if desc
+        DocBook::Document.parse_fragment(desc).each { |f| ps << f }
+      end
+
+      # Accumulate VarListEntrys for parents, ancestors, domain, range.
+
+      vle_list = []
+
+      # Asserted Superproperties.
+
+      unless (pl = prop.parents).empty?
+        vle_list << vle = VarListEntry.new
+        vle << te = Term.new
+        te.text = 'Asserted Superproperties:'
+        vle << li = ListItem.new
+        list = pl.map { |e| OwlProperty.by_uri[e] }.sort_by { |e| e.uri.to_prefixed.downcase }
+        li << list.indexed_struct_list(pri_term)
+      end
+
+      # Inferred Superproperties.
+
+      unless (al = prop.ancestors - pl).empty?
+        vle_list << vle = VarListEntry.new
+        vle << te = Term.new
+        te.text = 'Inferred Superproperties:'
+        vle << li = ListItem.new
+        list = al.map { |e| OwlProperty.by_uri[e] }.sort_by { |e| e.uri.to_prefixed.downcase }
+        li << list.indexed_struct_list(pri_term)
+      end
+
+      # Domain.
+
+      domain = prop.domain
+      unless domain.empty?
+        vle_list << vle = VarListEntry.new
+        vle << te = Term.new
+        te.text = "Domain:"
+        vle << li = ListItem.new
+        list = domain.map { |e| OwlClass.by_uri[e] }.sort_by { |e| e.uri.to_prefixed.downcase }
+        li << list.indexed_struct_list('class')
+      end
+
+      # Range.
+
+      unless (mr = prop.range).empty?
+        vle_list << vle = VarListEntry.new
+        vle << te = Term.new
+        te.text = 'Range:'
+        vle << li = ListItem.new
+        li << SimpleList.new << Member.new << Text.new("[0..#{prop.functional ? 1 : '*' }] ")
+        case ptype
+        when 'datatype'
+          rl = mr.map { |x| x.to_prefixed }.sort_by { |x| x.downcase }
+          li << rl.indexed_string_list('type')
+        when 'object'
+          rl = mr.map { |x| OwlClass.by_uri[x] }.sort_by { |x| x.uri.downcase }
+          li << rl.indexed_struct_list('class')
+        end
+      end
+
+      # Inverse.
+
+      inverse = prop.inverse
+      unless inverse.empty?
+        vle_list << vle = VarListEntry.new
+        vle << te = Term.new
+        te.text = "Inverse:"
+        vle << li = ListItem.new
+        list = inverse.map { |e| OwlProperty.by_uri[e] }.sort_by { |e| e.uri.to_prefixed.downcase }
+        li << list.indexed_struct_list('object property')
+      end
+
+      # Derived.
+
+      vle_list << vle = VarListEntry.new
+      vle << te = Term.new
+      te.text = "Derived:"
+      vle << li = ListItem.new
+      text = prop.isDerived ? 'true' : 'false'
+      li << SimpleList.new << Member.new << Text.new(text)
+
+      # Reification class.
+      
+      if prop.relclass
+        vle_list << vle = VarListEntry.new
+        vle << te = Term.new
+        te.text = "Reification Class:"
+        vle << li = ListItem.new
+        list = [prop.relclass].map { |e| OwlClass.by_uri[e] }
+        li << list.indexed_struct_list('class')
+      end
+
+      # Reification property chain.
+      
+      if prop.chain
+        vle_list << vle = VarListEntry.new
+        vle << te = Term.new
+        te.text = "Reification Property Chain:"
+        vle << li = ListItem.new
+        list = prop.chain.map { |e| OwlProperty.by_uri[e] }
+        li << list.indexed_property_chain
+      end
+      
+      # Insert VariableList if necessary.
+
+      unless vle_list.empty?
+        ps << vl = VariableList.new
+        vle_list.each { |vle| vl << vle }
+      end
+
+      # Insert property usage diagram (concrete properties only).
+
+      if prop_group == 'Concrete Object'
+        unless prop.domain.empty? && prop.range.empty?
+          if figure = prop_usage_diag(prefix, prop, diag_path)
+            ps << pa = Para.new("The property usage diagram for #{prop_name} is shown in ")
+            pa << Xref.new(figure.attributes['xml:id'], nil, 'Figure')
+            pa << Text.new('.')
+            ps << figure
+          end
+        end
+      end
+
+      # End property section.
+
+    end
+  end
+
+  # End property definition sections.
+
+end
+
+# Summary.
+
+if do_summary
+  log.info('create summary section')
+  ar << su = Section.new('Summary')
+  su << pa = Para.new("The #{o_title} is summarized in ")
+  pa << Xref.new("fig_#{prefix}", nil, 'Figure')
+  pa << Text.new('.')
+
+  su << ontology_diagram(prefix, o_title, all_nodes, all_edges, diag_path)
+end
+
+# UML/SysML embeddings.
+
+if do_embedding
+
+  log.info('create embedding section')
+  ar << ma = Appendix.new('UML/SysML Embedding')
+
+  EmbeddingStruct = Struct.new(:label, :method)
+  
+  omg_es = EmbeddingStruct.new('UML/SysML', :omg_embedding)
+  imce_es = EmbeddingStruct.new('OWL2-MOF2', :imce_embedding)
+
+  normal_class_embeddings = [ omg_es, imce_es ]
+  reification_class_embeddings = [ imce_es ]
+    
+  datatype_property_embeddings = []
+
+  MapStruct = Struct.new(:label, :embeddings, :list)
+
+  msl = [
+    MapStruct.new('Class', normal_class_embeddings, abstract_class_list + concrete_class_list),
+    MapStruct.new('Object Property Reification Class', reification_class_embeddings, reification_class_list),
+    MapStruct.new('Datatype Property', datatype_property_embeddings,
+      abstract_prop_list['Datatype'] + concrete_prop_list['Datatype'])
+  ]
+
+  msl.each do |ms|
+
+    ms.embeddings.each do |es|
+
+      pri_term = case ms.label
+        when /Class/
+          'class'
+        when /Datatype/
+          'datatype property'
+        when /Object/
+          'object property'
+        end
+      
+      columns = ms.list.inject(Set.new) { |s, e| s |= e.send(es.method) }.sort
+
+      ci = DocBook::ColorIterator.new(%w{#BFDFBF #FFFFFF})
+
+      title = "#{ms.label} #{es.label} Embedding"
+      log.info("#{title} table")
+      ma << ta = Table.new(title, {'role' => 'longtable'})
+      ta << tg = Tgroup.new(columns.length + 1)
+
+      colno = 1
+      tg << cs = Colspec.new
+      cs.add_attribute('colnum', colno)
+      cs.add_attribute('align', 'left')
+
+      columns.length.times do |n|
+        colno += 1
+        tg << cs = Colspec.new
+        cs.add_attribute('colnum', colno)
+        cs.add_attribute('align', 'center')
+      end
+
+      tg << th = Thead.new
+      th << ro = Row.new
+      ro << en = Entry.new
+      columns.each do |c|
+        ro << en = Entry.new
+        en.add_attribute('rotate', '1')
+        en << Text.new(c.dup)
+      end
+
+      tg << tb = Tbody.new
+      unless ms.list.empty?
+        ms.list.sort_by { |s| s.uri }.each do |e|
+          e_uri = e.uri
+          pref, e_name = e_uri.with_prefix
+          log.debug("Embedding(#{e_name})")
+          tb << ro = Row.new
+          ro << en = Entry.new
+          en << Instruction.new('dbhtml', "bgcolor=#{ci.value}")
+          en << Text.new(e_name)
+          en << IndexTerm.new(pri_term, nil, e_name)
+          columns.each do |c|
+            ro << en = Entry.new
+            en << Instruction.new('dbhtml', "bgcolor=#{ci.value}")
+            if e.send(es.method).include?(c)
+              en << Text.new('&#8226;', false, false, true)
+              en << IndexTerm.new(pri_term, nil, c)
+            end
+          end
+          ci.step
+        end
+      else
+        tb << ro = Row.new
+        ro << Entry.new
+      end
+      ta << Instruction.new('hard-pagebreak')
+    end
+  end
+
+end
+
+# Index.
+
+log.info('create index')
+ar << Index.new
+
+# End article.
+
+# Write DocBook instance.
+
+log.info('write output')
+doc.write(STDOUT, indent)
+log.info('done')

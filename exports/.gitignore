@@ -1,0 +1,8 @@
+/Makefile
+/location-mapping.yaml
+/artifacts/
+/tests/
+/.Makefile
+/.sentinels/
+/audits/
+/*.csv

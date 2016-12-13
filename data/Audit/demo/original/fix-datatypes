@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+ARGF.each do |l|
+l = l.gsub(/>([-+]?)([0-9.]+)</, %q{ rdf:datatype="http://www.w3.org/2001/XMLSchema#decimal">\1\2<})
+  puts l
+end

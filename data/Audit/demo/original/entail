@@ -1,0 +1,11 @@
+#!/bin/sh
+
+LIBS="Application ruby-pellet Pellet"
+
+for lib in $LIBS
+do
+    RUBYLIB="$RUBYLIB:../../../../lib/$lib"
+done
+export RUBYLIB
+
+jruby -J-Xmx1024m ../../../../tools/entail-pellet --debug --input-iri $1 --output-iri $1/entailments --types AllInstance

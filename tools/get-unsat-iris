@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+
+require 'csv'
+require 'fileutils'
+require 'rexml/document'
+
+csv = CSV.new(STDOUT)
+csv << %w{ class }
+
+doc = REXML::Document.new(ARGF)
+top = doc.get_elements('testsuites/testsuite[@name="satisfiability"]').first
+top.each_element('testcase') do |e|
+  next unless failure = e.get_elements('failure').first
+  name = e.attributes['name']
+  klass = name.split[1].sub(/\A<(.*)>\z/, '\1')
+  csv << [klass]
+end

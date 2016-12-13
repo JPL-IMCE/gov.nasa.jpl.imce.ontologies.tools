@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<launchConfiguration type="org.eclipse.dltk.ruby.launching.RubyLaunchConfigurationType">
+<booleanAttribute key="enableBreakOnFirstLine" value="false"/>
+<booleanAttribute key="enableDbgpLogging" value="false"/>
+<stringAttribute key="mainScript" value="tools/repair-ontology"/>
+<stringAttribute key="nature" value="org.eclipse.dltk.ruby.core.nature"/>
+<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
+<listEntry value="/gov.nasa.jpl.imce.ontologies/tools/repair-ontology"/>
+</listAttribute>
+<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
+<listEntry value="1"/>
+</listAttribute>
+<mapAttribute key="org.eclipse.debug.core.environmentVariables">
+<mapEntry key="RUBYLIB" value="../lib/OntologyBundles:../lib/Makefile:../lib/Application:../lib/Jena:../lib/ruby-jena:../lib/IMCE:../lib/ruby-owlapi:../lib/OWLAPI"/>
+</mapAttribute>
+<stringAttribute key="org.eclipse.debug.ui.ATTR_CAPTURE_IN_FILE" value="${workspace_loc:/gov.nasa.jpl.imce.ontologies/ontologies/logs}/repair-ontology.log"/>
+<listAttribute key="org.eclipse.debug.ui.favoriteGroups">
+<listEntry value="org.eclipse.debug.ui.launchGroup.run"/>
+</listAttribute>
+<booleanAttribute key="org.eclipse.dltk.launching.debugConsole" value="true"/>
+<stringAttribute key="process_factory_id" value="org.eclipse.dltk.launching.scriptProcessFactory"/>
+<stringAttribute key="project" value="gov.nasa.jpl.imce.ontologies"/>
+<stringAttribute key="scriptArguments" value="--debug --prefix-file .prefixes.yaml &quot;${file_prompt}&quot;"/>
+<stringAttribute key="workingDir" value="${workspace_loc:/gov.nasa.jpl.imce.ontologies/ontologies}"/>
+</launchConfiguration>

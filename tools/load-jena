@@ -1,0 +1,75 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'JenaApplication'
+
+java_import java.io.StringWriter
+
+APPLICATION_NAME = 'load-jena'
+
+class LoadJenaApplication < JenaApplication
+  
+  def run
+    
+    # Add options.
+    
+    option_parser.on('--uri URI', "ontology uri") do |v|
+      @options.uri = v
+    end
+
+    super
+    
+    # Check option values.
+    
+    unless @options.uri
+      log(FATAL, 'no ontology uri specified')
+      return 1
+    end
+    
+    unless argv.length == 1
+      log(FATAL, "#{argv.length} ontology files specified")
+      return 1
+    end
+    
+    # Load ontology.
+    
+    filename = argv.first
+    log(INFO, "parse model from #{filename}")
+    model = ModelFactory.create_default_model
+    model.read(File.open(filename).to_inputstream, '')
+    log(INFO, "load model #{@options.uri}")
+    
+    # Delete model for this uri.
+    
+    log(INFO, "delete model #{@options.uri}")
+    @data_service.delete_model(@options.uri)
+    
+    # Add model to service.
+    
+    log(INFO, 'add model to service')
+    @data_service.add(@options.uri, model)
+    unless @data_service.contains_model(@options.uri)
+      log(WARN, 'failed to add model for #{@options.uri} to dataset adapter')
+    end
+    
+    # Exit.
+    
+    return 0
+    
+  end
+end
+
+exit(LoadJenaApplication.new(APPLICATION_NAME).start)

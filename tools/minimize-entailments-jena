@@ -1,0 +1,107 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'JenaApplication'
+  
+APPLICATION_NAME = 'minimize-entailments-jena'
+
+class MinimizeApplication < JenaApplication
+  
+  def run
+    
+    option_parser.on('--staging-host HOST', 'staging host (required)') do |v|
+      @options.staging_host = v
+    end
+    option_parser.on('--staging-port HOST', 'staging port (required)') do |v|
+      @options.staging_port = v
+    end
+    option_parser.on('--staging-dataset DATASET', 'staging dataset (required)') do |v|
+      @options.staging_dataset = v
+    end
+    option_parser.on('--type TYPE', 'entailment type (required)') do |v|
+      @options.type = v
+    end
+
+    super
+    
+    required = %w{host port dataset}.map do |v|
+      "staging_#{v}".to_sym
+    end << :type
+    unless required.all? { |r| @options.send(r) }
+      log(FATAL, 'incomplete arguments')
+      return 1
+    end
+    
+    unless named_uri = argv.shift
+      log(FATAL, 'no URI specified')
+      return 1
+    end
+    
+    # Open staging data service.
+    
+    staging_service_uri = get_service_uris(@options.staging_host, @options.staging_port, @options.staging_dataset)
+    unless staging_data_service = open_data_service(staging_service_uri['data'])
+      log(FATAL, "cannot open staging data service")
+    end
+      
+    # Create model for minimized result.
+    
+    log(INFO, 'create model for minimized result')
+    model = ModelFactory.create_default_model
+    
+    # Add axioms for named graph.
+    
+    uri = "#{named_uri}/#{@options.type}"
+    log(INFO, "add axioms for #{uri}")
+    named_model = staging_data_service.get_model(uri)
+    model.add(named_model)
+    
+    # Remove redundant axioms.
+    
+    redundant_graphs = @closure_by_ontology[named_uri].inject([named_uri]) do |m, o|
+      m << o
+      m << "#{o}/#{@options.type}"
+    end
+    redundant_graphs.each do |u|
+      log(INFO, "remove axioms from #{u}")
+      log(DEBUG, "get axioms from #{u}")
+      if imported_model = staging_data_service.get_model(u)
+        list = imported_model.list_statements
+        while list.has_next
+          s = list.next_statement
+          if named_model.contains(s)
+            log(DEBUG, "remove statement #{s.to_s}")
+            model.remove(s)
+          end
+        end
+      else
+        log(DEBUG, "no model for #{u}")
+      end
+    end
+    
+    # Write minimized model.
+    
+    log(INFO, 'write merged model')
+    model.write(STDOUT.to_outputstream)
+  
+    # Exit.
+    
+    return 0
+    
+  end
+end
+
+exit(MinimizeApplication.new(APPLICATION_NAME).start)

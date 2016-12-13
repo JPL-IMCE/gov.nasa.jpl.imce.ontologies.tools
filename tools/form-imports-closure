@@ -1,0 +1,103 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'OWLAPIApplication'
+
+java_import 'org.coode.xml.XMLWriterPreferences'
+
+APPLICATION_NAME = 'form-imports-closure'
+
+class FormImportsClosure < OWLAPIApplication
+  
+  def run
+    
+    # Add options.
+    
+    option_parser.on('--imports-iri IRI', "IRI for imports closure") do |v|
+      @options.imports_iri = v
+    end
+
+    super
+    
+    unless @options.imports_iri
+      log(FATAL, "must specify --imports-iri")
+      return 1
+    end
+    unless argv.length == 1
+      log(FATAL, "must specify a single ontology iri")
+      return 1
+    end
+    named_iri = IRI.create(argv.shift)
+    imports_iri = IRI.create(@options.imports_iri)
+    
+    # Create ontology manager.
+    
+    log(DEBUG, 'create ontology manager')
+    manager = OWLManager.create_owl_ontology_manager
+    log(DEBUG, 'add location mappers')
+    location_mappers.each do |mapper|
+      manager.add_iri_mapper(mapper)
+    end
+   
+    # Create data factory.
+    
+    factory = manager.getOWLDataFactory
+    
+    # Set XML serialization preferences.
+    
+    xml_prefs = XMLWriterPreferences.get_instance
+    xml_prefs.set_use_namespace_entities(true)
+    
+    # Create ontology for merged result.
+    
+    log(INFO, 'create model for merged result')
+    ontology = manager.createOntology(imports_iri)
+    
+    # Load ontologies.
+    
+    log(DEBUG, "load ontology #{named_iri.to_s}")
+    named = manager.loadOntology(named_iri)
+    imported = named.getImports
+    
+    # Get ontology format (prefix manager).
+    
+    log(DEBUG, 'get ontology format')
+    format = manager.getOntologyFormat(named)
+      
+    # Add axioms for named and imported graphs.
+    
+    log(INFO, 'add axioms for named and imported graphs')
+    graph_map = { true => [named], false => imported}
+    graph_map.each do |top, list|
+      list.each do |o|
+        log(DEBUG, "copy axioms from #{o.to_s}")
+        manager.addAxioms(ontology, o.getLogicalAxioms)
+      end
+    end
+    
+    # Serialize ontology.
+    
+    manager.saveOntology(ontology, format, STDOUT.to_outputstream)
+    
+    # Exit.
+    
+    return 0
+    
+  end
+  
+end
+
+exit(FormImportsClosure.new(APPLICATION_NAME).start)

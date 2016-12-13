@@ -1,0 +1,121 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'Application'
+require 'fileutils'
+require 'find'
+require 'zip'
+
+APPLICATION_NAME = 'extract-export'
+
+class ExtractExport < Application
+  
+  def run
+    
+    option_parser.on('--artifacts-dir DIRECTORY', "artifacts directory") do |v|
+      @options.artifacts_dir = v
+    end
+
+    super
+    
+    # Check for proper arguments.
+    
+    unless @options.artifacts_dir
+      log(FATAL, 'no artifacts directory specified')
+      return 1
+    end
+    
+    unless archive = argv.shift
+      log(FATAL, 'no archive file specified')
+      return 1
+    end
+    
+    # Extract from top-level file.
+     
+    log(INFO, "extracting from #{archive}")
+    Zip::File.open(archive) do |zip_file|
+      zip_file.each do |entry|
+        log(DEBUG, "extract #{entry.name}")
+        dest = "#{@options.artifacts_dir}/#{entry.name}"
+        dir = File.dirname(dest)
+        FileUtils.mkdir_p(dir) unless Dir.exists?(dir)
+        begin
+          entry.extract(dest)
+        rescue Zip::DestinationFileExistsError 
+        end
+      end
+    end
+
+    # Find embedded archives and extract.
+    
+    log(INFO, 'find embedded archives and extract')
+    Find.find(@options.artifacts_dir).each do |f|
+      next unless FileTest.file?(f) && f =~ /\.zip\z/
+      log(DEBUG, "extracting from #{f}")
+      Zip::File.open(f) do |zip_file|
+        zip_file.each do |entry|
+          log(DEBUG, "extract #{entry.name}")
+          dest = "#{@options.artifacts_dir}/#{entry.name}"
+          dir = File.dirname(dest)
+          FileUtils.mkdir_p(dir) unless Dir.exists?(dir)
+          begin
+            entry.extract(dest)
+          rescue Zip::DestinationFileExistsError
+          end
+        end
+      end
+    end
+
+    # Find embedded archives and extract.
+    
+    log(INFO, 'find embedded archives and extract')
+    Find.find(@options.artifacts_dir).each do |f|
+      next unless FileTest.file?(f) && f =~ /\.zip\z/
+      log(DEBUG, "extracting from #{f}")
+      Zip::File.open(f) do |zip_file|
+        zip_file.each do |entry|
+          log(DEBUG, "extract #{entry.name}")
+          dest = "#{@options.artifacts_dir}/#{entry.name}"
+          dir = File.dirname(dest)
+          FileUtils.mkdir_p(dir) unless Dir.exists?(dir)
+          begin
+            entry.extract(dest)
+          rescue Zip::DestinationFileExistsError
+          end
+        end
+      end
+    end
+    
+    # Find top-level metadata ontology.
+    
+    log(INFO, 'find top-level metadata ontology')
+    top_metadata = Find.find(@options.artifacts_dir).select do |f|
+      File.file?(f) && f =~ /\.omf-metadata.owl\z/
+    end.first
+    unless top_metadata
+      log(FATAL, "can't find top-level metadata")
+      return 1
+    end
+    puts top_metadata
+    
+    # Exit.
+    
+    return 0
+    
+  end
+end
+
+exit(ExtractExport.new(APPLICATION_NAME).start)

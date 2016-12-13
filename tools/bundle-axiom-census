@@ -1,0 +1,92 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'set'
+require 'yaml'
+require 'OWLAPIApplication'
+
+APPLICATION_NAME = 'bundle-axiom-census'
+
+class BundleAxiomCensus < OWLAPIApplication
+  
+  def run
+    
+    super
+        
+    # Get bundle IRI.
+    
+    if ARGV.length == 1
+      bundle_iri = ARGV.shift
+      log(INFO, "bundle IRI #{bundle_iri}")
+    else
+      log(FATAL, 'no bundle IRI specified')
+      return 1
+    end
+    
+    # Axiom and class expression storage.
+    
+    axioms = Hash.new { |h, k| h[k] = 0 }
+    expressions = Hash.new { |h, k| h[k] = 0 }
+      
+    # Create ontology manager.
+    
+    log(INFO, 'create ontology manager')
+    manager = OWLManager.create_owl_ontology_manager
+    log(DEBUG, 'add location mappers')
+    location_mappers.each do |mapper|
+      manager.add_iri_mapper(mapper)
+    end
+   
+    # Load bundle.
+        
+    log(INFO, "load bundle #{bundle_iri}")
+    manager.loadOntology(IRI.create(bundle_iri))
+      
+    # Iterate over loaded ontologies and collect axioms and expression.
+    
+    manager.getOntologies.each do |ontology|
+      ontology_iri = ontology.getOntologyID.getOntologyIRI
+      log(DEBUG, "process #{ontology_iri}")
+      ontology.getLogicalAxioms.each do |axiom|
+        axiom_type = axiom.getAxiomType.getName 
+        axioms[axiom_type] += 1
+        axiom.getNestedClassExpressions.each do |expression|
+          expression_type = expression.getClassExpressionType.getName
+          expressions[expression_type] += 1
+        end
+      end
+    end
+    
+    # Print results.
+    
+    puts "axioms"
+    axioms.sort_by { |k, v| v }.reverse.each do |t, c|
+      printf("%6d %s\n", c, t)
+    end
+        
+    puts "expressions"
+    expressions.sort_by { |k, v| v }.reverse.each do |t, c|
+      printf("%6d %s\n", c, t)
+    end
+        
+    # Exit.
+    
+    return 0
+          
+  end
+end
+
+exit(BundleAxiomCensus.new(APPLICATION_NAME).start)

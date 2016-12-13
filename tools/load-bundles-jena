@@ -1,0 +1,112 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'JenaApplication'
+require 'OntologyBundles'
+
+java_import com.hp.hpl.jena.rdf.model.ResourceFactory
+
+APPLICATION_NAME = 'load-bundles-jena'
+
+CONTEXT = 'http://imce.jpl.nasa.gov'
+
+class LoadBundlesApplication < JenaApplication
+  
+  def run
+    
+    # Add options.
+    
+    option_parser.on('--bundles BUNDLES', "bundles data file") do |v|
+      @options.bundles = v
+    end
+    option_parser.on('--groups GROUPS', "groups data file") do |v|
+      @options.groups = v
+    end
+
+    super
+    
+    # Check option values.
+    
+    unless @options.bundles
+      log(FATAL, 'no bundles data file specified')
+      return 1
+    end
+    unless @options.groups
+      log(FATAL, 'no groups data file specified')
+      return 1
+    end
+    
+  	# Load ontology bundles data.
+  	
+  	log(INFO, 'load ontology bundles data')
+  	bundle_by_name = Marshal.load(File.open(@options.bundles, 'rb'))
+  	log(DEBUG, "ontology bundles #{bundle_by_name.inspect}")
+  
+  	# Load ontology groups data.
+  	
+  	log(INFO, 'load ontology groups data')
+  	group_by_iri = Marshal.load(File.open(@options.groups, 'rb'))
+  	log(DEBUG, "ontology groups #{group_by_iri.inspect}")
+	
+  	# Create bundle axioms.
+  	
+  	axioms = []
+
+  	log(INFO, 'create bundle axioms')
+    bundle_by_name.values.each do |bundle|
+      bundle_iri = bundle.iri
+      axioms << [bundle_iri, @namespace_by_prefix['rdf'] + 'type', @namespace_by_prefix['owl'] + 'Ontology']
+      bundle.imported_bundles.each do |import|
+        import_iri = import.iri
+        axioms << [bundle_iri, @namespace_by_prefix['annotation'] + 'importsBundle', import_iri]
+      end
+      bundle.groups.each do |group|
+        group_iri = group.iri
+        axioms << [group_iri, @namespace_by_prefix['rdf'] + 'type', @namespace_by_prefix['owl'] + 'Ontology']
+        axioms << [bundle_iri, @namespace_by_prefix['annotation'] + 'bundlesGroup', group_iri]
+        group.parts.each do |part|
+          part_iri = part.iri
+          axioms << [part_iri, @namespace_by_prefix['rdf'] + 'type', @namespace_by_prefix['owl'] + 'Ontology']
+          axioms << [group_iri, @namespace_by_prefix['annotation'] + 'groupsOntology', part_iri]
+        end
+      end
+    end
+    log(DEBUG, "created #{axioms.length} axioms")
+
+    # Add axioms to model.
+    
+    log(INFO, 'add axioms to model')
+    model = ModelFactory.create_default_model
+    raise 'no model' unless model
+    axioms.each do |axiom|
+      subject = ResourceFactory.create_resource(axiom.shift.to_s)
+      predicate = ResourceFactory.create_property(axiom.shift.to_s)
+      object = ResourceFactory.create_resource(axiom.shift.to_s)
+      statement = model.create_statement(subject, predicate, object)
+      log(DEBUG, "add statement [#{subject}, #{predicate}, #{object}]")
+      model.add(statement)
+    end
+    log(INFO, 'save model')
+    @data_service.put_model(CONTEXT, model)
+    
+    # Exit.
+    
+    return 0
+    
+  end
+end
+
+exit(LoadBundlesApplication.new(APPLICATION_NAME).start)

@@ -1,0 +1,59 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'JenaApplication'
+
+APPLICATION_NAME = 'extract-jena'
+
+class ExtractApplication < JenaApplication
+  
+  def run
+    
+    super
+    
+    unless uri = argv.shift
+      log(FATAL, 'no URI given')
+      return 1
+    end
+    
+    # Create model for result.
+    
+    log(INFO, 'create model for result')
+    model = ModelFactory.create_default_model
+    model.setNsPrefixes(@namespace_by_prefix)
+    
+    # Add model for named graph.
+    
+    log(DEBUG, "get model #{uri}")
+    m = @data_service.get_model(uri)
+    if m
+      log(DEBUG, "add model #{uri}")
+      model.add(m)
+    end
+    
+    # Write model.
+    
+    log(INFO, 'write model')
+    model.write(STDOUT.to_outputstream)
+    
+    # Exit.
+    
+    return 0
+    
+  end
+end
+
+exit(ExtractApplication.new(APPLICATION_NAME).start)

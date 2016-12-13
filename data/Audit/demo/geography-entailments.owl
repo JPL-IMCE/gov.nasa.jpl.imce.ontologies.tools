@@ -1,0 +1,3049 @@
+<rdf:RDF
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:j.0="http://www.mooney.net/geo#"
+    xmlns:owl="http://www.w3.org/2002/07/owl#"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+    xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" > 
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sanford">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lynchburgVa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#downeyCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road79">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#fayettevilleNc">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#huntingtonWv">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#snake2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road65">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#abingdonPa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lakewoodCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#middletownNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#arvadaCo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#richardsonTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#koolaupokoHi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#anchorageAk">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountMarcyNy">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newportNewsVa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#littleMissouri2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#warrenMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mckinley">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#alhambraCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pacificOceanAk">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hammondIn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mesquiteTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road78">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#citrusHeightsCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#roanoke2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#colorado2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#portArthurTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#boiseId">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#springfieldMo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hasLowPoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#columbia2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bristolTownshipPa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road64">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#magazineMountainAr">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#fairweather">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#champaignIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#LoPoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#santaClaraCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlanticOceanDe">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bridgeportCt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#arlingtonTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#burbankCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#miamiFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#syracuseNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#dearbornHeightsMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#batonRougeLa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#vallejoCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#oceansideCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#billingsMt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road77">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#washingtonDc">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountSunflowerKs">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountElbertCo">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#monroeLa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#auroraIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#milleLacs">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#torranceCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#oregon">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#red">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#daytonOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newOrleansLa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#carsonCityNv">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#gulfOfMexicoMs">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pontchartrain">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#waltonCountyFl">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#utah">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newOrleansLa2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road76">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lowellMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#corpusChristiTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#flintMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#williamson">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#warwickRi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#height">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road66">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#louisiana">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#manchesterNh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#olympiaWa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#wyoming">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lowerMerionPa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lakeSuperiorMn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#eastOrangeNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#westlandMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bloomingtonMn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#alaska">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#simiValleyCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#westminsterCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cranstonRi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road75">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#patersonNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sanBernardinoCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bostonMa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#naknek">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road55">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#massachusetts">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#norwalkCt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#beaumontTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#provoUt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cheyenne2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bellevueWa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#gardenGroveCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#superior">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#isLakeOf">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#montpelierVt">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#potomacRiverDc">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newYork">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road40">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mississippi">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#deathValleyCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#tennessee2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#odessaTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#miamiBeachFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road74">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#appletonWi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bakersfieldCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bona">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#statePopulation">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#tucsonAz">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#browneTower">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#largoFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#buffaloNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#gannettPeakWy">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#westAllisWi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#centervilleDe">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#chulaVistaCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#River">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#tylerTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#whiteButteNd">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#waukeganIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#irondequoitNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#isCapitalOf">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#woodallMountainMs">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#republican2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#brasstownBaldGa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#eugeneOr">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#ewaHi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.w3.org/2002/07/owl#Nothing">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#madisonWi">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#arlingtonHeightsIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#shreveportLa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sanDiegoCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#yale">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#duluthMn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#passesThrough">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#southBendIn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#albanyGa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#kingsPeakUt">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountMansfieldVt">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#st.ClairShoresMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#ogdenUt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#raleighNc">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bighorn2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lakeChamplainVt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newYorkNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#fortCollinsCo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#redondoBeachCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mcallenTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#losAngelesCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#montana">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#youngstownOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#castle">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bayonneNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#wisconsin">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#kennedy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#niagaraFallsNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#columbusGa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#abileneTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#abbreviation">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#knoxvilleTn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#glendaleAz">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road84">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sassafrasMountainSc">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#metairieLa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#whitney">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lakeErieMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road59">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#birminghamAl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#greenBayWi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#tallahasseeFl">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cedarRapidsIa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#southDakota">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#northPlatte2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#northCarolina">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#santaAnaCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlanticOceanFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#tacomaWa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#huntsvilleAl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#evansvilleIn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#vermont">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#connecticut2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#tampaFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#littleRiverOk">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#wabash2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#albuquerqueNm">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road44">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bear">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#boundaryPeakNv">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#huron">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountDavisPa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#evans">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#coloradoSpringsCo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountCurwoodMi">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road85">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#arkansas2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#royalOakMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#eriePa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#districtOfColumbia">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#fortWayneIn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#fresnoCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#meridenCt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pierreSd">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#northPalisade">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#chattahoochee2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pacificOceanHi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#highPointNj">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#tulsaOk">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#ohio">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hollywoodFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road57">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bigStoneLakeSd">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#arkansas">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#antero">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#planoTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#vancouver">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road86">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#parmaOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cheyenneWy">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountHoodOr">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road8">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#alverstone">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#thousandOaksCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#columbusOh">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#stateArea">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#delaware2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#redfordMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#altoonaPa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cheahaMountainAl">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#winnebago">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#maunaKeaHi">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bethlehemPa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#livoniaMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#alabama">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#columbiaSc">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#coloradoRiverNv">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#portlandOr">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#farmingtonHillsMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.w3.org/2002/07/owl#bottomDataProperty">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#richmondCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road87">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pensacolaFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#racineWi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlanticOceanNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pecos2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#washington">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mississippiRiverKy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road29">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountFrissellCt">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#fortWorthTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sanJuan2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#becharof">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#silverSpringMd">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#City">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lakeOfTheWoods">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#camdenNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlantaGa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#torreys">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sill">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#teshekpuk">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#toledoOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#ouachita2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#arlingtonVa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cimarron2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#michigan2">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#neosho2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road69">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#saltonSea">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#kitCarson">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cherryHillNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#rhodeIsland">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountWhitneyCa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#overlandParkKs">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#southButtress">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#omahaNe">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#taumSaukMountainMo">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#framinghamMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#berkeleyCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#rainy">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#blackMountainKy">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#milwaukeeWi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#scrantonPa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#orlandoFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#greatSaltLake">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#renoNv">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newarkNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#southGateCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#waterlooIa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo/entailments">
+    <owl:versionInfo>2016-04-06 13:18:42 -0700</owl:versionInfo>
+    <rdfs:comment>generated by entail-pellet</rdfs:comment>
+    <owl:imports rdf:resource="http://www.mooney.net/geo"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Ontology"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#elyriaOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#santaRosaCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#tombigbee2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#elizabethNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hasLake">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountainViewCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#charlestonSc">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#ketteringOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlanticOceanSc">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road89">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road5">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#gulfOfMexicoAl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#potomacRiverWv">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sanAngeloTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#modestoCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#spruceKnobWv">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#wyomingMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#haywardCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#denverCo">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#gulfOfMexicoTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#indianapolisIn">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mississippiRiverIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sterlingHeightsMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#jeffersonCityMo">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#portsmouthVa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#huntingtonBeachCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hasHighPoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#saltLakeCityUt">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#siouxCityIa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#northDakota">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pacificOceanOr">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bross">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#waterburyCt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#texas">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#tempeAz">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#arkansasRiverCo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#st.PaulMn">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#albanyNy">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mississippiRiverTn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#uticaNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#portlandMe">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#minnesota">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#gainesvilleFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#annArborMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#greensboroNc">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#dalyCityCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lakeCharlesLa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#chicagoIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#springfieldIl">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#jacksonvilleFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#southPlatte2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#concordNh">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#kansas">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#eastLosAngelesCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#isHighestPointOf">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pasadenaTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#euclidOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#stocktonCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#tenleytownDc">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#edisonNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#providenceRi">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#arizona">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#alexandriaVa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#troyMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#isLowestPointOf">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#santaFeNm">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#nebraska">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#allentownPa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#timmsHillWi">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#statePopDensity">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#eastButtress">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#indiana">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#ciceroIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#southeastCornerNe">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lexingtonKy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#greenvilleSc">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#walthamMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road91">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#guadalupePeakTx">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#redBluffReservoirNm">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pittsburghPa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#terreHauteIn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#desMoinesIa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newBedfordMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#clarkFork2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#oklahoma">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hamptonVa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#westHartfordCt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#runsThrough">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#clearwaterFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sanLeandroCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#kenoshaWi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#garyIn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cumberland2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#inglewoodCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cityPopulation">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newtonMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#clintonMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#nashvilleTn">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road90">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bismarckNd">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#redRiverNd">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#ohioRiverOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#missouri2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#campbellHillOh">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#quandary">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#augustaMe">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#harrisburgPa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#trentonNj">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newHampshire">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#wilmingtonDe">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#maine">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bianca">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#borahPeakId">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#number">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#dallasTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlanticOceanNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#grandPrairieTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#independenceMo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road10">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#belleFourcheRiverWy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cheektowagaNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#franklinTownshipIn">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountRogersVa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#brownsvilleTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlanticOceanRi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#niobrara2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#memphisTn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.w3.org/2002/07/owl#bottomObjectProperty">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#SymmetricProperty"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#iowa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#wichitaKs">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.w3.org/2002/07/owl#topObjectProperty">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#SymmetricProperty"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#TransitiveProperty"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road24">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#salemOr">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#springfieldMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#dundalkMd">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#rochesterMn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountMitchellNc">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#durhamNc">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#westCovinaCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#isCityOf">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#champlain">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#rainier">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newHavenCt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#salinasCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#nashuaNh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#jolietIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#delawareRiverPa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#phoenixAz">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#st.Elias">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#rockfordIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#oaklandCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#charlotteNc">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road25">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#springfieldOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#irvingtonNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#washita2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#juneauAk">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bristolCt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lansingMi">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#Mountain">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#oklahomaCityOk">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#length">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lawrenceMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#chattanoogaTn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pawtucketRi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newBritainCt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pearl2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#saginawMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#maroon">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sanFranciscoCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#wacoTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#waterfordMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#st.JosephMo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hiElevation">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#decaturIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#fullertonCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#eagleMountainMn">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#grandRapidsMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#danburyCt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sanMateoCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#st.Francis2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#baltimoreMd">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sanAntonioTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road81">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#westPalmBeachFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road95">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#tahoe">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#yonkersNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mobileAl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#montgomeryAl">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#glendaleCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#irvineCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hasCapital">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lakewoodCo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#riversideCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#white2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#fallRiverMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#potomac2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#schenectadyNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#loElevation">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#rock2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#muncieIn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newRochelleNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mississippi2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#evanstonIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#florida">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lincoln">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road80">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hamiltonOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#massive">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#oakLawnIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#isMountainOf">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#clevelandOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road94">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#richmondVa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#yellowstone2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountVernonNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#midlandTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#costaMesaCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#clingmansDomeTn">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#california">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#kootenaiRiverMt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#Lake">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#greenwichCt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#orangeCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hudson2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#rochesterNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pennsylvania">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#annapolisMd">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#normanOk">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#fortSmithAr">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#st.LouisMo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sunnyvaleCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lynnMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#kentucky">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#belford">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#fairfieldCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#tennessee">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#westValleyUt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road83">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#anaheimCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#longs">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#elDiente">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road20">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#topekaKs">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#taylorMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road93">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#savannahGa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#granitePeakMt">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hasRiver">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#peoriaIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#ohio2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hasCity">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#kendallFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#powder2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road15">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#harneyPeakSd">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#whittierCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#nevada">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#harvard">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newMexico">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cambridgeMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#columbiaMo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#maryland">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#stamfordCt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountWashingtonNh">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#blackburn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#beaverDamCreekUt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#coloradoRiverAz">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#Capital">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road35">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#ouachitaRiverAr">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlanticOceanVa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#flathead">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sanJoseCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road70">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#auroraCo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#spokaneWa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newJersey">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#smokyHill2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hawaii">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#st.PetersburgFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#escondidoCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mississippiRiverIa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cliftonNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#fremontCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#wrangell">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#doverDe">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#st.FrancisRiverMo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#andersonIn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#erie">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hubbard">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountGreylockMa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#chesapeakeVa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#virginia">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cincinnatiOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#norwalkCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#austinTx">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#maconGa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#garlandTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pennHillsPa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#humphreysPeakAz">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#gila2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road71">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#davenportIa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#dakota2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#green2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#amarilloTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#honoluluHi">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#westVirginia">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#laredoTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#okeechobee">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountMckinleyAk">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#northCharlestonSc">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#southfieldMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlanticOceanNc">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#HiPoint">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#woodbridgeNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lakeArea">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#bethesdaMd">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#road30">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Road"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#winston-salemNc">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#ontario">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#siouxFallsSd">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#jacksonMs">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#kansasCityMo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#shasta">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#boulderCo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#skokieIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#watereeCatawba2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#allegheny2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#borders">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#SymmetricProperty"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#white">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#roanokeVa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#driskillMountainLa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lawtonOk">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#fortLauderdaleFl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#dubuqueIa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#ocheyedanMoundIa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#brocktonMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#crestoneNeedle">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#medfordMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#jerseyCityNj">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#santaBarbaraCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#longBeachCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#carsonCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#buenaParkCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#delaware">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#louisvilleKy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mesaAz">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hasMountain">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlanticOceanMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#fargoNd">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#colorado">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#quincyMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hartfordCt">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#wilson">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#tuscaloosaAl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#uncompahgre">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#minneapolisMn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#santaMonicaCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#michigan">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#northLittleRockAr">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#Road">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#iliamna">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lasVegasNv">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#ontarioCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#frankfortKy">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#detroitMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#blackMesaOk">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#somervilleMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hasRoad">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#ObjectProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#red2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#littleRockAr">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#scottsValleyCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lorainOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#laPlata">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#jerimothHillRi">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#greatFallsMt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#cantonOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pontiacMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#newportBeachCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#readingPa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#State">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#verdigrisRiverKs">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#kansasCityKs">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlanticOceanMd">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#puebloCo">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#idaho">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#hunter">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#virginiaBeachVa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountRainierWa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#elMonteCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#levittownNy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#kennerLa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#longviewTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#elbert">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlanticOceanNh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#upperDarbyPa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#mountKatahdinMe">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#seattleWa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#houstonTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#elCajonCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#canadian2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#connecticut">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#st.Clair">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Lake"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#kalamazooMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#worcesterMa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlanticOceanGa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#southCarolina">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#ohioRiverIn">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.w3.org/2002/07/owl#Thing">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Class"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lakewoodOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lakeMichiganWi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lubbockTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#johnsonTownshipNe">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#snakeRiverId">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#irvingTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#wichitaFallsTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#rioGrande2">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#River"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pasadenaCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#foraker">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#crestone">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lafayetteLa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#venturaCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#alamedaCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#scottsdaleAz">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#dearbornMi">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#helenaMt">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#charlesMoundIl">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#shavano">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#elPasoTx">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#churchill">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#princeton">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.w3.org/2002/07/owl#topDataProperty">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#DatatypeProperty"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#longIslandSoundCt">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#backboneMountainMd">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#concordCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pacificOceanWa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#akronOh">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#wheelerPeakNm">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#HiPoint"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#georgia">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#pomonaCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#comptonCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#philadelphiaPa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#grays">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Mountain"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#illinois">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#sacramentoCa">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#elginIl">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#atlanticOceanMe">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#LoPoint"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#highPointNc">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#charlestonWv">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#lincolnNe">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#Capital"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#missouri">
+    <rdf:type rdf:resource="http://www.mooney.net/geo#State"/>
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#norfolkVa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#oxnardCa">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+  <rdf:Description rdf:about="http://www.mooney.net/geo#casperWy">
+    <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#Thing"/>
+    <rdf:type rdf:resource="http://www.mooney.net/geo#City"/>
+  </rdf:Description>
+</rdf:RDF>

@@ -1,0 +1,1356 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'logger'
+require 'tempfile'
+require 'time'
+require 'tsort'
+require 'uri'
+require 'yaml'
+require 'jpl/docbook'
+require 'jpl/rdf/sesame'
+
+include REXML
+
+# Define constants.
+
+OWL2_MOF2 = 'http://imce.jpl.nasa.gov/foundation/owl2-mof2/owl2-mof2'
+OWL2_MOF2_IRI = RDF::Uri.new(OWL2_MOF2)
+
+# Define constants.
+
+# Define structs.
+
+MapStruct = Struct.new(:map, :ok, :type)
+
+# Define variables.
+
+imports_by_ontology = Hash.new { |h, k| h[k] = Set.new }
+
+results = {}
+
+# Define utility functions.
+
+def equal_any(var, list)
+  '(' + list.map { |val| "#{var} = #{val}" }.push('false').join(' || ') + ')'
+end
+
+class Hash
+  
+  v1, v2, v3 = RUBY_VERSION.split('.')
+  unless v1 > '1' || v2 > '8'
+    # Replacing the to_yaml function so it'll serialize hashes sorted (by their keys)
+    #
+    # Original function is in /usr/lib/ruby/1.8/yaml/rubytypes.rb
+    def to_yaml( opts = {} )
+      YAML::quick_emit( object_id, opts ) do |out|
+        out.map( taguri, to_yaml_style ) do |map|
+          sort.each do |k, v|   # <-- here's my addition (the 'sort')
+            map.add( k, v )
+          end
+        end
+      end
+    end
+  end
+  
+  def close(k)
+    self[k].inject(Set.new) do |m, o|
+      m << o
+      m += self.close(o)
+    end
+  end
+  
+end
+
+class Symbol
+  def <=>(other)
+    to_s <=> other.to_s
+  end
+end
+
+class String
+  def backbone
+    sub(/\Ahttp:\/\/(.*)\z/, 'http://imce.jpl.nasa.gov/backbone/\1')
+  end
+  def context(append = nil)
+    RDF::Uri.new(self + (append ||= '')).to_uriref
+  end
+end
+
+def docbook2html(text, xsltproc, docbook_xhtml_xsl, log = nil)
+  log.debug("docbook fragment: #{text}") if log
+  f = REXML::Formatters::Default.new
+  
+  # Embed fragment within a DocBook article.
+  
+  d = REXML::Document.new()
+  d << a = REXML::Element.new('article')
+  a.add_attribute('xmlns', 'http://docbook.org/ns/docbook')
+  a.add_attribute('version', '5.0')
+  DocBook::Document.parse_fragment(text).each do |p|
+    a << p
+  end
+  if log
+    t = ''
+    f.write(d, t)
+    log.debug("docbook article: #{t}")
+  end
+  
+  # Translate DocBook to HTML.
+  
+  cmd = "#{xsltproc} '#{docbook_xhtml_xsl}' -"
+  log.debug("command: #{cmd}") if log
+  xsltproc = IO.popen(cmd, 'w+')
+  f.write(d, xsltproc)
+  xsltproc.close_write
+  html_in = xsltproc.read
+  xsltproc.close
+  log.debug("html article: #{html_in}")
+
+  # Parse HTML and extract original fragment.
+  
+  d = REXML::Document.new(html_in)
+  html_out = ''
+  d.each_element("html/body/div[@class='article']/p") do |e|
+    f.write(e, html_out)
+  end
+  log.debug("html fragment: #{html_out}") if log
+  html_out
+end
+
+#  Define modules.
+
+class Tree
+  
+  def initialize(hash, value = nil)
+    @hash = hash
+    @value = value
+    @children = []
+  end
+  
+  attr_reader :value
+  attr_accessor :children
+  
+  def add(new_value)
+    
+    # Return if value already exists.
+    
+    return if lookup(new_value)
+    
+    new_tree = Tree.new(@hash, new_value)
+    
+    # Find children of new value in tree.
+    
+    children_in_tree = []
+    descend do |n|
+      children_in_tree << n if @hash.has_key?(n.value) && @hash[n.value].include?(new_value)
+    end
+    
+    children_in_tree.each do |c|
+      new_tree.children << c
+      self.children.delete(c)
+    end
+    
+    # Find parents of new value in tree.
+    
+    if @hash.has_key?(new_value)
+      parents_in_tree = @hash[new_value].map { |pvalue| lookup(pvalue) }.select { |p| p }
+    else
+      parents_in_tree = []
+    end
+
+    if parents_in_tree.empty?
+
+      # Add new tree to children of self.
+
+      children << new_tree
+
+    else
+
+      # Add new tree to children of each parent.
+
+      parents_in_tree.each { |p| p.children << new_tree }
+
+    end
+
+  end
+  alias :<< :add
+  
+  def descend(&block)
+    yield self
+    children.each do |c|
+      c.descend(&block)
+    end
+  end
+  
+  def lookup(value)
+    descend do |tree|
+      return tree if tree.value == value
+    end
+    nil
+  end
+  
+  def to_h
+    h = {}
+    children.each do |c|
+      h[c.value] = c.to_h
+    end
+    h
+  end
+  
+end
+
+# Process arguments.
+
+def usage
+  warn 'ontology-digest --host host --port port --path path --repo repo --iri bundle_uri --name bundle_name --type type --imports imports_file'
+end
+
+log_level = Logger::FATAL
+host = port = path = repo = bundle_iri = bundle_name = type = imports_file = nil
+docbook_xhtml_xsl = '/usr/share/xml/docbook/stylesheet/nwalsh/xhtml/docbook.xsl'
+xsltproc = 'xsltproc'
+
+build_key = '[none]'
+build_number = '[none]'
+revision_number = '[unknown]'
+
+GetoptLong.new(
+[ '--help',    '-h',       GetoptLong::NO_ARGUMENT ],
+[ '--debug',   '-d',       GetoptLong::NO_ARGUMENT ],
+[ '--info',    '-i',       GetoptLong::NO_ARGUMENT ],
+[ '--warn',    '-w',       GetoptLong::NO_ARGUMENT ],
+[ '--repo',    '-r',       GetoptLong::REQUIRED_ARGUMENT ],
+[ '--host',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--port',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--path',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--iri',                 GetoptLong::REQUIRED_ARGUMENT ],
+[ '--name',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--xsltproc',            GetoptLong::REQUIRED_ARGUMENT ],
+[ '--docbook-id',          GetoptLong::REQUIRED_ARGUMENT ],
+[ '--docbook-dtd',         GetoptLong::REQUIRED_ARGUMENT ],
+[ '--docbook-xhtml-xsl',   GetoptLong::REQUIRED_ARGUMENT ],
+[ '--build-key',           GetoptLong::REQUIRED_ARGUMENT ],
+[ '--build-number',        GetoptLong::REQUIRED_ARGUMENT ],
+[ '--revision-number',     GetoptLong::REQUIRED_ARGUMENT ],
+[ '--type',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--imports',             GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt, arg|
+  case opt
+  when "--help"
+    usage
+    exit 0
+  when "--debug"
+    log_level = Logger::DEBUG
+  when "--info"
+    log_level = Logger::INFO
+  when "--warn"
+    log_level = Logger::WARN
+  when "--host"
+    host = arg
+  when "--port"
+    port = arg
+  when "--path"
+    path = arg
+  when "--repo"
+    repo = arg
+  when '--iri'
+    bundle_iri = arg
+  when '--name'
+    bundle_name = arg
+  when '--xsltproc'
+    xsltproc = arg
+  when '--docbook-xhtml-xsl'
+    docbook_xhtml_xsl = arg
+  when '--build-key'
+    build_key = arg
+  when '--build-number'
+    build_number = (arg =~ /\A\d+\z/) ? arg.to_i : arg
+  when '--revision-number'
+    revision_number = (arg =~ /\A\d+\z/) ? arg.to_i : arg
+  when '--type'
+    type = arg
+  when '--imports'
+    imports_file = arg
+  else
+    warn "unknown option: #{opt}"
+    usage
+    exit 1
+  end
+end
+
+unless host && port && path && repo && bundle_iri && bundle_name && type && imports_file && !ARGV.empty?
+  usage
+  exit 1
+end
+
+named_uris = ARGV
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Connect to Sesame server.
+
+log.info('begin session')
+session = RDF::Sesame::Session.new(host, port, path, log)
+raise 'no session' unless session
+log.info('create model')
+model = session.model(repo)
+raise 'no model' unless model
+
+nsm = {}
+namespace_by_prefix = {}
+model.namespaces.map do |defn|
+  unless (prf = defn.prefix.to_s).empty?
+    ns = defn.namespace.to_s
+    nsm[prf] = RDF::NamespaceMap.new(ns)
+    namespace_by_prefix[prf] = ns
+  end
+end
+RDF::Uri.ns_by_prf = namespace_by_prefix
+
+# Create namespace definition string.
+
+NS_DEFS = nsm.map do |prf, ns|
+  "PREFIX #{prf}:#{nsm[prf][''].to_uriref}"
+end.join("\n")
+
+# Load imports graph.
+
+imports_by_ontology = YAML.load(File.open(imports_file))['closure']
+log.debug("imports_by_ontology: #{imports_by_ontology.inspect}")
+
+# Collect ontologies by source.
+
+ontologies_by_source = {}
+ontologies_by_source['named'] = Set.new(named_uris.map { |u| RDF::Uri.new(u) })
+ontologies_by_source['imported'] = named_uris.inject(Set.new) do |m, u|
+  m += imports_by_ontology[u].map { |i| RDF::Uri.new(i)  }
+  m
+end
+ontologies_by_source.each do |source, list|
+  log.debug("ontologies_by_source['#{source}'] = #{list.inspect}")
+end
+
+# Construct IRI lists.
+
+ontology_iri_list = {}
+ontologies_by_source.each do |source, list|
+  ontology_iri_list[source] = list.map { |o| RDF::Uri.new(o).to_uriref }
+end
+log.debug("ontology_iri_list #{ontology_iri_list.inspect}")
+
+# Construct ontology URIs for entailments.
+
+ontologies_by_source_by_type = Hash.new { |h, k| h[k] = Hash.new { |l, m| l[m] = [] } }
+%w{named imported}.each do |org|
+  %w{ClassEntailments PropertyEntailments}.each do |etype|
+    ontologies_by_source_by_type[org][etype] = ontologies_by_source[org].map { |o| RDF::Uri.new(o + "/#{etype}") }
+    log.debug("ontologies_by_source_by_type['#{org}']['#{etype}'] = #{ontologies_by_source_by_type[org][etype].inspect}")
+  end
+end
+
+# Construct SPARQL 'from' clauses.
+
+from_clauses_by_source = {}
+ontologies_by_source.each do |org, list|
+  from_clauses_by_source[org] = list.map { |ont| "from #{ont.to_uriref}" }.join("\n")
+  log.debug("from_clauses_by_source['#{org}'] = #{from_clauses_by_source[org].inspect}")
+end
+
+from_clauses_by_source_by_type = Hash.new { |h, k| h[k] = Hash.new { |l, m| l[m] = [] } }
+ontologies_by_source_by_type.each do |org, hash|
+  hash.each do |etype, list|
+    from_clauses_by_source_by_type[org][etype] = list.map { |ont| "from #{ont.to_uriref}" }.join("\n")
+    log.debug("from_clauses_by_source_by_type['#{org}']['#{etype}'] = #{from_clauses_by_source_by_type[org][etype].inspect}")
+  end
+end
+
+# Construct SPARQL 'from named' clauses.
+
+from_named_clauses_by_source = {}
+from_clauses_by_source.each do |org, c| 
+  from_named_clauses_by_source[org] = c.gsub(/^from /, 'from named ')
+  log.debug("from_named_clauses_by_source['#{org}'] = #{from_named_clauses_by_source[org].inspect}")
+end
+
+from_named_clauses_by_source_by_type = Hash.new { |h, k| h[k] = Hash.new { |l, m| l[m] = [] } }
+from_clauses_by_source_by_type.each do |org, hash|
+  hash.each do |etype, c|
+    from_named_clauses_by_source_by_type[org][etype] = c.gsub(/^from /, 'from named ')
+    log.debug("from_named_clauses_by_source_by_type['#{org}']['#{etype}'] = #{from_named_clauses_by_source_by_type[org][etype].inspect}")
+  end
+end
+
+# Classes.
+
+classes = {}
+query = %Q{
+
+  #{NS_DEFS}
+
+  select distinct ?klass ?reifiedProperty ?structuredDatatype ?isAbstract ?noMapping
+
+  #{from_clauses_by_source['named']}
+  #{from_named_clauses_by_source['named']}
+  #{from_clauses_by_source_by_type['named']['ClassEntailments']}
+  
+  where {
+
+    graph ?graph { ?klass rdf:type owl:Class }.
+
+    optional {
+      ?klass rdfs:subClassOf ?rop
+      filter #{equal_any('?rop', ontologies_by_source['named'].map { |o| o.backbone.context('#ReifiedObjectProperty') })}
+    }
+    
+    optional {
+      ?klass rdfs:subClassOf ?sdt
+      filter #{equal_any('?sdt', ontologies_by_source['named'].map { |o| o.backbone.context('#StructuredDatatype') })}
+    }
+
+    bind(bound(?rop) as ?reifiedProperty)
+    bind(bound(?sdt) as ?structuredDatatype)
+    bind(exists { ?klass annotation:isAbstract true } as ?isAbstract)
+      
+    filter (
+         #{equal_any('?graph', ontology_iri_list['named'])}
+      && !exists { ?klass annotation:noMapping true }
+      && !regex(str(?klass), "#Thing$")
+    )
+  }
+}
+log.debug("classes query: #{query}")
+model.query({'query' => query, 'infer' => 'false'}) do |resp|
+  klass = resp.klass.to_qname
+  classes[klass] = {
+    'isAbstract' => resp.isAbstract.true?,
+    'reifiedProperty' => resp.reifiedProperty.true?,
+    'structuredDatatype' => resp.structuredDatatype.true?,
+  }
+end
+results['classes'] = classes
+  
+# Class taxonomy.
+
+class_taxonomy = Hash.new { |h, k| h[k] = [] }
+inverted_normal_class_taxonomy = Hash.new { |h, k| h[k] = [] }
+inverted_reified_property_class_taxonomy = Hash.new { |h, k| h[k] = [] }
+no_mapping = Set.new
+reified = Set.new
+
+query = %Q{
+
+  #{NS_DEFS}
+
+  select distinct ?klass ?sklass ?reified ?klass_no_mapping ?sklass_no_mapping
+
+  #{from_clauses_by_source['named']}
+  #{from_named_clauses_by_source['named']}
+  #{from_clauses_by_source['imported']}
+
+  where {
+
+    graph ?graph {
+      ?klass rdf:type owl:Class .
+    }
+    ?klass rdfs:subClassOf ?sklass .
+    ?sklass rdf:type owl:Class .
+
+    optional {
+      ?klass rdfs:subClassOf ?interm .
+      ?interm rdfs:subClassOf ?sklass .
+      filter (?klass != ?interm && ?interm != ?sklass)
+    }
+
+    optional {
+      ?property owl:propertyChainAxiom [
+        rdf:first [
+          owl:inverseOf ?srcprop ;
+        ] ;
+      ] .
+      ?srcprop rdfs:domain ?klass .
+    }
+
+    bind(bound(?property) as ?reified)
+    bind(exists { ?klass annotation:noMapping true } as ?klass_no_mapping)
+    bind(exists { ?sklass annotation:noMapping true } as ?sklass_no_mapping)
+    
+    filter (
+         #{equal_any('?graph', ontology_iri_list['named'])}
+      && !regex(str(?klass), "#Thing$")
+      && !regex(str(?sklass), "#Thing$")
+      && !bound(?interm)
+      && ?klass != ?sklass
+    )
+  }
+  order by ?klass ?sklass
+}
+log.debug("class taxonomy query: #{query}")
+model.query({'query' => query, 'infer' => 'false'}) do |resp|
+  klass = resp.klass.to_qname
+  sklass = resp.sklass.to_qname
+  reified << klass if resp.reified.true?
+  no_mapping << klass if resp.klass_no_mapping.true?
+  no_mapping << sklass if resp.sklass_no_mapping.true?
+  class_taxonomy[klass] << sklass
+end
+
+# Elide unmapped classes from class taxonomy.
+  
+def flatten(hash, key, no_mapping)
+  hash[key].inject([]) do |m, o|
+    if no_mapping.include?(o)
+      m += flatten(hash, o, no_mapping)
+    else
+      m << o
+    end
+  end
+end
+
+class_taxonomy.keys.each do |k|
+  class_taxonomy[k] = flatten(class_taxonomy, k, no_mapping)
+end
+class_taxonomy.keys.each do |k|
+  class_taxonomy.delete(k) if no_mapping.include?(k)
+end
+
+# Create inverted class taxonomies.
+
+class_taxonomy.each do |k, v|
+  v.each do |vi|
+    t = reified.include?(k) ? inverted_reified_property_class_taxonomy : inverted_normal_class_taxonomy
+    t[vi] << k
+  end
+end
+
+results['class taxonomy'] = class_taxonomy
+results['inverted normal class taxonomy'] = inverted_normal_class_taxonomy
+results['inverted reified property class taxonomy'] = inverted_reified_property_class_taxonomy
+
+# Reified object property taxonomy.
+
+reified_object_property_taxonomy = Hash.new { |h, k| h[k] = [] }
+no_mapping = Set.new
+query = %Q{
+  #{NS_DEFS}
+  select distinct ?property ?sproperty ?property_no_mapping ?sproperty_no_mapping
+  #{from_clauses_by_source['named']}
+  #{from_clauses_by_source_by_type['named']['PropertyEntailments']}
+  #{from_named_clauses_by_source['named']}
+  where {
+
+      graph ?graph {
+        ?property rdf:type owl:ObjectProperty .
+      }
+
+      ?property rdfs:subPropertyOf ?sproperty .
+      ?sproperty rdf:type owl:ObjectProperty .
+      ?property rdfs:subPropertyOf ?top_rop .
+
+      optional {
+        ?property rdfs:subPropertyOf ?interm .
+        ?interm rdfs:subPropertyOf ?sproperty .
+        filter (?property != ?interm && ?interm != ?sproperty)
+      }
+
+      bind(exists { ?property annotation:noMapping true } as ?property_no_mapping)
+      bind(exists { ?sproperty annotation:noMapping true } as ?sproperty_no_mapping)
+
+      filter (
+        #{equal_any('?graph', ontology_iri_list['named'])}
+        && #{equal_any('?top_rop', ontologies_by_source['named'].map { |o| o.backbone.context('#topReifiedObjectProperty') })}
+        && !#{equal_any('?sproperty', ontologies_by_source['named'].map { |o| o.backbone.context('#topReifiedObjectProperty') })}
+        && !bound(?interm)
+        && !(bound(?noMapping) && ?noMapping)
+        && ?property != ?sproperty
+      )
+    }
+}
+log.debug("reified object property taxonomy query #{query}")
+model.query({'query' => query, 'infer' => 'false'}) do |resp|
+  property = resp.property.to_qname
+  sproperty = resp.sproperty.to_qname
+  no_mapping << property if resp.property_no_mapping.true?
+  no_mapping << sproperty if resp.sproperty_no_mapping.true?
+  reified_object_property_taxonomy[property] << sproperty
+end
+
+# Elide unmapped properties from taxonomy.
+  
+reified_object_property_taxonomy.keys.each do |k|
+  reified_object_property_taxonomy[k] = flatten(reified_object_property_taxonomy, k, no_mapping)
+end
+reified_object_property_taxonomy.keys.each do |k|
+  reified_object_property_taxonomy.delete(k) if no_mapping.include?(k)
+end
+results['reified object property taxonomy'] = reified_object_property_taxonomy
+
+# Object property reification.
+
+object_property_reification = {}
+oprop_qnames = %w{relclass srcprop srctype trgprop trgtype reltype }
+
+query = %Q{
+  
+  #{NS_DEFS}
+
+  select distinct ?property ?relclass ?srcprop ?srctype ?trgprop ?trgtype ?isDerived ?isAbstract ?reltype
+
+  #{from_clauses_by_source['named']}
+  #{from_named_clauses_by_source['named']}
+  #{from_clauses_by_source_by_type['named']['ClassEntailments']}
+  #{from_clauses_by_source_by_type['named']['PropertyEntailments']}
+  #{from_clauses_by_source['imported']}
+  #{from_named_clauses_by_source['imported']}
+  #{from_clauses_by_source_by_type['imported']['ClassEntailments']}
+  
+  where {
+    graph ?graph { ?property rdf:type owl:ObjectProperty }
+    ?property rdfs:subPropertyOf ?top_rop .
+  
+    optional {
+      ?property annotation:noMapping ?noMapping .
+    }
+  
+    # reification property chain
+
+    ?property owl:propertyChainAxiom [
+      rdf:first [
+        owl:inverseOf ?srcprop ;
+      ] ;
+      rdf:rest [
+        rdf:first ?trgprop ;
+      ] ;
+    ] .
+
+    # first clause with inverse source property.
+
+    ?srcprop rdf:type owl:ObjectProperty .
+    ?srcprop rdf:type owl:FunctionalProperty .
+
+    # second clause with target property
+
+    ?trgprop rdf:type owl:ObjectProperty .
+    ?trgprop rdf:type owl:FunctionalProperty .
+
+    # relationship class
+
+    ?srcprop rdfs:domain ?relclass .
+    ?srcprop rdfs:range ?srctype .
+  
+    ?trgprop rdfs:domain ?relclass .
+    ?trgprop rdfs:range ?trgtype .
+    
+    ?relclass rdfs:subClassOf ?reltype .
+    ?reltype rdfs:subClassOf owl2-mof2-backbone:ReifiedObjectProperty
+    graph #{OWL2_MOF2_IRI.to_uriref} { ?reltype rdf:type owl:Class }
+    
+    # Ensure that reified object property type is most specific. Enforced by filter below.
+    
+    optional {
+      ?relclass rdfs:subClassOf ?reltype2 .
+      ?reltype2 rdfs:subClassOf ?reltype .
+      graph #{OWL2_MOF2_IRI.to_uriref} { ?reltype2 rdf:type owl:Class }
+      filter (?reltype2 != ?reltype)   
+    }
+
+    bind(exists { ?property annotation:isDerived true } as ?isDerived)
+    bind(exists { ?property annotation:isAbstract true } as ?isAbstract)
+    
+    filter (
+         #{equal_any('?graph', ontology_iri_list['named'])}
+      && #{equal_any('?top_rop', ontologies_by_source['named'].map { |o| o.backbone.context('#topReifiedObjectProperty') })}
+      && !#{equal_any('?property', ontologies_by_source['named'].map { |o| o.backbone.context('#topReifiedObjectProperty') })}
+      && !(bound(?noMapping) && ?noMapping)
+      && !bound(?reltype2)
+    )
+  }
+}
+log.debug("object property reification query #{query}")
+model.query({ 'query' => query, 'infer' => 'false'}) do |resp|
+  object_property_reification[resp.property.to_qname] = h = {}
+  oprop_qnames.each do |qname|
+    h[qname] = resp.send(qname).to_qname
+  end
+  h['isAbstract'] = resp.isAbstract.true?
+  h['isDerived'] = resp.isDerived.true?
+end
+results['object property reification'] = object_property_reification
+  
+# Structured data property taxonomy.
+
+structured_data_property_taxonomy = Hash.new { |h, k| h[k] = [] }
+mapped = Set.new
+query = %Q{
+  #{NS_DEFS}
+  select distinct ?property ?sproperty ?property_no_mapping ?sproperty_no_mapping
+  #{from_clauses_by_source['named']}
+  #{from_clauses_by_source_by_type['named']['PropertyEntailments']}
+  #{from_named_clauses_by_source['named']}
+  where {
+
+      graph ?graph {
+        ?property rdf:type owl:ObjectProperty .
+      }
+
+      ?property rdfs:subPropertyOf ?sproperty .
+      ?sproperty rdf:type owl:ObjectProperty .
+      ?property rdfs:subPropertyOf ?top_sdp .
+
+      optional {
+        ?property rdfs:subPropertyOf ?interm .
+        ?interm rdfs:subPropertyOf ?sproperty .
+        filter (?property != ?interm && ?interm != ?sproperty)
+      }
+
+      bind(exists { ?property annotation:noMapping true } as ?property_no_mapping)
+      bind(exists { ?sproperty annotation:noMapping true } as ?sproperty_no_mapping)
+
+      filter (
+        #{equal_any('?graph', ontology_iri_list['named'])}
+        && #{equal_any('?top_sdp', ontologies_by_source['named'].map { |o| o.backbone.context('#topStructuredDataProperty') })}
+        && !#{equal_any('?sproperty', ontologies_by_source['named'].map { |o| o.backbone.context('#topStructuredDataProperty') })}
+        && !bound(?interm)
+        && ?property != ?sproperty
+      )
+    }
+}
+log.debug("structured data property taxonomy query #{query}")
+model.query({'query' => query, 'infer' => 'false'}) do |resp|
+  property = resp.property.to_qname
+  sproperty = resp.sproperty.to_qname
+  structured_data_property_taxonomy[property] << sproperty
+  no_mapping << property if resp.property_no_mapping.true?
+  no_mapping << sproperty if resp.sproperty_no_mapping.true?
+end
+
+# Elide unmapped properties from taxonomy.
+  
+structured_data_property_taxonomy.keys.each do |k|
+  structured_data_property_taxonomy[k] = flatten(structured_data_property_taxonomy, k, no_mapping)
+end
+structured_data_property_taxonomy.keys.each do |k|
+  structured_data_property_taxonomy.delete(k) if no_mapping.include?(k)
+end
+
+results['structured data property taxonomy'] = structured_data_property_taxonomy
+
+# Structured data properties.
+
+structured_data_properties = {}
+query = %Q{
+
+  #{NS_DEFS}
+
+  select distinct ?property ?domain ?range ?ontology
+
+  #{from_clauses_by_source['named']}
+  #{from_named_clauses_by_source['named']}
+
+  where {
+
+      graph ?ontology {
+        ?property rdf:type owl:ObjectProperty .
+      }
+
+      ?property rdfs:subPropertyOf ?top_sdp .
+      ?property rdfs:domain ?domain .
+      ?property rdfs:range ?range .
+
+      optional {
+        ?property annotation:noMapping ?noMapping .
+      }
+
+      filter (
+        #{equal_any('?ontology', ontology_iri_list['named'])}
+        && #{equal_any('?top_sdp', ontologies_by_source['named'].map { |o| o.backbone.context('#topStructuredDataProperty') })}
+        && !(bound(?noMapping) && ?noMapping)
+      )
+    }
+}
+log.debug("structured data properties query #{query}")
+model.query({'query' => query, 'infer' => 'false'}) do |resp|
+  property = resp.property.to_qname
+  domain = resp.domain.to_qname
+  range = resp.range.to_qname
+  ontology = resp.ontology.to_s
+  structured_data_properties[property] = h = {}
+  h['domain'] = domain
+  h['range'] = range
+  h['ontology'] = ontology
+end
+results['structured data properties'] = structured_data_properties
+
+# Scalar data property taxonomy.
+
+scalar_data_property_taxonomy = Hash.new { |h, k| h[k] = [] }
+no_mapping = Set.new
+
+query = %Q{
+  #{NS_DEFS}
+  select distinct ?property ?sproperty ?property_no_mapping ?sproperty_no_mapping
+  #{from_clauses_by_source['named']}
+  #{from_clauses_by_source_by_type['named']['PropertyEntailments']}
+  #{from_named_clauses_by_source['named']}
+  where {
+
+      graph ?graph {
+        ?property rdf:type owl:DatatypeProperty .
+      }
+
+      ?property rdfs:subPropertyOf ?sproperty .
+      ?sproperty rdf:type owl:ObjectProperty .
+      ?property rdfs:subPropertyOf ?top_sdp .
+
+      optional {
+        ?property rdfs:subPropertyOf ?interm .
+        ?interm rdfs:subPropertyOf ?sproperty .
+        filter (?property != ?interm && ?interm != ?sproperty)
+      }
+
+      bind(exists { ?property annotation:noMapping ?noMapping } as ?property_no_mapping)
+      bind(exists { ?sproperty annotation:noMapping ?noMapping } as ?sproperty_no_mapping)
+
+      filter (
+        #{equal_any('?graph', ontology_iri_list['named'])}
+        && (
+             #{equal_any('?top_sdp', ontologies_by_source['named'].map { |o| o.backbone.context('#topDataProperty') })}
+          || #{equal_any('?top_sdp', ontologies_by_source['named'].map { |o| o.backbone.context('#topScalarDataProperty') })}
+        )
+        && !#{equal_any('?sproperty', ontologies_by_source['named'].map { |o| o.backbone.context('#topDataProperty') })}
+        && !#{equal_any('?sproperty', ontologies_by_source['named'].map { |o| o.backbone.context('#topScalarDataProperty') })}
+        && !bound(?interm)
+        && ?property != ?sproperty
+      )
+    }
+}
+log.debug("scalar data property taxonomy query #{query}")
+model.query({'query' => query, 'infer' => 'false'}) do |resp|
+  property = resp.property.to_qname
+  sproperty = resp.sproperty.to_qname
+  scalar_data_property_taxonomy[property] << sproperty
+  no_mapping << property if resp.property_no_mapping.true
+  no_mapping << sproperty if resp.sproperty_no_mapping.true
+end
+
+# Elide unmapped properties from taxonomy.
+  
+scalar_data_property_taxonomy.keys.each do |k|
+  scalar_data_property_taxonomy[k] = flatten(scalar_data_property_taxonomy, k, no_mapping)
+end
+scalar_data_property_taxonomy.keys.each do |k|
+  scalar_data_property_taxonomy.delete(k) if no_mapping.include?(k)
+end
+
+results['scalar data property taxonomy'] = scalar_data_property_taxonomy
+
+# Scalar data properties.
+
+scalar_data_properties = {}
+query = %Q{
+
+  #{NS_DEFS}
+
+  select distinct ?property ?domain ?range ?ontology
+
+  #{from_clauses_by_source['named']}
+  #{from_named_clauses_by_source['named']}
+
+  where {
+
+      graph ?ontology {
+        ?property rdf:type owl:DatatypeProperty .
+      }
+
+      ?property rdfs:subPropertyOf ?top_sdp .
+      ?property rdfs:domain ?domain .
+      ?property rdfs:range ?range .
+
+      optional {
+        ?property annotation:noMapping ?noMapping .
+      }
+
+      filter (
+        #{equal_any('?ontology', ontology_iri_list['named'])}
+        && (
+             #{equal_any('?top_sdp', ontologies_by_source['named'].map { |o| o.backbone.context('#topDataProperty') })}
+          || #{equal_any('?top_sdp', ontologies_by_source['named'].map { |o| o.backbone.context('#topScalarDataProperty') })}
+        )
+        && !#{equal_any('?property', ontologies_by_source['named'].map { |o| o.backbone.context('#topDataProperty') })}
+        && !#{equal_any('?property', ontologies_by_source['named'].map { |o| o.backbone.context('#topScalarDataProperty') })}
+        && !(bound(?noMapping) && ?noMapping)
+      )
+    }
+}
+log.debug("scalar data properties query #{query}")
+model.query({'query' => query, 'infer' => 'false'}) do |resp|
+  property = resp.property.to_qname
+  domain = resp.domain.to_qname
+  range = resp.range.to_qname
+  ontology = resp.ontology.to_s
+  scalar_data_properties[property] = h = {}
+  h['domain'] = domain
+  h['range'] = range
+  h['ontology'] = ontology
+end
+results['scalar data properties'] = scalar_data_properties
+
+# Entity OMG element ID.
+
+omg_element_id = {}
+query = %Q{
+  #{NS_DEFS}
+  select distinct ?entity ?id
+  #{from_clauses_by_source['named']}
+  
+  where {
+    ?entity annotation:omgElementId ?id
+  }
+}
+log.debug("entity omg element id query #{query}")
+model.query({ 'query' => query, 'infer' => 'false'}) do |resp|
+  entity = resp.entity.to_qname
+  id = resp.id.to_s
+  omg_element_id[entity] = id
+end
+results['entity omg element id'] = omg_element_id
+  
+# Valid subject-predicate-object triples.
+
+if type == 'imce'
+  
+  valid_s_tree = Tree.new(class_taxonomy, 'valid subject tree')
+  valid_fp_tree = Tree.new(reified_object_property_taxonomy,
+                           'valid forward predicate tree')
+  valid_rp_tree = Tree.new(reified_object_property_taxonomy,
+                           'valid reverse predicate tree')
+  valid_o_tree = Tree.new(class_taxonomy, 'valid object tree')
+  
+  valid_sfp_list = Hash.new { |h, k| h[k] = Set.new }
+  valid_srp_list = Hash.new { |h, k| h[k] = Set.new }
+  valid_so_list = Hash.new { |h, k| h[k] = Set.new }
+  valid_ps_list = Hash.new { |h, k| h[k] = Set.new }
+  valid_po_list = Hash.new { |h, k| h[k] = Set.new }
+  valid_os_list = Hash.new { |h, k| h[k] = Set.new }
+  valid_ofp_list = Hash.new { |h, k| h[k] = Set.new }
+  valid_orp_list = Hash.new { |h, k| h[k] = Set.new }
+    
+  valid_spo_list = Hash.new { |h, k| h[k] = Hash.new { |l, m| l[m] = Set.new } }
+  valid_sofp_list = Hash.new { |h, k| h[k] = Hash.new { |l, m| l[m] = Set.new } }
+  valid_sorp_list = Hash.new { |h, k| h[k] = Hash.new { |l, m| l[m] = Set.new } }
+  valid_pos_list = Hash.new { |h, k| h[k] = Hash.new { |l, m| l[m] = Set.new } }
+    
+  query = %Q{
+    #{NS_DEFS}
+  
+    select distinct ?source ?property ?forward ?target ?rest_range
+  
+    #{from_clauses_by_source['named']}
+    #{from_clauses_by_source_by_type['named']['ClassEntailments']}
+    #{from_clauses_by_source_by_type['named']['PropertyEntailments']}
+  
+    where {
+    
+      # Find source and target that subclass domain and range of a property.
+  
+      ?source rdfs:subClassOf ?domain .
+      ?property rdfs:domain ?domain .
+      ?property rdfs:range ?range .
+      ?target rdfs:subClassOf ?range .
+    
+      # Find any allValuesFrom restriction on this class and property.
+  
+      optional {
+        ?source rdfs:subClassOf ?restriction .
+        ?restriction rdf:type owl:Restriction ;
+          owl:onProperty ?property ;
+          owl:allValuesFrom ?rest_range .
+  
+        # Ensure that range restriction is most specific. Ontology audits check consistency, so most specific suffices.
+        # Enforced by filter below.
+  
+        optional {
+          ?source rdfs:subClassOf ?restriction2 .
+          ?restriction2 rdf:type owl:Restriction ;
+            owl:onProperty ?property .
+  
+          ?restriction2 rdfs:subClassOf ?restriction .
+          filter (?restriction2 != ?restriction)
+        }
+        filter (!bound(?restriction2))
+      }
+  
+      optional {
+        ?property rdfs:subPropertyOf ?src_or_trg
+        filter (
+           #{equal_any('?src_or_trg', ontologies_by_source['named'].map { |o| o.backbone.context('#topReifiedObjectPropertySource') })}
+        || #{equal_any('?src_or_trg', ontologies_by_source['named'].map { |o| o.backbone.context('#topReifiedObjectPropertyTarget') })}
+        )
+      }
+      
+      # Find property direction.
+  
+      bind (not exists { ?property annotation:isDerived true } as ?forward)
+  
+      # Include only concrete classes and properties. Omit property reification source and target properties.
+  
+      filter (
+           not exists { ?source annotation:isAbstract true }
+        && ?source != owl:Nothing
+        && not exists { ?property annotation:isAbstract true }
+        && ?target != owl:Nothing
+        && not exists { ?target annotation:isAbstract true }
+        && !bound(?src_or_trg)
+      )
+    }
+  }
+  log.debug("valid source-property-target triples query: #{query}")
+  model.query({ 'query' => query, 'infer' => 'false'}) do |resp|
+    
+    source = resp.source.to_qname
+    property = resp.property.to_qname
+    target = (r = resp.rest_range) ? r.to_qname : resp.target.to_qname
+    forward = resp.forward.true?
+    
+    # Build valid subject tree.
+    
+    valid_s_tree << source
+    
+    # Build valid predicate tree.
+    
+    if forward
+      valid_fp_tree << property
+    else
+      valid_rp_tree << property
+    end
+    
+    # Build valid object tree.
+    
+    valid_o_tree << target
+    
+    # Build valid subject-predicate list.
+    
+    if forward
+      valid_sfp_list[source] << property
+    else
+      valid_srp_list[source] << property
+    end
+    
+    # Build valid subject-object list.
+    
+    valid_so_list[source] << target
+  
+    # Build valid predicate-subject list.
+    
+    valid_ps_list[property] << source
+  
+    # Build valid predicate-object list.
+    
+    valid_po_list[property] << target
+  
+    # Build valid object-subject list.
+    
+    valid_os_list[target] << source
+  
+    # Build valid object-predicate list.
+    
+    if forward
+      valid_ofp_list[target] << property
+    else
+      valid_orp_list[target] << property
+    end
+  
+    # Build valid subject-predicate-object list.
+    
+    valid_spo_list[source][property] << target
+    
+    # Build valid subject-object-predicate list.
+    
+    if forward
+      valid_sofp_list[source][target] << property
+    else
+      valid_sorp_list[source][target] << property
+    end
+    
+    # Build valid predicate-object-subject list.
+    
+    valid_pos_list[property][target] << source
+  
+  end
+  
+  valid_s_tree = valid_s_tree.to_h
+  valid_fp_tree = valid_fp_tree.to_h
+  valid_rp_tree = valid_rp_tree.to_h
+  valid_o_tree = valid_o_tree.to_h
+    
+  [
+    valid_sfp_list, valid_srp_list, valid_so_list, valid_ps_list,
+    valid_po_list, valid_os_list, valid_ofp_list, valid_orp_list
+  ].each do |h|
+    h.each do |k, v|
+      h[k] = v.to_a.sort
+    end
+  end
+  
+  [valid_spo_list, valid_sofp_list, valid_sorp_list, valid_pos_list].each do |h|
+    h.each do |k1, v1|
+      v1.each do |k2, v2|
+        v1[k2] = v2.to_a.sort
+      end
+    end
+  end
+  
+  results['valid subject tree'] = valid_s_tree
+  results['valid forward predicate tree'] = valid_fp_tree
+  results['valid reverse predicate tree'] = valid_rp_tree
+  results['valid object tree'] = valid_o_tree
+  results['valid subject-forward predicate list'] = valid_sfp_list
+  results['valid subject-reverse predicate list'] = valid_srp_list
+  results['valid subject-object list'] = valid_so_list
+  results['valid predicate-subject list'] = valid_ps_list
+  results['valid predicate-object list'] = valid_po_list
+  results['valid object-subject list'] = valid_os_list
+  results['valid object-forward predicate list'] = valid_ofp_list
+  results['valid object-reverse predicate list'] = valid_orp_list
+  results['valid subject-predicate-object list'] = valid_spo_list
+  results['valid subject-object-forward predicate list'] = valid_sofp_list
+  results['valid subject-object-reverse predicate list'] = valid_sorp_list
+  results['valid predicate-object-subject list'] = valid_pos_list
+
+end
+
+  # Inverse property pairs.
+
+inverse_properties = {}
+query = %Q{
+  #{NS_DEFS}
+
+  select distinct ?reverse_prop ?forward_prop
+
+  #{from_clauses_by_source['named']}
+  #{from_clauses_by_source_by_type['named']['PropertyEntailments']}
+
+  where {
+    
+    ?forward_prop rdf:type owl:ObjectProperty .
+    ?reverse_prop rdf:type owl:ObjectProperty .
+
+    { ?forward_prop owl:inverseOf ?reverse_prop } union { ?reverse_prop owl:inverseOf ?forward_prop }
+    ?reverse_prop annotation:isDerived true .
+
+    filter (
+         !regex(str(?forward_prop), "#topObjectProperty$")
+      && !regex(str(?reverse_prop), "#topObjectProperty$")
+    )
+
+  }
+
+  order by ?reverse_prop
+}
+log.debug("inverse property query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false'}) do |resp|
+  forward_prop = resp.forward_prop.to_qname
+  reverse_prop = resp.reverse_prop.to_qname
+  inverse_properties[reverse_prop] = forward_prop
+end
+results['inverse property pairs'] = inverse_properties
+  
+# Datatypes.
+
+datatypes = []
+query = %Q{
+  #{NS_DEFS}
+  
+  select distinct ?datatype
+  
+  #{from_clauses_by_source['named']}
+  
+  where {
+    ?datatype rdf:type rdfs:Datatype .
+    filter (!isblank(?datatype))
+  }
+  
+  order by ?datatype
+}
+log.debug("datatypes query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false'}) do |resp|
+  datatypes << resp.datatype.to_qname
+end
+results['datatypes'] = datatypes.sort
+
+# Ontology revisions.
+
+ontology_revision = {}
+query = %Q{
+  #{NS_DEFS}
+  
+  select distinct ?ontology ?revision ?date
+  
+  #{from_clauses_by_source['named']}
+  
+  where {
+    ?ontology rdf:type owl:Ontology .
+  
+    optional {
+      ?ontology owl:versionInfo ?revision .
+    }
+    optional {
+      ?ontology dc:date ?date .
+    }
+  }
+}
+log.debug("ontology revision query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false'}) do |resp|
+  
+  ontology = resp.ontology.to_s
+  
+  if revision = resp.revision
+    if m = (revision.to_s.match(/\A.*Revision:\s+(\d+).*\z/))
+      revision = m[1]
+    end
+  end
+  revision ||= '[unknown]'
+  
+  if date = resp.date
+    if m = (date.to_s.match(/(\d{4}-\d{2}-\d{2})/))
+      date = m[1]
+    end
+  end
+  date ||= '[unknown]'
+  
+  value = [revision, "(#{date})"].join(' ')
+  ontology_revision[ontology] = value
+  log.debug("ontology_revision['#{ontology}'] = #{ontology_revision[ontology]}")
+  
+end
+
+# Entities with annotation properties.
+
+annotation_properties = Hash.new { |h, k| h[k] = Hash.new { |l, m| l[m] = Hash.new { |n, o| n[o] = {} } } }
+query = %Q{
+  #{NS_DEFS}
+  
+  select distinct ?property ?entity ?entity_type ?value
+  
+  #{from_clauses_by_source['named']}
+  #{from_named_clauses_by_source['named']}
+  #{from_clauses_by_source['imported']}
+
+  where {
+    graph ?graph { ?entity rdf:type ?entity_type }
+    ?entity ?property ?value .
+    ?property rdf:type owl:AnnotationProperty .
+
+    filter (
+         !isblank(?entity)
+      && not exists { ?entity annotation:noMapping true }
+      && #{equal_any('?graph', ontology_iri_list['named'])}
+      && #{equal_any('?entity_type', %w{ owl:Class owl:ObjectProperty owl:DatatypeProperty })}
+      && regex(str(?property), "^#{nsm['annotation']['']}", "i")
+    )
+  }
+}
+log.debug("annotation properties query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false'}) do |resp|
+  
+  entity = resp.entity.to_qname
+  entity_type = resp.entity_type.to_qname
+  property = resp.property.to_qname
+  value = resp.value.to_s
+  
+  annotation_properties[property][entity_type][entity] = value
+  log.debug("annotation_properties['#{property}']['#{entity_type}']['#{entity}'] = #{value}")
+  
+end
+results['annotation properties'] = annotation_properties
+
+# Entity description. For unknown reasons, queries run after this fail when writing to the log.
+# It needs to be last.
+
+entity_description = {}
+query = %Q{
+  #{NS_DEFS}
+  
+  select distinct ?entity ?description
+  
+  #{from_clauses_by_source['named']}
+  
+  where {
+    ?entity dc:description ?description .
+  
+    filter (
+      not exists { ?entity annotation:isAbstract true }
+      && not exists { ?entity annotation:noMapping true }
+    )
+  }
+  
+  order by ?entity
+}
+log.debug("entity description query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false'}) do |resp|
+  entity = resp.entity.to_qname
+  description = docbook2html(resp.description.to_s, xsltproc, docbook_xhtml_xsl, log)
+  entity_description[entity] = description
+end
+results['entity description'] = entity_description
+
+# Namespace prefixes.
+  
+results['namespace prefixes'] = namespace_by_prefix
+
+# Ontology imports.
+
+results['ontology imports'] = imports_by_ontology.inject({}) do |m, o|
+  ontology, imports = *o
+  m[ontology.to_s] = imports.map { |i| i.to_s }
+  m
+end
+
+# Imported bundles.
+
+options = { :subj => RDF::Uri.new(bundle_iri).to_uriref, :pred => nsm['annotation']['importsBundle'].to_uriref }
+results['imported bundles'] = model.statements(options).map { |s| s.object.to_s }
+  
+# Summary.
+
+summary = {}
+
+summary['bundle iri'] = bundle_iri
+summary['bundle name'] = bundle_name
+summary['classes'] = class_taxonomy.keys.length
+summary['reified object properties'] = object_property_reification.keys.length
+summary['structured data properties'] = structured_data_properties.length
+summary['scalar data properties'] = scalar_data_properties.length
+summary['datatypes'] = datatypes.length
+summary['build key'] = build_key
+summary['build'] = build_number
+summary['revision']  = revision_number
+summary['ontology revision'] = ontology_revision
+results['summary'] = summary
+  
+# Write output.
+
+puts results.to_yaml
+
+# End session.
+
+log.info('end')
+session.finish

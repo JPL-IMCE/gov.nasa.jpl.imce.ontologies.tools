@@ -1,0 +1,72 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'Application'
+require 'rexml/document'
+
+include REXML
+
+APPLICATION_NAME = 'validate-docbook'
+
+class ValidateDocbookApplication < Application
+  
+  # Add options.
+  
+  def run
+    
+    options.xmllint = 'xmllint'
+    option_parser.on('--xmllint APP', 'xmllint application') do |v|
+      options.xmllint = v
+    end
+
+    options.xmllint_opts = ''
+    option_parser.on('--xmllint-opts OPTIONS', 'xmllint options') do |v|
+      options.xmllint_opts = v
+    end
+
+    super
+    
+    # Validate inputs.
+    
+    doc = Document.new
+    doc << tss = Element.new('testsuites')
+    
+    tss << ts = Element.new('testsuite')
+    ts.add_attribute('name', 'validity')
+    ARGV.each do |docbook|
+      ts << tc = Element.new('testcase')
+      tc.add_attribute('name', docbook)
+      log(INFO, "test case: #{docbook}")
+      cmd = "sh -c '#{@options.xmllint} #{@options.xmllint_opts} #{docbook} 2>&1'"
+      log(DEBUG, "cmd: #{cmd}")
+      result = %x{#{cmd}}.strip
+      unless $?.success? && result.empty?
+        tc << fl = Element.new('failure')
+        fl.text = result
+      end
+    end
+    
+    log(DEBUG, 'write output')
+    doc.write(STDOUT, 2)
+    
+    # Exit.
+    
+    return 0
+    
+  end
+end
+
+exit(ValidateDocbookApplication.new(APPLICATION_NAME).start)

@@ -1,0 +1,247 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'PelletApplication'
+
+APPLICATION_NAME = 'validate-owl'
+
+CONSISTENCY = 'consistency'
+SATISFIABILITY = 'satisfiability'
+
+class ValidateOwlApplication < PelletApplication
+  
+  def run
+
+    @options.validate_satisfiability = false
+    option_parser.on("--#{SATISFIABILITY}", "validate #{SATISFIABILITY}") do
+      @options.validate_satisfiability = true
+    end
+    @options.indent = 2
+    option_parser.on('--indent N', Integer, "indent output [#{@options.indent}]") do |v|
+      @options.indent = v
+    end
+    @options.indicate = false
+    option_parser.on('--indicate-status', "indicate validation status via exit value") do |v|
+      @options.indicate = true
+    end
+    @options.id = nil
+    option_parser.on('--id ID', 'identifier') do |v|
+      @options.id = v
+    end
+    
+    super
+    
+    raise 'no identifier' unless @options.id
+    
+    tests = []
+    tests << CONSISTENCY
+    tests << SATISFIABILITY if @options.validate_satisfiability
+    
+    iris = ARGV.map { |a| IRI.create(a) }
+    result = validate_iris(iris, tests, logger)
+    write_result(result, STDOUT, @options.indent)
+
+    return @options.indicate ? count_failures(result) : 0
+    
+  end
+  
+  def validate_iris(iris, tests, logger)
+    
+    java_import org.semanticweb.owlapi.apibinding.OWLManager
+    java_import com.clarkparsia.pellet.owlapiv3.PelletReasonerFactory
+    java_import com.clarkparsia.owlapi.explanation.GlassBoxExplanation
+    java_import org.semanticweb.owlapi.io.StringDocumentTarget
+    java_import org.semanticweb.owlapi.util.SimpleRenderer
+    java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
+    
+    success = Hash.new { |h, k| h[k] = {} }
+    explanation = Hash.new { |h, k| h[k] = {} }
+    result = {:success => success, :explanation => explanation}
+    functional_syntax_format = org.semanticweb.owlapi.io.OWLFunctionalSyntaxOntologyFormat.new
+      
+    logger.log(Logger::DEBUG, 'create ontology manager')
+    manager = OWLManager.createOWLOntologyManager
+    raise "couldn't create owl ontology manager" unless manager
+    log(DEBUG, 'add location mappers')
+    location_mappers.each do |mapper|
+      manager.add_iri_mapper(mapper)
+    end
+    
+    # Create owl:Thing.
+    
+    logger.log(Logger::DEBUG, 'create owl:Thing')
+    owl_thing = OWLDataFactoryImpl.new.getOWLThing
+    raise "couldn't create owl:Thing" unless owl_thing
+      
+    # Create collection ontology.
+    
+    collection_ontology = manager.createOntology
+    
+    iris.each do |iri|
+      logger.log(Logger::INFO, "ontology: #{iri}")
+        
+      # Load ontology.
+      
+      logger.log(Logger::DEBUG, "load ontology #{iri}")
+      this_ontology = manager.loadOntology(iri)
+      raise "couldn't load ontology #{iri}" unless this_ontology
+      
+      # Add axioms from this ontology and its imports to collection ontology.
+      
+      (manager.getImportsClosure(this_ontology) << this_ontology).each do |o|
+        manager.addAxioms(collection_ontology, o.getAxioms)
+      end
+      
+      # Get ontology format.
+      
+      logger.log(Logger::DEBUG, "get ontology format")
+      format = manager.getOntologyFormat(this_ontology)
+      raise "couldn't get ontology format" unless format
+        
+      # Copy ontology prefixes to output format.
+      
+      logger.log(Logger::DEBUG, "copy ontology format to output format")
+      functional_syntax_format.copyPrefixesFrom(format)
+    end
+    
+    # Get axiom counts.
+    
+    total = 0
+    manager.getOntologies.reject { |o| o ==  collection_ontology }.each do |o|
+      i = o.getOntologyID.getOntologyIRI.toString rescue o.getOntologyID.toString
+      count = o.getLogicalAxiomCount
+      log(Logger::DEBUG, "loaded #{count} logical axioms from #{i}")
+      total += count
+    end
+    log(Logger::INFO, "total #{total} logical axioms")
+    log(Logger::INFO, "total #{collection_ontology.getLogicalAxiomCount} collected logical axioms")
+    
+    # Create renderer for unsatisfiable class names.
+    
+    logger.log(Logger::DEBUG, "create renderer")
+    renderer = SimpleRenderer.new
+    renderer.setPrefixesFromOntologyFormat(collection_ontology, manager, false)
+  
+    # Create Pellet reasoner.
+    
+    logger.log(Logger::DEBUG, 'create pellet reasoner factory')
+    reasoner_factory = PelletReasonerFactory.new
+    raise "couldn't create reasoner factory" unless reasoner_factory
+    logger.log(Logger::DEBUG, 'create pellet reasoner')
+    reasoner = reasoner_factory.createReasoner(collection_ontology)
+    raise "couldn't create reasoner" unless reasoner
+
+    # Create GlassBoxExplanation.
+    
+    logger.log(Logger::DEBUG, 'create glass box explanation')
+    gb_explanation = GlassBoxExplanation.new(reasoner)
+    raise "couldn't create explanation" unless gb_explanation
+    
+    # Run tests.
+    
+    tests.each do |test|
+      logger.log(Logger::INFO, "test #{test}")
+      
+      case test
+      when CONSISTENCY
+    
+        # Check consistency.
+        
+        consistent = success[CONSISTENCY][@options.id] = reasoner.isConsistent
+        logger.log(Logger::INFO, consistent ? 'consistent' : 'inconsistent')
+        
+        unless consistent
+          explanation[CONSISTENCY][@options.id] = explain_class(owl_thing, gb_explanation, manager, functional_syntax_format)
+          break
+        end
+    
+      when SATISFIABILITY
+    
+        # Check satisfiability.
+        
+        all_classes = collection_ontology.getClassesInSignature(true)
+        raise "can't get all classes" unless all_classes
+        node = reasoner.getUnsatisfiableClasses
+        raise "can't get unsatisfiable classes" unless node
+        unsat = node.getEntities.reject { |n| n.isOWLNothing }
+        raise "can't get entities" unless unsat
+        logger.log(Logger::INFO, "#{unsat.length} unsatisfiable classes") 
+        all_classes.each do  |klass|
+          case_name = "#{@options.id} #{renderer.render(klass)}"
+          satisfiable = !unsat.include?(klass)
+          success[SATISFIABILITY][case_name] = satisfiable
+          unless satisfiable
+            explanation[SATISFIABILITY][case_name] =
+              explain_class(klass, gb_explanation, manager, functional_syntax_format)
+          end
+        end      
+      end
+    end
+
+    # Return result.
+        
+    result
+      
+  end
+
+  def explain_class(klass, explanation, manager, format)
+    
+    axioms = explanation.getExplanation(klass)
+    raise "couldn't get explanation for #{uri}" unless axioms
+    ontology = manager.createOntology(axioms)
+    raise "couldn't create ontology for explanation" unless ontology
+    target = StringDocumentTarget.new
+    manager.saveOntology(ontology, format, target)
+    target.toString
+    
+  end
+  
+  def write_result(result, io, indent)
+    
+    require 'rexml/document'
+    
+    doc = REXML::Document.new
+    doc << tss = REXML::Element.new('testsuites')
+    result[:success].each do |test, h1|
+      tss << ts = REXML::Element.new('testsuite')
+      ts.add_attribute('name', test)
+      h1.each do |id, success|
+        ts << tc = REXML::Element.new('testcase')
+        tc.add_attribute('name', id)
+        unless success
+          tc << fl = REXML::Element.new('failure')
+          fl << REXML::CData.new(result[:explanation][test][id])
+        end
+      end
+    end
+    
+    doc.write(io, options.indent)
+    
+  end
+    
+  def count_failures(result)
+    
+    result[:success].inject(0) do |m1, o1|
+      k1, v1 = *o1
+      m1 += v1.values.count { |v| !v }
+      m1
+    end
+    
+  end
+  
+end
+    
+exit(ValidateOwlApplication.new(APPLICATION_NAME).start)

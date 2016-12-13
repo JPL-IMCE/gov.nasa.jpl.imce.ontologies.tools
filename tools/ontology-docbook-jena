@@ -1,0 +1,1948 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'JenaApplication'
+require 'rexml/document'
+require 'jpl/docbook'
+require 'graphviz'
+
+APPLICATION_NAME = 'ontology-docbook-jena'
+
+# Define utility classes.
+
+class OwlRestriction < OpenStruct
+
+  @@list = []
+
+  def self.each(&block)
+    @@list.each(&block)
+  end
+
+  def initialize(klass, prop)
+    super()
+    self.klass = klass
+    self.prop = prop
+    self.minc = 0
+    self.maxc = nil
+    self.allv = nil
+    @@list << self
+  end
+end
+
+class OwlClass < OpenStruct
+
+  @@by_uri = {}
+
+  def self.by_uri
+    @@by_uri
+  end
+
+  def initialize(uri)
+    super()
+    self.uri = uri
+    self.parents = Set.new
+    self.ancestors = Set.new
+    self.children = Set.new
+    self.descendants = Set.new
+    self.restrictions = Set.new
+    self.equivalent = Set.new
+    self.minc = Hash.new(0)
+    self.maxc = {}
+    self.allv = {}
+    self.properties = Hash.new { |h, k| h[k] = Hash.new { |h, k| h[k] = Set.new } }
+    self.isAbstract = false
+    self.comments = []
+    self.omg_embedding = Set.new
+    self.imce_embedding = Set.new
+    self.reification = Set.new
+    self.disjoints = Set.new
+    @@by_uri[uri] = self
+  end
+
+  def intersection(other)
+    if self.ancestors.include?(other.uri)
+      other
+    elsif other.ancestors.include?(self.uri)
+      self
+    else
+      raise "invalid intersection #{self.uri} with #{other.uri}"
+    end
+  end
+  
+end
+
+class OwlProperty < OpenStruct
+
+  @@by_uri = {}
+
+  def self.by_uri
+    @@by_uri
+  end
+
+  def initialize(uri)
+    super()
+    self.uri = uri
+    self.parents = Set.new
+    self.ancestors = Set.new
+    self.functional = false
+    self.domain = nil
+    self.range = nil
+    self.inverse = Set.new
+    self.isAbstract = false
+    self.comments = []
+    self.embedding = Set.new
+    @@by_uri[uri] = self
+  end
+
+end
+
+class OwlDatatypeProperty < OwlProperty
+end
+
+class OwlObjectProperty < OwlProperty
+  def initialialize
+    super()
+    self.isDerived = false
+    self.reification = false
+    self.relclass = nil
+    self.chain = nil
+  end
+end
+
+class RdfsDatatype < OpenStruct
+  
+  @@by_uri = {}
+
+  def self.by_uri
+    @@by_uri
+  end
+
+  def initialize(uri)
+    super()
+    self.uri = uri
+    @@by_uri[uri] = self
+  end
+
+  def intersection(other)
+    raise "invalid intersection #{self.uri} with #{other.uri}"
+  end
+  
+end
+
+class RdfsOneOfDatatype < RdfsDatatype
+  
+  @@one_of_by_uri = {}
+    
+  def self.by_uri
+    @@one_of_by_uri
+  end
+
+  def initialize(uri)
+    super(uri)
+    self.list = Set.new
+    @@one_of_by_uri[uri] = self
+  end
+  
+  def <<(v)
+    self.list << v
+  end
+  
+end
+
+Node = Struct.new(:name, :options)
+Edge = Struct.new(:from, :to, :options)
+EmbeddingStruct = Struct.new(:label, :method)
+MapStruct = Struct.new(:label, :embeddings, :list)
+
+module Enumerable
+  def indexed_struct_list(pri, raggedright = true)
+    return Text.new('') if empty?
+    result = SimpleList.new
+    each do |item|
+      qname = item.qname
+      text = Text.new(qname)
+      result << m = Member.new
+      if item.used
+        m << Link.new(item.id) << text
+      else
+        m << text
+      end
+      m << IndexTerm.new(pri, nil, qname)
+    end
+    result << Instruction.new('dblatex', 'raggedright=true') if raggedright
+    result
+  end
+
+  def indexed_string_list(pri)
+    return Text.new('') if empty?
+    text_list = map { |i| Text.new(i) }
+    term_list = map { |i| IndexTerm.new(pri, nil, i.strip_parens) }
+    result = SimpleList.new
+    text_list.zip(term_list) do |text, term|
+      result << m = Member.new
+      m << text
+      m << term
+    end
+    result
+  end
+
+  def indexed_literal_list(pri)
+    return Text.new('') if empty?
+    text_list = map { |i| Literal.new(i) }
+    term_list = map { |i| IndexTerm.new(pri, nil, i.strip_parens) }
+    result = SimpleList.new
+    text_list.zip(term_list) do |text, term|
+      result << m = Member.new
+      m << text
+      m << term
+    end
+    result
+  end
+  
+  def indexed_property_chain
+    result = SimPara.new('')
+    return result if empty?
+    
+    terms = map do |e|
+      name = e.qname
+      t = Element.new
+      text = Text.new(name)
+      if e.used
+        t << Link.new(e.id) << text
+      else
+        t << text
+      end
+      t << IndexTerm.new('object property', nil, name)
+      t
+    end
+    
+    terms[0].children.each { |c| result << c }
+    result << Element.new('superscript') << Text.new('-1')
+    result << t = Text.new(' &compfn; ')
+    t.raw = true
+    terms[1].children.each { |c| result << c }
+
+    result
+  end
+  
+  def concrete_descendants(seen = Set.new)
+    inject(Set.new) do |m, c|
+      cs = OwlClass.by_uri[c]
+      if cs.isAbstract
+        seen << c
+        m += (cs.children - seen).concrete_descendants(seen)
+      else
+        m << c
+      end
+    end
+  end
+
+end
+
+class String
+  def strip_parens
+    sub(/\A\(?([^)]*)\)?\z/, '\1')
+  end
+end
+
+class Set
+  def minimize!
+    subtract(inject(Set.new) { |m, u| m += OwlClass.by_uri[u].ancestors })
+  end
+end
+
+class GraphTooLargeException < RuntimeError
+end
+
+def class_def_diag(prefix, klass, options)
+  name = klass.qname
+  safe_name = name.gsub(/[#\/.:-]/, '_')
+  node_name = 'n' + safe_name
+  filebase = "#{options.diag_path}/#{prefix}-#{safe_name}-class-def".gsub(/_/, '-')
+
+  nodes = []
+  edges = []
+
+  g = GraphViz.new('G', (p = ENV['GRAPHVIZ_PATH']) ? { :path => p } : {})
+  g['rankdir'] = 'TB'
+  g['overlap'] = 'scale'
+  g['sep'] = "0.4, 0.2"
+  g.node['shape'] = 'record'
+  g.node['fontname'] = options.diag_font
+  g.node['fontsize'] = '8.0'
+  g.edge['fontname'] = options.diag_font
+  g.edge['fontsize'] = '7.0'
+
+  dt_prop_string = []
+  dt_props = klass.properties['Asserted']['Datatype']
+  dt_props.sort_by { |p| OwlProperty.by_uri[p].qname.downcase }.each do |p|
+    ps = OwlProperty.by_uri[p]
+    range = klass.allv[p].nil? ? OwlProperty.by_uri[p].range : klass.allv[p]
+    minc = klass.minc[p] || '0'
+    maxc = klass.maxc[p] || '*'
+    ps = "#{ps.qname}: [#{minc}..#{maxc}]"
+    ps << " #{range.qname}" if range.qname
+    dt_prop_string << ps
+  end
+  node_opts = {:label => "{#{name}|#{dt_prop_string.join('\\n')}}"}
+  g.add_nodes(node_name, node_opts)
+  nodes << Node.new(node_name, {:label => name})
+
+  (klass.parents + klass.equivalent).each do |p|
+    p_name = OwlClass.by_uri[p].qname
+    p_node_name = 'n' + p_name.gsub(/[.:-]/, '_')
+    node_opts = {:label => p_name}
+    g.add_nodes(p_node_name, node_opts)
+    nodes << Node.new(p_node_name, node_opts)
+    edge_opts = {:dir => 'back', :arrowtail => 'onormal'}
+    g.add_edges(p_node_name, node_name, edge_opts)
+    edges << Edge.new(p_node_name, node_name, edge_opts)
+  end
+
+  column_superior = []
+  column = 0
+  klass.children.each do |c|
+    c_name = OwlClass.by_uri[c].qname
+    c_node_name = 'n' + c_name.gsub(/[.:-]/, '_')
+    node_opts = {:label => c_name}
+    g.add_nodes(c_node_name, node_opts)
+    nodes << Node.new(c_node_name,node_opts)
+
+    # line children up in columns
+
+    if column_superior[column]
+      g.add_edges(column_superior[column], c_node_name, {:style => 'invis'})
+    end
+    column_superior[column] = c_node_name
+    column = (column + 1) % options.array_width
+
+    edge_opts = {:dir => 'back', :arrowtail => 'onormal'}
+    g.add_edges(node_name, c_node_name, edge_opts)
+    edges << Edge.new(node_name, c_node_name, edge_opts)
+  end
+
+  ob_props = klass.properties['Asserted']['Object']
+  ob_props.sort_by { |p| OwlProperty.by_uri[p].qname.downcase }.each do |p|
+    ps = OwlProperty.by_uri[p]
+    p_name = ps.qname
+    range = klass.allv[p] || ps.range
+    minc = klass.minc[p] || '0'
+    maxc = klass.maxc[p] || '*'
+    r_name = OwlClass.by_uri[range.uri].qname
+    p_label = "#{p_name} [#{minc}..#{maxc}]"
+    r_node_name = 'n' + r_name.gsub(/[.:-]/, '_')
+    node_opts = {:label => r_name}
+    unless r_name == node_name
+      g.add_nodes(r_node_name, node_opts)
+      nodes << Node.new(r_node_name, node_opts)
+    end
+    edge_opts = {:arrowhead => 'normal', :label => p_label}
+    g.add_edges(node_name, r_node_name, edge_opts)
+    edges << Edge.new(node_name, r_node_name, edge_opts)
+  end
+
+  fi = Figure.new("Class definition diagram for #{name}.")
+  fi << mo = MediaObject.new
+
+  %w{ eps png svg }.each do |fmt|
+    outfile = "#{filebase}.#{fmt}"
+    log(Logger::DEBUG, "write class definition diagram #{outfile}")
+    g.output({fmt => outfile})
+    mo << io = ImageObject.new
+    io << id = ImageData.new(outfile, fmt.upcase)
+  end
+
+  [nodes, edges, fi]
+end
+
+def class_usage_diag(prefix, klass, options)
+  name = klass.qname
+  safe_name = name.gsub(/[#\/.:-]/, '_')
+  node_name = 'n' + safe_name
+  filebase = "#{options.diag_path}/#{prefix}-#{safe_name}-class-usage".gsub(/_/, '-')
+
+  g = GraphViz.new('G', (p = ENV['GRAPHVIZ_PATH']) ? { :path => p } : {})
+  g['rankdir'] = 'TB'
+  g['overlap'] = 'scale'
+  g['sep'] = "0.4, 0.2"
+  g.node['shape'] = 'record'
+  g.node['fontname'] = options.diag_font
+  g.node['fontsize'] = '8.0'
+  g.edge['fontname'] = options.diag_font
+  g.edge['fontsize'] = '7.0'
+
+  node_opts = {:label => name}
+  g.add_nodes(node_name, node_opts)
+
+  ob_props = %w{Asserted Inferred}.inject(Set.new) do |m, o|
+    m += klass.properties[o]['Object']
+  end
+  ob_props.sort_by { |p| OwlProperty.by_uri[p].qname.downcase }.each do |p|
+    ps = OwlProperty.by_uri[p]
+    p_name = ps.qname
+    range = [klass.allv[p] || ps.range].map { |r| r.uri }
+    rl = range.concrete_descendants
+    minc = klass.minc[p] || '0'
+    maxc = klass.maxc[p] || '*'
+    rl.each do |r|
+      r_name = OwlClass.by_uri[r].qname
+      p_label = "#{p_name} [#{minc}..#{maxc}]"
+      r_node_name = 'n' + r_name.gsub(/[.:-]/, '_')
+      node_opts = {:label => r_name}
+      unless r_name == node_name
+        g.add_nodes(r_node_name, node_opts)
+      end
+      edge_opts = {:arrowhead => 'normal', :label => p_label}
+      g.add_edges(node_name, r_node_name, edge_opts)
+    end
+  end
+
+  raise GraphTooLargeException if g.edge_count > @options.class_usage_edge_limit
+  
+  fi = Figure.new("Class usage diagram for #{name}.")
+  fi << mo = MediaObject.new
+
+  %w{ eps png svg }.each do |fmt|
+    outfile = "#{filebase}.#{fmt}"
+    log(Logger::DEBUG, "write class usage diagram #{outfile}")
+    g.output({:use => 'neato', fmt => outfile})
+    mo << io = ImageObject.new
+    io << id = ImageData.new(outfile, fmt.upcase)
+  end
+
+  fi
+end
+
+def prop_usage_diag(prefix, prop, options)
+
+  return nil if (descendants = [prop.domain].concrete_descendants).empty?
+
+  p_uri = prop.uri
+  p_name = prop.qname
+  edge_name = p_name.gsub(/[#\/.:-]/, '_')
+  filebase = "#{options.diag_path}/#{prefix}-#{edge_name}-prop-usage".gsub(/_/, '-')
+
+  g = GraphViz.new('G', (p = ENV['GRAPHVIZ_PATH']) ? { :path => p } : {})
+  g['rankdir'] = 'LR'
+  g['overlap'] = 'scale'
+  g['sep'] = "0.4, 0.2"
+  g.node['shape'] = 'record'
+  g.node['fontname'] = options.diag_font
+  g.node['fontsize'] = '8.0'
+  g.edge['fontname'] = options.diag_font
+  g.edge['fontsize'] = '7.0'
+
+  descendants.each do |d|
+    ds = OwlClass.by_uri[d]
+    d_name = ds.qname
+    d_node_name = 'n' + d_name.gsub(/[.:-]/, '_')
+    node_opts = {:label => d_name}
+    g.add_nodes(d_node_name, node_opts)
+    range = [ds.allv[p] || prop.range].map { |r| r.uri }
+    rl = range.concrete_descendants
+    minc = ds.minc[p_uri] || '0'
+    maxc = ds.maxc[p_uri] || '*'
+    rl.each do |r|
+      r_name = OwlClass.by_uri[r].qname
+      p_label = "#{p_name} [#{minc}..#{maxc}]"
+      r_node_name = 'n' + r_name.gsub(/[.:-]/, '_')
+      node_opts = {:label => r_name}
+      unless r_name == d_node_name
+        g.add_nodes(r_node_name, node_opts)
+      end
+      edge_opts = {:arrowhead => 'normal', :label => p_label}
+      g.add_edges(d_node_name, r_node_name, edge_opts)
+    end
+  end
+
+  fi = Figure.new("Property usage diagram for #{p_name}.")
+  fi << mo = MediaObject.new
+
+  %w{ eps png svg }.each do |fmt|
+    outfile = "#{filebase}.#{fmt}"
+    log(Logger::DEBUG, "write property usage diagram #{outfile}")
+    g.output({fmt => outfile})
+    mo << io = ImageObject.new
+    io << id = ImageData.new(outfile, fmt.upcase)
+  end
+
+  fi
+end
+
+def ontology_diagram(prefix, title, nodes, edges, options)
+  filebase = "#{options.diag_path}/#{prefix}".gsub(/_/, '-')
+
+  g = GraphViz.new('G', (p = ENV['GRAPHVIZ_PATH']) ? { :path => p } : {})
+  g['rankdir'] = 'TB'
+  g['overlap'] = 'scale'
+  g['ratio'] = '.618'
+  g['splines'] = 'true'
+  g.node['shape'] = 'record'
+  g.node['fontname'] = options.diag_font
+  g.node['fontsize'] = '8.0'
+  g.edge['fontname'] = options.diag_font
+  g.edge['fontsize'] = '7.0'
+
+  nodes.sort_by { |n| n.name } .each do |node|
+    g.add_nodes(node.name, node.options)
+  end
+
+  edges.sort_by { |e| e.from + e.to + (e.options[:label] || '') } .each do |edge|
+    g.add_edges(edge.from, edge.to, edge.options)
+  end
+
+  title += ' diagram'
+  fi = Figure.new(title + '.', {'xml:id' => "fig_#{prefix}"})
+  fi.add_attribute('xreflabel', title)
+  fi << mo = MediaObject.new
+
+  %w{ eps png svg }.each do |fmt|
+    outfile = "#{filebase}.#{fmt}"
+    log(Logger::DEBUG, "write ontology diagram #{outfile}")
+    g.output({fmt => outfile})
+    mo << io = ImageObject.new
+    io << id = ImageData.new(outfile, fmt.upcase)
+  end
+
+  fi
+end
+
+def comments_fragment(element)
+  se = Section.new('Comments')
+  se << vl = ItemizedList.new({'userlevel' => 'comments'})
+  element.comments.each do |c|
+    vl << li = ListItem.new
+    DocBook::Document.parse_fragment(c).each { |f| li << f }
+  end
+  se
+end
+
+
+class OntologyDocbookApplication < JenaApplication
+
+  DCNS = 'http://purl.org/dc/elements/1.1/'
+  DEFAULT_ARRAY_WIDTH = 5
+  DEFAULT_CLASS_USAGE_EDGE_LIMIT = 32
+  DEFAULT_DIAGRAM_PATH = '.diagrams'
+  DEFAULT_DIAGRAM_FONT = 'Helvetica'
+  DEFAULT_DO_CLASS_USAGE = true
+  DEFAULT_DO_EMBEDDING = true
+  DEFAULT_DO_SUMMARY = true
+  SUBTITLE = 'Integrated Model-Centric Engineering'
+  COLORS = %w{ #BFDFBF #FFFFFF }
+  COPYRIGHT_YEAR = '2013'
+  COPYRIGHT_HOLDER = 'California Institute of Technology'
+  LEGAL_NOTICE = [
+    'Government sponsorship acknowledged.',
+    'This research was carried out at the Jet Propulsion Laboratory, California Institute of Technology,
+    under a contract with the National Aeronautics and Space Administration.'
+  ]
+  OWL2_MOF2_IRI = 'http://imce.jpl.nasa.gov/foundation/owl2-mof2/owl2-mof2'
+
+  def run
+    
+    # Add options.
+    
+    option_parser.on('--number NUMBER', "document number") do |v|
+      @options.number = v
+    end
+    option_parser.on('--iri IRI', "ontology iri") do |v|
+      @options.iri = v
+    end
+    option_parser.on('--dbcent ID', 'DocBook character entities ID') do |v|
+      @options.dbcent = v
+    end
+    @options.diag_path = DEFAULT_DIAGRAM_PATH
+    option_parser.on('--diag-path PATH', 'diagram path') do |v|
+      @options.diag_path = v
+    end
+    @options.diag_font = DEFAULT_DIAGRAM_FONT
+    option_parser.on('--diag-font FONT', 'diagram font') do |v|
+      @options.diag_font = v
+    end
+    @options.array_width = DEFAULT_ARRAY_WIDTH
+    option_parser.on('--array-width NUMBER', Integer, 'array width') do |v|
+      @options.array_width = v
+    end
+    @options.do_summary = DEFAULT_DO_SUMMARY
+    option_parser.on('--omit-summary', "omit ontology summary diagram") do
+      @options.do_summary = false
+    end
+    @options.do_class_usage = DEFAULT_DO_CLASS_USAGE
+    option_parser.on('--omit-class-usage', 'omit class usage diagrams') do
+      @options.do_class_usage = false
+    end
+    @options.class_usage_edge_limit = DEFAULT_CLASS_USAGE_EDGE_LIMIT
+    option_parser.on('--class-usage-edge-limit N', "omit class usage diagrams with more than N edges (default #{DEFAULT_CLASS_USAGE_EDGE_LIMIT})") do |v|
+      @options.class_usage_edge_limit = v
+    end
+    @options.do_embedding = DEFAULT_DO_EMBEDDING
+    option_parser.on('--omit-embedding', 'omit embedding appendix') do
+      @options.do_embedding = false
+    end
+
+    super
+    
+    # Check option values.
+    
+    unless @options.number
+      log(FATAL, 'no document number specified')
+      return 1
+    end
+    unless argv.length == 2
+      log(FATAL, 'must name two ontologies on command line')
+      return 1
+    end
+    
+    # Overwrite some setup until strategy for view ontologies is worked out.
+    
+    log(DEBUG, 'override setup')
+    named_ontologies, imported_ontologies = *collect_ontologies(argv)
+    imported_ontologies.reject! { |o| o =~ /-view\z/ }
+    @ontologies_by_group = partition_by_group(named_ontologies, imported_ontologies)
+    @ontologies_by_group_by_type = construct_entailment_uris(@options.entailment_types)
+    @from_clauses_by_group, @from_clauses_by_group_by_type = *construct_from_clauses
+    @from_named_clauses_by_group, @from_named_clauses_by_group_by_type = *construct_from_clauses(true)
+    
+    indent = @options.log_level == 'DEBUG' ? 1 : -1
+    
+    # Define variables.
+    
+    all_nodes = Set.new
+    all_edges = Set.new
+    
+    # Get model for named non-embedding ontology
+    
+    iri = @ontologies_by_group['named-no-embedding'].first
+    log(DEBUG, "ontology iri: #{iri}")
+    @model = @data_service.get_model(iri)
+    raise "no model for ontology #{iri}" unless @model
+    log(DEBUG, "found model for #{iri}")
+    
+    # Find this ontology.
+    
+    ontology = @model.get_resource(iri)
+    raise "no ontology for #{iri}" unless ontology
+    log(DEBUG, "found ontology for #{iri}")
+    prefix = @model.getNsURIPrefix(ontology.to_s + '#')
+    log(DEBUG, "prefix: #{prefix}")
+    
+    # Load default model to get namespace map.
+    # Set default namespace to get abbreviated Qnames.
+    
+    @default_model = @data_service.get_model
+    raise "no default model" unless @default_model
+    @default_model.remove_ns_prefix(prefix)
+    @default_model.set_ns_prefix('', ontology.to_s + '#')
+    
+    # Get ontology properties.
+    
+    o_title = get_single_property_value(ontology, 'dc:title').lexical_form
+    o_title ||= ontology.to_string
+    log(DEBUG, "ontology title: #{o_title}")
+    
+    o_desc = get_single_property_value(ontology, 'dc:description').lexical_form
+    log(DEBUG, "ontology description: #{o_desc}") if o_desc
+    
+    o_version = get_single_property_value(ontology, 'owl:versionInfo').lexical_form
+    o_version = o_version.gsub(/\$/, '')
+    log(DEBUG, "ontology version: #{o_version}") if o_version
+    
+    o_date = get_single_property_value(ontology, 'dc:date').lexical_form
+    o_date = o_date.sub(/\A.*(\d{4}-\d{2}-\d{2}).*\z/, '\1')
+    log(DEBUG, "ontology date: #{o_date}") if o_date
+    
+    # Get ontology imports.
+    
+    imports = get_multiple_property_values(ontology, 'owl:imports').map do |v|
+      v.to_string
+    end
+    
+    # Query ontologies and build data structures.
+    
+    log(INFO, 'find datatypes')
+    find_datatypes
+    log(INFO, 'find classes and parents')
+    find_classes_and_parents
+    log(INFO, 'find class comments')
+    find_class_comments
+    log(INFO, 'find class ancestors')
+    find_class_ancestors
+    log(INFO, 'find range restrictions')
+    find_range_restrictions
+    log(INFO, 'find disjoint classes')
+    find_disjoint_classes
+    log(INFO, 'find properties and parents')
+    find_properties_and_parents
+    log(INFO, 'find property inverses')
+    find_property_inverses
+    log(INFO, 'find property ancestors')
+    find_property_ancestors
+    log(INFO, 'find property comments')
+    find_property_comments
+    if @options.do_embedding
+      log(INFO, 'find class embeddings')
+      find_class_embeddings
+    end
+    log(INFO, 'find property reifications')
+    find_property_reifications
+    
+    # Collect and reconcile references.
+    
+    log(INFO, 'collect and reconcile references')
+    
+    # Treat functional attribute of a property like a restriction on its domain.
+    
+    OwlProperty.by_uri.values.each do |p|
+      if p.functional
+        if p.domain
+          cs = OwlClass.by_uri[p.domain]
+          (cs.descendants.to_a << p.domain).each do |t|
+            ts = OwlClass.by_uri[t]
+            ts.maxc[p.uri] = 1
+          end
+        end
+      end
+    end
+    
+    # Propagate domain and range to subproperties. Not yet general; replaces missing domain
+    # and range with something from ancestors.
+    
+    OwlProperty.by_uri.values.each do |p|
+      unless p.ancestors.empty?
+        unless p.domain
+          al = p.ancestors.map { |a| OwlProperty.by_uri[a] } .select { |a| a.domain }
+           p.domain = al.inject(p.domain) do |m, d|
+             m = m.intersection(d)
+           end
+        end
+        unless p.range
+          al = p.ancestors.map { |a| OwlProperty.by_uri[a] } .select { |a| a.range }
+          p.range = al.inject(p.range) do |m, d|
+            m = m.intersection(d)
+          end
+        end
+      end
+    end
+    
+    # Propagate effect of all restrictions on each class.
+    
+    OwlClass.by_uri.values.each do |cs|
+      app_classes = Set.new([cs]) + cs.ancestors.map { |a| OwlClass.by_uri[a] }
+      app_classes = app_classes.select { |c| c.respond_to?(:restrictions) }
+      app_restric = Set.new(app_classes.map { |c| c.restrictions }).flatten
+      app_restric.each do |rs|
+        prop = rs.prop
+        cs.minc[prop] = rs.minc if cs.minc[prop] < rs.minc
+        if rs.maxc
+          if cs.maxc[prop].nil? or cs.maxc[prop] > rs.maxc
+            cs.maxc[prop] = rs.maxc
+          end
+        end
+        begin
+          cs.allv[prop] = cs.allv[prop] ? cs.allv[prop].intersection(rs.allv) : rs.allv
+        rescue
+          log(FATAL, $!)
+          log(FATAL, "cs #{cs.uri} all values on prop #{prop} from #{rs.allv.uri}")
+          return 1
+        end
+      end
+    end
+    
+    # Construct class property lists.
+    
+    OwlProperty.by_uri.each do |p, ps|
+      ptype = property_type(ps.ptype)
+      if d = ps.domain
+        OwlClass.by_uri[d].properties['Asserted'][ptype] << p
+      end
+    end
+    
+    # Progagate class property lists from ancestors.
+    
+    OwlClass.by_uri.values.each do |c|
+      (c.parents + c.ancestors).each do |a|
+        as = OwlClass.by_uri[a]
+        as.properties['Asserted'].each do |ptype, set|
+          c.properties['Inferred'][ptype] += set
+        end
+      end
+    end
+    
+    # Emit debugging summaries.
+    
+    OwlRestriction.each do |r|
+      log(DEBUG, "OwlRestriction #{r}")
+    end
+    
+    RdfsDatatype.by_uri.each do |u, c|
+      log(DEBUG, "RdfDatatype.by_uri[#{u}] = #{c}")
+    end
+    
+    OwlClass.by_uri.each do |u, c|
+      log(DEBUG, "OwlClass.by_uri[#{u}] = #{c}")
+    end
+    
+    OwlProperty.by_uri.each do |u, c|
+      log(DEBUG, "OwlProperty.by_uri[#{u}] = #{c}")
+    end
+
+    # Create GraphViz work directory.
+    
+    begin
+      Dir.mkdir(@options.diag_path)
+    rescue Errno::EEXIST
+    end
+    
+    # Create DocBook document.
+    
+    log(INFO, 'create DocBook document')
+    doc = REXML::Document.new
+    doc << REXML::XMLDecl.new
+    
+    # Add DTD declaration for character entity definitions.
+    
+    entities = %Q{[
+    <!ENTITY % sgml.features "IGNORE">
+    <!ENTITY % xml.features "INCLUDE">
+    <!ENTITY % dbcent PUBLIC "#{@options.dbcent}" "dbcentx.mod">
+    %dbcent;
+    ]}
+    doc << doc_type = REXML::DocType.new('article', entities)
+    
+    # Start article.
+    
+    options = {}
+    options['release_info'] = o_version if o_version
+    doc << ar = Article.new
+    ar.add_attribute('xmlns', 'http://docbook.org/ns/docbook')
+    ar.add_attribute('version', '5.0')
+    
+    ar << ti = Element.new('title')
+    ti.text = o_title
+    ar << st = Element.new('subtitle')
+    st.text = SUBTITLE
+    
+    ar << ai = Element.new('info')
+    ai << bi = Element.new('biblioid')
+    bi.text = @options.number
+    ai << pd = Element.new('pubdate')
+    pd.text = o_date
+    ai << co = Element.new('copyright')
+    co << yr = Element.new('year')
+    yr.text = COPYRIGHT_YEAR
+    co << ho = Element.new('holder')
+    ho.text = COPYRIGHT_HOLDER
+    ai << ln = Element.new('legalnotice')
+    LEGAL_NOTICE.each do |t|
+      ln << Para.new(t)
+    end
+
+    # Intro section.
+    
+    log(INFO, 'create introduction section')
+    ar << id = Section.new('Introduction')
+    if o_desc
+      DocBook::Document.parse_fragment(o_desc).each { |f| id << f }
+    else
+      id << Para.new
+    end
+    
+    # Imports section.
+    
+    log(INFO, 'create imports section')
+    ar << is = Section.new('Imported Ontologies')
+    unless imports.empty?
+      is << il = ItemizedList.new
+      imports.each do |i|
+        il << li = ListItem.new
+        li << Para.new(i.to_s)
+      end
+    else
+      is << Para.new
+    end
+
+    # Namespace section.
+
+    log(INFO, 'create namespace section')
+    ar << ns = Section.new('Namespaces')
+    unless @namespace_by_prefix.empty?
+      ns << vl = VariableList.new
+      @namespace_by_prefix.keys.sort.each do |prf|
+        vl << vle = VarListEntry.new
+        vle << te = Term.new
+        te.add_text(prf.to_s)
+        vle << li = ListItem.new
+        li << Para.new(@namespace_by_prefix[prf].to_s)
+      end
+    else
+      ns << Para.new
+    end
+    
+    # Class definition section.
+    
+    log(INFO, 'create class definition section')
+    
+    # Select and mark classes and properties to be documented.
+    
+    class_list = OwlClass.by_uri.values.select do |c|
+      uri = c.uri
+      uri.start_with?(ontology.to_s)
+    end.sort_by do |c|
+      c.qname.downcase
+    end
+    class_list.each { |c| c.used = true }
+      
+    abstract_class_list = class_list.select { |c| c.reification.empty? && c.isAbstract }
+    concrete_class_list = class_list.select { |c| c.reification.empty? && !c.isAbstract }
+    reification_class_list = class_list.select { |c| !c.reification.empty? }
+    
+    prop_list = {}
+    abstract_prop_list = {}
+    concrete_prop_list = {}
+    reif_prop_list = {}
+    
+    %w{Datatype Object}.each do |ptype|
+      prop_list[ptype] = OwlProperty.by_uri.values.select do |p|
+        uri = p.uri
+        uri.to_s.start_with?(ontology.to_s) && property_type(p.ptype) == ptype
+      end.sort_by do |p|
+        p.qname.downcase
+      end
+      prop_list[ptype].each { |p| p.used = true }
+    end
+    
+    %w{Datatype Object}.each do |ptype|
+      abstract_prop_list[ptype] = prop_list[ptype].select { |p| p.isAbstract && !p.reification }
+      concrete_prop_list[ptype] = prop_list[ptype].select { |p| !p.isAbstract && !p.reification }
+      reif_prop_list[ptype] = prop_list[ptype].select { |p| p.reification }
+    end
+
+    # Create a subsection for each class.
+    
+    class_map = { 'Abstract Class' => abstract_class_list,
+      'Concrete Class' => concrete_class_list,
+      'Object Property Reification Class' => reification_class_list
+    }
+    ['Abstract Class',
+      'Concrete Class',
+      'Object Property Reification Class'].each do |class_group|
+    
+      log(INFO, "Section(#{class_group})")
+      this_list = class_map[class_group]
+      unless this_list.empty?
+        ar << cd = Section.new("#{class_group} Definitions")
+        this_list.each do |klass|
+    
+          class_name = klass.qname
+    
+          cd << cs = Section.new(class_name, {'xml:id' => klass.id})
+          log(DEBUG, "Section(#{class_name})")
+          cs << PreferredIndexTerm.new('class', nil, class_name)
+    
+          # Print description paragraph.
+    
+          desc = klass.description
+          if desc
+            DocBook::Document.parse_fragment(desc).each { |f| cs << f }
+          end
+    
+          # Accumulate VarListEntrys for equivalent, parent, and ancestor classes and properties.
+        
+          vle_list = []
+    
+          # Equivalent classes.
+    
+          unless (el = klass.equivalent).empty?
+            vle_list << vle = VarListEntry.new
+            vle << te = Term.new
+            te.text = 'Equivalent Classes:'
+            vle << li = ListItem.new
+            list = el.map { |e| OwlClass.by_uri[e] }.sort_by { |e| e.qname.downcase }
+            li << list.indexed_struct_list('class')
+          end
+    
+          # Asserted superclasses.
+    
+          unless (pl = klass.parents).empty?
+            vle_list << vle = VarListEntry.new
+            vle << te = Term.new
+            te.text = 'Asserted Superclasses:'
+            vle << li = ListItem.new
+            list = pl.map { |e| OwlClass.by_uri[e] }.sort_by { |e| e.qname.downcase }
+            li << list.indexed_struct_list('class')
+          end
+    
+          # Inferred superclasses.
+    
+          unless (al = klass.ancestors - pl).empty?
+            vle_list << vle = VarListEntry.new
+            vle << te = Term.new
+            te.text = 'Inferred Superclasses:'
+            vle << li = ListItem.new
+            list = al.map { |e| OwlClass.by_uri[e] }.sort_by { |e| e.qname.downcase }
+            li << list.indexed_struct_list('class')
+          end
+    
+          # Asserted subclasses.
+    
+          unless (pl = klass.children).empty?
+            vle_list << vle = VarListEntry.new
+            vle << te = Term.new
+            te.text = 'Asserted Subclasses:'
+            vle << li = ListItem.new
+            list = pl.map { |e| OwlClass.by_uri[e] }.sort_by { |e| e.qname.downcase }
+            li << list.indexed_struct_list('class')
+          end
+    
+          # Asserted disjoint classes.
+          
+          unless (dl = klass.disjoints).empty?
+            vle_list << vle = VarListEntry.new
+            vle << te = Term.new
+            te.text = 'Asserted Disjoint Classes:'
+            vle << li = ListItem.new
+            list = dl.map { |e| OwlClass.by_uri[e] }.sort_by { |e| e.qname.downcase }
+            li << list.indexed_struct_list('class')
+          end
+          
+          # Properties.
+    
+          [
+            ['Asserted', 'Datatype'],
+            ['Inferred', 'Datatype'],
+            ['Asserted', 'Object'],
+            ['Inferred', 'Object']
+          ].each do |a0|
+            src, ptype = *a0
+            ap = klass.properties[src][ptype].sort_by { |p| OwlProperty.by_uri[p].qname.downcase }
+            unless ap.empty?
+              vle_list << vle = VarListEntry.new
+              vle << te = Term.new
+              te.text = "#{src} #{ptype} Properties:"
+              vle << li = ListItem.new
+              li << pvl = VariableList.new
+              ap.sort_by { |p| OwlProperty.by_uri[p].qname.downcase }.each do |p|
+                prop = OwlProperty.by_uri[p]
+                pname = prop.qname
+                pvl << pvle = VarListEntry.new
+                pvle << pte = Term.new
+                if prop.used
+                  pte << Link.new(prop.id) << Text.new(pname)
+                else
+                  pte << Text.new(pname)
+                end
+                pte << IndexTerm.new("#{ptype.downcase} property", nil, pname)
+                pvle << pli = ListItem.new
+                minc = klass.minc[p] || '0'
+                maxc = klass.maxc[p] || '*'
+                pli << SimpleList.new << Member.new << Text.new("[#{minc}..#{maxc}] ")
+                range = klass.allv[p] || OwlProperty.by_uri[p].range
+                case ptype
+                when 'Datatype'
+                  pli << [range.qname].indexed_string_list('datatype')
+                when 'Object'
+                  if range
+                    rc = OwlClass.by_uri[range.uri]
+                    raise "no class for #{range.uri}" unless rc
+                    pli << [rc].indexed_struct_list('class')
+                  end
+                end
+              end
+            end
+          end
+          
+          # Reified Object Properties.
+          
+          unless (rl = klass.reification).empty?
+            vle_list << vle = VarListEntry.new
+            vle << te = Term.new
+            te.text = 'Reified Object Properties:'
+            vle << li = ListItem.new
+            list = rl.map { |e| OwlProperty.by_uri[e] }.sort_by { |e| e.qname.downcase }
+            li << list.indexed_struct_list('object property')
+          end
+    
+          # Insert VariableList if necessary.
+    
+          unless vle_list.empty?
+            cs << vl = VariableList.new
+            vle_list.each { |vle| vl << vle }
+          end
+    
+          # Insert class definition diagram.
+    
+          nodes, edges, figure = *class_def_diag(prefix, klass, @options)
+          all_nodes += nodes
+          all_edges += edges
+          cs << pa = Para.new("The class definition diagram for #{class_name} is shown in ")
+          pa << Xref.new(figure.attributes['xml:id'], nil, 'Figure')
+          pa << Text.new('.')
+          cs << figure
+    
+          # Insert class usage diagram (concrete classes only).
+    
+          unless klass.isAbstract
+            if @options.do_class_usage
+              begin
+                figure = class_usage_diag(prefix, klass, @options)
+                pa << Text.new(" The class usage diagram for #{class_name} is shown in ")
+                pa << Xref.new(figure.attributes['xml:id'], nil, 'Figure')
+                pa << Text.new('.')
+                cs << figure
+              rescue GraphTooLargeException
+                pa << Text.new(" The class usage diagram for #{class_name} is too large to include.")
+              end
+            else
+              pa << Text.new(" The class usage diagram for #{class_name} has been omitted.")
+            end
+          end
+    
+          # Insert comments.
+    
+          cs << comments_fragment(klass) unless klass.comments.empty?
+    
+        end
+      end
+    end
+    
+    # End class definition section.
+    
+    # Property definition sections.
+    
+    log(INFO, 'create property definition section')
+    prop_map = { 'Abstract Datatype' => abstract_prop_list['Datatype'],
+      'Concrete Datatype' => concrete_prop_list['Datatype'],
+      'Abstract Object' => abstract_prop_list['Object'],
+      'Concrete Object' => concrete_prop_list['Object'],
+      'Object Property Reification Source/Target Object' => reif_prop_list['Object']
+    }
+    ['Abstract Datatype', 'Concrete Datatype',
+      'Abstract Object',  'Concrete Object',
+      'Object Property Reification Source/Target Object'].each do |prop_group|
+    
+      log(INFO, "Section(#{prop_group})")
+      this_list = prop_map[prop_group]
+    
+      # Create a subsection for each property.
+    
+      unless this_list.empty?
+        ar << dp = Section.new("#{prop_group} Property Definitions")
+        this_list.each do |prop|
+    
+          prop_name = prop.qname
+          ptype = case prop_group
+            when /Datatype/
+              'datatype'
+            when /Object/
+              'object'
+            end
+          pri_term = "#{ptype} property"
+    
+          dp << ps = Section.new(prop_name, {'xml:id' => prop.id})
+          log(DEBUG, "Section(#{prop_name})")
+          ps << PreferredIndexTerm.new(pri_term, nil, prop_name)
+    
+          # Print description paragraph.
+    
+          desc = prop.description
+          if desc
+            DocBook::Document.parse_fragment(desc).each { |f| ps << f }
+          end
+    
+          # Accumulate VarListEntrys for parents, ancestors, domain, range.
+    
+          vle_list = []
+    
+          # Asserted Superproperties.
+    
+          unless (pl = prop.parents).empty?
+            vle_list << vle = VarListEntry.new
+            vle << te = Term.new
+            te.text = 'Asserted Superproperties:'
+            vle << li = ListItem.new
+            list = pl.map { |e| OwlProperty.by_uri[e] }.sort_by { |e| e.qname.downcase }
+            li << list.indexed_struct_list(pri_term)
+          end
+    
+          # Inferred Superproperties.
+    
+          unless (al = prop.ancestors - pl).empty?
+            vle_list << vle = VarListEntry.new
+            vle << te = Term.new
+            te.text = 'Inferred Superproperties:'
+            vle << li = ListItem.new
+            list = al.map { |e| OwlProperty.by_uri[e] }.sort_by { |e| e.qname.downcase }
+            li << list.indexed_struct_list(pri_term)
+          end
+    
+          # Domain.
+    
+          if domain = prop.domain
+            vle_list << vle = VarListEntry.new
+            vle << te = Term.new
+            te.text = "Domain:"
+            vle << li = ListItem.new
+            list = [OwlClass.by_uri[domain]]
+            li << list.indexed_struct_list('class')
+          end
+    
+          # Range.
+    
+          if mr = prop.range
+            vle_list << vle = VarListEntry.new
+            vle << te = Term.new
+            te.text = 'Range:'
+            vle << li = ListItem.new
+            li << SimpleList.new << Member.new << Text.new("[0..#{prop.functional ? 1 : '*' }] ")
+            case ptype
+            when 'datatype'
+              li << [mr.qname].indexed_string_list('datatype')
+            when 'object'
+              li << [mr].indexed_struct_list('class')
+            end
+          end
+    
+          # Inverse.
+    
+          inverse = prop.inverse
+          unless inverse.empty?
+            vle_list << vle = VarListEntry.new
+            vle << te = Term.new
+            te.text = "Inverse:"
+            vle << li = ListItem.new
+            list = inverse.map { |e| OwlProperty.by_uri[e] }.sort_by { |e| e.qname.downcase }
+            li << list.indexed_struct_list('object property')
+          end
+    
+          # Derived.
+    
+          vle_list << vle = VarListEntry.new
+          vle << te = Term.new
+          te.text = "Derived:"
+          vle << li = ListItem.new
+          text = prop.isDerived ? 'true' : 'false'
+          li << SimpleList.new << Member.new << Text.new(text)
+    
+          # Reification class.
+          
+          if prop.relclass
+            vle_list << vle = VarListEntry.new
+            vle << te = Term.new
+            te.text = "Reification Class:"
+            vle << li = ListItem.new
+            list = [prop.relclass].map { |e| OwlClass.by_uri[e] }
+            li << list.indexed_struct_list('class')
+          end
+    
+          # Reification property chain.
+          
+          if prop.chain
+            vle_list << vle = VarListEntry.new
+            vle << te = Term.new
+            te.text = "Reification Property Chain:"
+            vle << li = ListItem.new
+            list = prop.chain.map { |e| OwlProperty.by_uri[e] }
+            li << list.indexed_property_chain
+          end
+          
+          # Insert VariableList if necessary.
+    
+          unless vle_list.empty?
+            ps << vl = VariableList.new
+            vle_list.each { |vle| vl << vle }
+          end
+    
+          # Insert property usage diagram (concrete properties only).
+    
+          if prop_group == 'Concrete Object'
+            unless prop.domain.empty? && prop.range.empty?
+              if figure = prop_usage_diag(prefix, prop, @options)
+                ps << pa = Para.new("The property usage diagram for #{prop_name} is shown in ")
+                pa << Xref.new(figure.attributes['xml:id'], nil, 'Figure')
+                pa << Text.new('.')
+                ps << figure
+              end
+            end
+          end
+    
+          # Insert comments.
+    
+          ps << comments_fragment(prop) unless prop.comments.empty?
+    
+          # End property section.
+    
+        end
+      end
+    
+      # End property definition sections.
+    
+    end
+    
+    # Datatype definition section. Currently handles enumerations only.
+    
+    log(INFO, 'create datatype definition section')
+    unless RdfsOneOfDatatype.by_uri.empty?
+      ar << dtos = Section.new('Datatypes')
+      
+      # Enumeration datatypes.
+      
+      unless (enums = RdfsOneOfDatatype.by_uri).empty?
+        dtos << dtis = Section.new('Enumerations')
+        dtis << vl = VariableList.new
+        enums.each do |uri, datatype|
+          dt_name = datatype.qname
+          log(DEBUG, "VarListEntry(#{dt_name}")
+          
+          vl << vle = VarListEntry.new
+          vle << te = Term.new
+          te.text = "#{dt_name}:"
+          te << PreferredIndexTerm.new('datatype', nil, dt_name)
+          
+          vle << li = ListItem.new
+          li << datatype.list.indexed_literal_list('literal')
+        end
+      end
+    end
+          
+    # Summary.
+    
+    if @options.do_summary
+      log(INFO, 'create summary section')
+      ar << su = Section.new('Summary')
+      su << pa = Para.new("The #{o_title} is summarized in ")
+      pa << Xref.new("fig_#{prefix}", nil, 'Figure')
+      pa << Text.new('.')
+    
+      su << ontology_diagram(prefix, o_title, all_nodes, all_edges, @options)
+    end
+    
+    # UML/SysML embeddings.
+    
+    if @options.do_embedding
+    
+      log(INFO, 'create embedding section')
+      ar << ma = Appendix.new('UML/SysML Embedding')
+    
+      omg_es = EmbeddingStruct.new('UML/SysML', :omg_embedding)
+      imce_es = EmbeddingStruct.new('OWL2-MOF2', :imce_embedding)
+    
+      normal_class_embeddings = [ omg_es, imce_es ]
+      reification_class_embeddings = [ imce_es ]
+        
+      datatype_property_embeddings = []
+    
+      msl = [
+        MapStruct.new('Class', normal_class_embeddings, abstract_class_list + concrete_class_list),
+        MapStruct.new('Object Property Reification Class', reification_class_embeddings, reification_class_list),
+        MapStruct.new('Datatype Property', datatype_property_embeddings,
+          abstract_prop_list['Datatype'] + concrete_prop_list['Datatype'])
+      ]
+    
+      msl.each do |ms|
+    
+        ms.embeddings.each do |es|
+    
+          pri_term = case ms.label
+            when /Class/
+              'class'
+            when /Datatype/
+              'datatype property'
+            when /Object/
+              'object property'
+            end
+          
+          columns = ms.list.inject(Set.new) { |s, e| s |= e.send(es.method) }.sort
+    
+          ci = DocBook::ColorIterator.new(%w{#BFDFBF #FFFFFF})
+    
+          title = "#{ms.label} #{es.label} Embedding"
+          log(INFO, "#{title} table")
+          ma << ta = Table.new(title, {'role' => 'longtable'})
+          ta << tg = Tgroup.new(columns.length + 1)
+    
+          colno = 1
+          tg << cs = Colspec.new
+          cs.add_attribute('colnum', colno)
+          cs.add_attribute('align', 'left')
+    
+          columns.length.times do |n|
+            colno += 1
+            tg << cs = Colspec.new
+            cs.add_attribute('colnum', colno)
+            cs.add_attribute('align', 'center')
+          end
+    
+          tg << th = Thead.new
+          th << ro = Row.new
+          ro << en = Entry.new
+          columns.each do |c|
+            ro << en = Entry.new
+            en.add_attribute('rotate', '1')
+            en << Text.new(c.dup)
+          end
+    
+          tg << tb = Tbody.new
+          unless ms.list.empty?
+            ms.list.sort_by { |s| s.qname }.each do |e|
+              e_uri = e.uri
+              e_name = e.qname
+              tb << ro = Row.new
+              ro << en = Entry.new
+              en << Instruction.new('dbhtml', "bgcolor=#{ci.value}")
+              en << Text.new(e_name)
+              en << IndexTerm.new(pri_term, nil, e_name)
+              columns.each do |c|
+                ro << en = Entry.new
+                en << Instruction.new('dbhtml', "bgcolor=#{ci.value}")
+                if e.send(es.method).include?(c)
+                  en << Text.new('&#8226;', false, false, true)
+                  en << IndexTerm.new(pri_term, nil, c)
+                end
+              end
+              ci.step
+            end
+          else
+            tb << ro = Row.new
+            ro << Entry.new
+          end
+          ta << Instruction.new('hard-pagebreak')
+        end
+      end
+    
+    end
+    
+    # Index.
+    
+    log(INFO, 'create index')
+    ar << Index.new
+    
+    # End article.
+    
+    # Write DocBook instance.
+
+    log(INFO, 'write DocBook document')
+    doc.write(STDOUT, indent)
+    
+    # Exit.
+    
+    return 0
+    
+  end
+
+  def property_iterator(s, p)
+    prop = @model.create_property(@default_model.expand_prefix(p))
+    @model.list_objects_of_property(s, prop)
+  end
+  
+  def get_single_property_value(s, p)
+    iter = property_iterator(s, p)
+    if iter.has_next
+      iter.next
+    else
+      nil
+    end
+  end
+
+  def get_multiple_property_values(s, p)
+    iter = property_iterator(s, p)
+    values = []
+    while iter.has_next do
+      values << iter.next
+    end
+    values
+  end
+  
+  def property_type(iri)
+    case iri.to_s
+    when /DatatypeProperty/
+      'Datatype'
+    when /ObjectProperty/
+      'Object'
+    else
+      nil
+    end
+  end
+  
+  # Find datatypes.
+  
+  def find_datatypes
+    
+    query = %Q{
+      #{@namespace_defs}
+      select ?prop ?literal ?desc
+      #{@from_clauses_by_group['named-no-embedding']}
+      #{@from_clauses_by_group['imported-imce-no-embedding']}
+      where {
+        ?prop rdf:type rdfs:Datatype;
+          owl:equivalentClass [
+            owl:oneOf [
+              rdf:rest*/rdf:first ?literal
+            ]
+          ] .
+    
+        optional { ?klass dc:description ?desc . }
+          
+        filter (!isblank(?prop) && !isblank(?literal))
+      }
+    }
+    run_select_query(query) do |resp|
+      prop = resp.prop.get_uri
+      literal = resp.literal.get_string
+      unless ds = RdfsDatatype.by_uri[prop]
+        ds = RdfsOneOfDatatype.new(prop)
+        ds.qname = @default_model.qname_for(resp.prop.to_string).sub(/\A:/, '')
+        ds.id = 'datatype.' + ds.qname.gsub(/:/, '_')
+      end
+      ds.description = resp.desc.lexical_form if resp.desc
+      ds << literal
+    end
+  end
+  
+  # Find classes and parents.
+
+  def find_classes_and_parents
+    query = %Q{
+      #{@namespace_defs}
+      select distinct ?klass ?desc ?parent ?child ?union ?equiv ?ap ?av ?avl ?isAbstract
+      #{@from_clauses_by_group['named-no-embedding']}
+      #{@from_clauses_by_group['imported-imce-no-embedding']}
+      where {
+        ?klass rdf:type owl:Class .
+        optional { ?klass dc:description ?desc . }
+        optional {
+          { ?klass rdfs:subClassOf ?parent . } union
+          { ?klass owl:equivalentClass ?parent . }
+        }
+        optional {
+          { ?child rdfs:subClassOf ?klass . } union
+          { ?child owl:equivalentClass ?klass . }
+        }
+        optional {
+          ?klass owl:unionOf ?union
+        }
+        optional {
+          ?klass owl:equivalentClass ?equiv
+        }
+        optional {
+          ?klass annotation:isAbstract ?isAbstract .
+        }
+      }
+    }
+    run_select_query(query) do |resp|
+      klass = resp.klass.get_uri
+      unless cs = OwlClass.by_uri[klass]
+        cs = OwlClass.new(klass)
+        cs.qname = @default_model.qname_for(resp.klass.to_string).sub(/\A:/, '')
+        cs.id = 'class.' + cs.qname.gsub(/:/, '_')
+      end
+      cs.description = resp.desc.lexical_form if resp.desc
+      cs.parents << resp.parent.get_uri unless resp.parent.is_anon if resp.parent
+      cs.children << resp.child.get_uri unless resp.child.is_anon if resp.child
+      cs.union = resp.union if resp.union
+      cs.equivalent << resp.equiv.get_uri if resp.equiv
+      cs.isAbstract = resp.isAbstract.true? if resp.isAbstract
+    end
+  end
+  
+  # Find class comments.
+  
+  def find_class_comments
+    query = %Q{
+      #{@namespace_defs}
+      select distinct ?klass ?comment
+      #{@from_clauses_by_group['named-no-embedding']}
+      #{@from_clauses_by_group['imported-imce-no-embedding']}
+      where {
+        ?klass rdf:type owl:Class .
+        ?klass rdfs:comment ?comment .
+      }
+    }
+    run_select_query(query) do |resp|
+      klass = resp.klass.get_uri
+      raise "unknown class #{cs}" unless cs = OwlClass.by_uri[klass]
+      if resp.comment
+        unless (c = resp.comment.lexical_form.strip).empty?
+          cs.comments << c
+        end
+      end
+    end
+  end
+  
+  # Find class ancestors.
+  
+  def find_class_ancestors
+    query = %Q{
+      #{@namespace_defs}
+      select distinct ?klass ?ancestor
+      #{@from_clauses_by_group['named-no-embedding']}
+      #{@from_clauses_by_group['imported-imce-no-embedding']}
+      #{@from_clauses_by_group_by_type['named-no-embedding']['ClassEntailments']}
+      #{@from_clauses_by_group_by_type['imported-imce-no-embedding']['ClassEntailments']}
+      where {
+              { ?klass rdfs:subClassOf ?ancestor . }
+        union { ?klass owl:equivalentClass ?ancestor . }
+        ?ancestor rdf:type owl:Class
+        filter ((?klass != ?ancestor) && (?klass != owl:Nothing) && (?ancestor != owl:Thing))
+      }
+    }
+    run_select_query(query) do |resp|
+      ancestor = resp.ancestor.get_uri
+      klass = resp.klass.get_uri
+      cs = OwlClass.by_uri[klass]
+      if as = OwlClass.by_uri[ancestor]
+        cs.ancestors << ancestor
+        as.descendants << klass
+      else
+        raise "bad type for ancestor #{ancestor}"
+      end
+    end
+  end
+  
+  # Find range restrictions.
+  
+  def find_range_restrictions
+    query = %Q{
+      #{@namespace_defs}
+      select ?klass ?prop ?card ?minc ?maxc ?allv
+      #{@from_clauses_by_group['named-no-embedding']}
+      #{@from_clauses_by_group['imported-imce-no-embedding']}
+      where {
+        ?klass rdfs:subClassOf ?rest .
+        ?rest rdf:type owl:Restriction .
+        ?rest owl:onProperty ?prop
+        optional { ?rest owl:cardinality ?card }
+        optional { ?rest owl:qualifiedCardinality ?qcard }
+        optional { ?rest owl:minCardinality ?minc }
+        optional { ?rest owl:maxCardinality ?maxc }
+        optional { ?rest owl:allValuesFrom ?allv }
+        optional { ?rest owl:someValuesFrom ?somv }
+      }
+    }
+    run_select_query(query) do |resp|
+      klass = resp.klass.get_uri
+      prop = resp.prop.get_uri
+      rs = OwlRestriction.new(klass, prop)
+      rs.minc = rs.maxc = resp.card.lexical_form.to_i if resp.card
+      rs.minc = rs.maxc = resp.qcard.lexical_form.to_i if resp.qcard
+      rs.minc = rs.resp.minc.lexical_form.to_i if resp.minc
+      rs.maxc = resp.maxc.lexical_form.to_i if resp.maxc
+      if allv = resp.allv
+        k = OwlClass.by_uri[allv.get_uri]
+        raise "no class for #{allv}" unless k
+        rs.allv = k
+      end
+      rs.minc = [rs.minc, 1].max if resp.somv
+      if rcs = OwlClass.by_uri[klass]
+        rcs.restrictions << rs
+      else
+        raise "no class #{klass} for restriction"
+      end
+    end
+  end
+  
+  # Find asserted disjoint classes.
+  
+  def find_disjoint_classes
+    query = %Q{
+      #{@namespace_defs}
+      select distinct ?klass1 ?klass2
+      #{@from_clauses_by_group['named-no-embedding']}
+      where {
+        ?klass1 owl:disjointWith ?klass2 .
+      }
+    }
+    run_select_query(query) do |resp|
+      klass1 = resp.klass1.get_uri
+      klass2 = resp.klass2.get_uri
+      ks1 = OwlClass.by_uri[klass1]
+      ks2 = OwlClass.by_uri[klass2]
+      ks1.disjoints << klass2
+      ks2.disjoints << klass1
+    end
+  end
+  
+  # Find properties and direct parents.
+  
+  def find_properties_and_parents
+    query = %Q{
+      #{@namespace_defs}
+      select ?prop ?ptype ?desc ?parent ?domain ?range ?isAbstract ?isDerived
+             ?isDatatype ?isObject ?isFunctional
+      #{@from_clauses_by_group['named-no-embedding']}
+      #{@from_clauses_by_group['imported-imce-no-embedding']}
+      where {
+        ?prop rdf:type ?ptype
+        optional { ?prop dc:description ?desc . }
+        optional {
+          { ?prop rdfs:subPropertyOf ?parent } union
+          { ?prop owl:equivalentProperty ?parent }
+        }
+        optional { ?prop rdfs:domain ?domain }
+        optional { ?prop rdfs:range ?range }
+        bind (exists { ?prop annotation:isAbstract true } as ?isAbstract)
+        bind (exists { ?prop annotation:isDerived true } as ?isDerived)
+        bind (?ptype = owl:DatatypeProperty as ?isDatatype)
+        bind (?ptype = owl:ObjectProperty as ?isObject)
+        bind (exists { ?prop rdf:type owl:FunctionalProperty } as ?isFunctional)
+        filter (!isblank(?prop) && (?isDatatype || ?isObject))
+      }
+    }
+    run_select_query(query) do |resp|
+      prop = resp.prop.get_uri
+      unless ps = OwlProperty.by_uri[prop]
+        ps = OwlProperty.new(prop)
+        ps.qname = @default_model.qname_for(resp.prop.to_string).sub(/\A:/, '')
+        ps.id = 'property.' + ps.qname.gsub(/:/, '_')
+      end
+      ps.ptype = resp.ptype.get_uri
+      ps.functional = resp.isFunctional.true?
+      ps.description = resp.desc.lexical_form if resp.desc
+      ps.isAbstract =  resp.isAbstract.true?
+      unless ps.isAbstract
+        ps.parents << resp.parent.get_uri if resp.parent
+        ps.domain = resp.domain.get_uri if resp.domain
+      end
+      ps.isDerived = resp.isDerived.true?
+      if resp.range
+        rru = resp.range.get_uri
+        rrq = @default_model.qname_for(rru).sub(/\A:/, '')
+        if resp.isObject.true?
+          rs = OwlClass.by_uri[rru]
+          raise "no class for #{rru}" unless rs
+        elsif resp.isDatatype.true?
+          unless rs = RdfsDatatype.by_uri[rru]
+            rs = RdfsDatatype.new(rru)
+            rs.qname = @default_model.qname_for(rru).sub(/\A:/, '')
+            rs.id = 'datatype.' + rs.qname.gsub(/:/, '_')
+          end
+        else
+          raise "invalid property type for #{prop}"
+        end
+        ps.range = rs
+      end
+    end
+  end
+  
+  # Find property inverses.
+  
+  def find_property_inverses
+    query = %Q{
+      #{@namespace_defs}
+      select ?prop ?inverse
+      #{@from_clauses_by_group['named-no-embedding']}
+      #{@from_clauses_by_group['imported-imce-no-embedding']}
+      where {
+        ?prop rdf:type ?ptype .
+        ?prop owl:inverseOf ?inverse .
+        filter (?ptype = owl:DatatypeProperty || ?ptype = owl:ObjectProperty)
+      }
+    }
+    run_select_query(query) do |resp|
+      prop = resp.prop.get_uri
+      inverse = resp.inverse.get_uri
+      OwlProperty.by_uri[prop].inverse << inverse
+      OwlProperty.by_uri[inverse].inverse << prop
+    end
+  end
+  
+  # Find property ancestors.
+  
+  def find_property_ancestors
+    query = %Q{
+      #{@namespace_defs}
+      select distinct ?prop ?ancestor
+    #{@from_clauses_by_group['named-no-embedding']}
+    #{@from_clauses_by_group['imported-imce-no-embedding']}
+    #{@from_clauses_by_group_by_type['named-no-embedding']['PropertyEntailments']}
+    #{@from_clauses_by_group_by_type['imported-imce-no-embedding']['PropertyEntailments']}
+      where {
+        ?prop rdf:type ?ptype
+        optional {
+          { ?prop rdfs:subPropertyOf  ?ancestor } union
+            { ?prop owl:equivalentProperty ?ancestor }
+        }
+        filter ((
+                  ?ptype = owl:DatatypeProperty ||
+                  ?ptype = owl:ObjectProperty ||
+                  ?ptype = owl:FunctionalProperty
+               ) && ?prop != ?ancestor &&
+               (
+                 ?prop != owl:bottomObjectProperty &&
+                 ?prop != owl:bottomDataProperty &&
+                 ?ancestor != owl:topObjectProperty &&
+                 ?ancestor != owl:topDataProperty
+               ))
+      }
+    }
+    run_select_query(query) do |resp|
+      prop = resp.prop.get_uri
+      ps = OwlProperty.by_uri[prop]
+      ps.ancestors << resp.ancestor.get_uri if resp.ancestor
+    end
+  end
+  
+  # Find property comments.
+  
+  def find_property_comments
+    query = %Q{
+      #{@namespace_defs}
+      select distinct ?property ?comment
+      #{@from_clauses_by_group['named-no-embedding']}
+      #{@from_clauses_by_group['imported-imce-no-embedding']}
+      where {
+        { ?property rdf:type owl:DatatypeProperty } union { ?property rdf:type owl:ObjectProperty }
+        ?property rdfs:comment ?comment .
+      }
+    }
+    run_select_query(query) do |resp|
+      property = resp.property.get_uri
+      raise "unknown property #{cs}" unless cs = OwlProperty.by_uri[property]
+      if resp.comment
+        unless (c = resp.comment.lexical_form.strip).empty?
+          cs.comments << c
+        end
+      end
+    end
+  end
+  
+  # Find class embeddings.
+  
+  def find_class_embeddings
+    query = %Q{
+      #{@namespace_defs}
+      select distinct ?klass ?embedding
+      #{@from_named_clauses_by_group['named-imce']}
+      #{@from_named_clauses_by_group['imported-imce']}
+      #{@from_named_clauses_by_group['imported-omg-metamodel']}
+      #{@from_clauses_by_group['named-imce']}
+      #{@from_clauses_by_group['imported-imce']}
+      #{@from_clauses_by_group_by_type['named-imce']['ClassEntailments']}
+      where {
+        graph ?imce_graph { ?klass rdf:type owl:Class }
+        ?klass rdfs:subClassOf ?embedding .
+        graph ?omg_graph { 
+          ?embedding rdf:type owl:Class .
+                { ?embedding annotation:isMetaclass true }
+          union { ?embedding annotation:isStereotypeMetaclass true }
+          union { ?embedding annotation:isMetaclassSpecificExtension true }
+        }
+        filter (
+             #{(@ontologies_by_group['named-imce'] + @ontologies_by_group['imported-imce']).map { |o| o.to_uriref }.equal_any?('?imce_graph')}
+          && #{@ontologies_by_group['imported-omg-metamodel'].map { |o| o.to_uriref }.equal_any?('?omg_graph')}
+        )
+      }
+    }
+    run_select_query(query).each do |resp|
+      klass = resp.klass.get_uri
+      if embedding = resp.embedding
+        embedding = @default_model.qname_for(embedding.to_string).sub(/\A:/, '')
+        if cs = OwlClass.by_uri[klass]
+          cs.omg_embedding << embedding
+        end
+      end
+    end
+    
+    query = %Q{
+      #{@namespace_defs}
+      select distinct ?klass ?embedding
+      #{@from_named_clauses_by_group['named-no-embedding']}
+      from named <#{OWL2_MOF2}>
+      #{@from_clauses_by_group['imported-imce']}
+      #{@from_clauses_by_group_by_type['named']['ClassEntailments']}
+      #{@from_clauses_by_group_by_type['imported-imce']['ClassEntailments']}
+      where {
+        graph ?imce_graph { ?klass rdf:type owl:Class }
+        graph <#{OWL2_MOF2}> { 
+          ?embedding rdf:type owl:Class .
+        }
+        ?klass rdfs:subClassOf ?embedding .
+        optional {
+          graph <#{OWL2_MOF2}> {
+            ?embedding2 rdf:type owl:Class .
+          }
+          ?klass rdfs:subClassOf ?embedding2 .
+          ?embedding2 rdfs:subClassOf ?embedding .
+          filter (?klass != ?embedding2 && ?embedding2 != ?embedding)
+        }
+        filter (
+          !bound(?embedding2)
+          && #{@ontologies_by_group['named-no-embedding'].map { |o| o.to_uriref }.equal_any?('?imce_graph')}
+        )
+      }
+    }
+    run_select_query(query).each do |resp|
+      klass = resp.klass.get_uri
+      if embedding = resp.embedding
+        embedding = @default_model.qname_for(embedding.to_string).sub(/\A:/, '')
+        if cs = OwlClass.by_uri[klass]
+          cs.imce_embedding << embedding
+        end
+      end
+    end   
+  end
+  
+  # Find property reifications.
+  
+  def find_property_reifications
+    query = %Q{
+      #{@namespace_defs}
+      select distinct ?property ?invprop ?embedding ?srcprop ?trgprop ?relclass
+      #{@from_clauses_by_group['named-no-embedding']}
+      #{@from_named_clauses_by_group['named-no-embedding']}
+      #{@from_clauses_by_group['imported-imce-no-embedding']}
+      #{@from_clauses_by_group_by_type['named-no-embedding']['ClassEntailments']}
+      #{@from_clauses_by_group_by_type['imported-imce-no-embedding']['ClassEntailments']}
+      #{@from_clauses_by_group_by_type['named-no-embedding']['PropertyEntailments']}
+      #{@from_clauses_by_group_by_type['imported-imce-no-embedding']['PropertyEntailments']}
+      where {
+        graph ?graph { ?property rdf:type owl:ObjectProperty . }
+    
+        # reification rule
+    
+        [ swrl:body [ rdf:first [ swrl:propertyPredicate ?srcprop ] ;
+                      rdf:rest [ rdf:first [ swrl:propertyPredicate ?trgprop ] ] ];
+          swrl:head [ rdf:first [ swrl:propertyPredicate ?property ] ]
+        ] .
+    
+        # find relationship class
+    
+        ?srcprop rdfs:domain ?relclass .
+        ?trgprop rdfs:domain ?relclass .
+    
+        filter (#{@ontologies_by_group['named-no-embedding'].map { |o| o.to_uriref }.equal_any?('?graph')})
+      }
+    }
+    run_select_query(query).each do |resp|
+      property = resp.property.get_uri
+      relclass = resp.relclass.get_uri
+      srcprop = resp.srcprop.get_uri
+      trgprop = resp.trgprop.get_uri
+      
+      OwlClass.by_uri[relclass].reification << property
+      
+      property_struct = OwlProperty.by_uri[property]
+      property_struct.relclass = relclass
+      property_struct.chain = [srcprop, trgprop]
+      
+      OwlProperty.by_uri[srcprop].reification = true
+      OwlProperty.by_uri[trgprop].reification = true
+    end
+  end
+  
+end
+
+exit(OntologyDocbookApplication.new(APPLICATION_NAME).start)

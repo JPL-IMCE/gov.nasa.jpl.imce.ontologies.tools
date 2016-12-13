@@ -1,0 +1,59 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'JenaApplication'
+
+APPLICATION_NAME = 'create-view'
+
+class CreateViewApplication < JenaApplication
+  
+  def run
+    
+    super
+    
+    unless uri = argv.shift
+      log(FATAL, 'no URI given')
+      return 1
+    end
+    
+    # Create model for result.
+    
+    log(INFO, "create model for #{uri}")
+    model = ModelFactory.create_default_model
+    model.setNsPrefixes(@namespace_by_prefix)
+    
+    # Add models for named graphs.
+    
+    log(INFO, 'add models for named graphs')
+    todo = ARGV.length
+    count = 0
+    ARGV.each do |i|
+      if m = @data_service.get_model(i)
+        log(DEBUG, "add (#{count += 1} of #{todo}) #{'%7d' % m.size} statements from #{i}")
+        @data_service.add(uri, m)
+      else
+        log(WARN, "empty model for #{i}")
+      end
+    end
+    
+    # Exit.
+    
+    return 0
+    
+  end
+end
+
+exit(CreateViewApplication.new(APPLICATION_NAME).start)

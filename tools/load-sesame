@@ -1,0 +1,155 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'logger'
+require 'open-uri'
+require 'time'
+
+require 'jpl/rdf/sesame'
+
+# Define variables.
+
+# Process arguments.
+
+def usage
+  warn 'load-sesame --host host --port port --path path --repo repo --uri uri --prefix pref --backbone-prefix pref --backbone-namespace ns [ file ]'
+end
+
+log_level = Logger::FATAL
+host = port = path = repo = uri = prefix = backbone_prefix = backbone_namespace = nil
+
+GetoptLong.new(
+[ '--help',    '-h',       GetoptLong::NO_ARGUMENT ],
+[ '--debug',   '-d',       GetoptLong::NO_ARGUMENT ],
+[ '--info',    '-i',       GetoptLong::NO_ARGUMENT ],
+[ '--warn',    '-w',       GetoptLong::NO_ARGUMENT ],
+[ '--repo',    '-r',       GetoptLong::REQUIRED_ARGUMENT ],
+[ '--host',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--port',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--path',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--uri',                 GetoptLong::REQUIRED_ARGUMENT ],
+[ '--prefix',              GetoptLong::REQUIRED_ARGUMENT ],
+[ '--backbone-prefix',     GetoptLong::REQUIRED_ARGUMENT ],
+[ '--backbone-namespace',  GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt, arg|
+case opt
+when "--help"
+  usage
+  exit 0
+when "--debug"
+  log_level = Logger::DEBUG
+when "--info"
+  log_level = Logger::INFO
+when "--warn"
+  log_level = Logger::WARN
+when "--host"
+  host = arg
+when "--port"
+  port = arg
+when "--path"
+  path = arg
+when "--repo"
+  repo = arg
+when "--uri"
+  uri = arg
+when "--prefix"
+  prefix = arg
+when '--backbone-prefix'
+  backbone_prefix = arg
+when '--backbone-namespace'
+  backbone_namespace = arg
+else
+  usage
+  exit 1
+end
+end
+
+unless host && port && path && repo && uri && (backbone_prefix.nil? == backbone_namespace.nil?)
+  usage
+  exit 1
+end
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Connect to Sesame server.
+
+log.info('begin session')
+session = RDF::Sesame::Session.new(host, port, path, log)
+raise 'no session' unless session
+log.info('create model')
+model = session.model(repo)
+raise 'no model' unless model
+
+# Load ontology.
+
+context = RDF::Uri.new(uri).to_uriref
+options = {'context' => context}
+
+# Delete model statements.
+
+log.info("delete context #{context}")
+model.delete_statements(options)
+
+# Load ontology.
+
+log.info("load context #{context}")
+model.import(ARGF, options)
+log.info("loaded #{model.size(options).to_i} statements")
+log.info("repository size: #{model.size} statements")
+
+# Associate prefixes and namespaces.
+
+namespace_by_prefix = {}
+namespace_by_prefix[prefix] = uri if prefix
+if backbone_prefix && backbone_namespace
+  namespace_by_prefix[backbone_prefix] = backbone_namespace
+end
+
+# Process namespace prefixes.
+
+namespace_by_prefix.each do |prefix, namespace|
+    
+  # Delete namespace definitions for this prefix and its case variants.
+  
+  model.namespaces.map do |defn|
+    defn.prefix.to_s
+  end.select do |p|
+    p.downcase == prefix.downcase
+  end.each do |p|
+    log.info("delete namespace prefix #{p}")
+    model.delete_namespace(p)
+  end
+  
+  # Delete default namespace with empty prefix.
+  
+  model.delete_namespace('')
+  
+  # Set namespace prefix.
+    
+  log.info("set namespace prefix #{prefix} for namespace #{namespace}")
+  model.set_namespace(prefix, namespace + '#')
+  
+end
+
+# End session.
+
+log.info('end session')
+session.finish

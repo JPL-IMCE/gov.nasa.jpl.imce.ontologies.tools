@@ -1,0 +1,174 @@
+#!/usr/bin/env ruby
+
+require 'csv'
+require 'fileutils'
+require 'rexml/document'
+
+require 'owlapi'
+
+require 'Application'
+
+APPLICATION_NAME = 'get-unsats'
+
+class GetUnsats < Application
+
+  java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
+
+  def run
+  
+    @options.get_props = false
+    option_parser.on('--get-props', 'get implicated properties') do
+      @options.get_sups = false
+      @options.get_props = true
+      @options.get_prop_targets = false
+    end
+    @options.get_sups = false
+    option_parser.on('--get-sups', 'get implicated superclasses') do
+      @options.get_sups = true
+      @options.get_props = false
+      @options.get_prop_targets = false
+    end
+    @options.get_prop_targets = false
+    option_parser.on('--get-prop-targets', 'get implicated properties and targets') do
+      @options.get_sups = false
+      @options.get_props = false
+      @options.get_prop_targets = true
+    end
+    
+    super
+    
+    # Create ontology manager.
+    
+    logger.log(Logger::INFO, 'create ontology manager')
+    manager = OWLManager.createOWLOntologyManager
+    raise "couldn't create owl ontology manager" unless manager
+
+    # Create data factory
+    
+    logger.log(Logger::INFO, 'create OWL data factory')
+    factory = manager.getOWLDataFactory
+    
+    # Initialize CSV output.
+    
+    logger.log(Logger::INFO, 'initialize CSV output')
+    csv = CSV.new(STDOUT)
+    header = %w{ class }
+    if @options.get_props
+      header << 'prop'
+    elsif @options.get_sups
+      header << 'sup'
+    elsif @options.get_prop_targets
+      header += %w{ prop target }
+    end
+    csv << header
+    
+    # Process unsatisfiability results.
+    
+    logger.log(Logger::INFO, 'process unsatisfiability results')
+    doc = REXML::Document.new(ARGF)
+    top = doc.get_elements('testsuites/testsuite[@name="satisfiability"]').first
+    top.each_element('testcase') do |e|
+      next unless failure = e.get_elements('failure').first
+      name = e.attributes['name']
+      klass = name.split[1].sub(/\A<(.*)>\z/, '\1')
+      explanation = failure.texts.join
+      data = [klass]
+      extra = if @options.get_sups
+          get_sups_from_explanation(manager, factory, klass, explanation)
+        elsif @options.get_props
+          get_props_from_explanation(manager, factory, klass, explanation)
+        elsif @options.get_prop_targets
+          get_prop_targets_from_explanation(manager, factory, klass, explanation)
+        else
+          []
+        end
+      if @options.get_sups || @options.get_props || @options.get_prop_targets
+        extra.each do |e|
+          csv << (data.dup + e)
+        end
+      else
+        csv << data
+      end
+    end
+    
+    return 0
+    
+  end
+  
+  def get_props_from_explanation(manager, factory, klass, explanation)
+        
+    # Create ontology model for results.
+    
+    source = StringDocumentSource.new(explanation)
+    model = manager.loadOntologyFromOntologyDocument(source)
+    
+    # Create class expression for unsatisfiable class.
+    
+    class_expr = factory.getOWLClass(IRI.create(klass))
+    
+    # Find implicated properties.
+    
+    model.getSubClassAxiomsForSubClass(class_expr).map do |a|
+      a.getSuperClass
+    end.select do |c|
+      c.isAnonymous &&
+      c.isObjectRestriction
+    end.map { |r| [ r.getProperty.getIRI.toString ] }.uniq
+
+  end
+  
+  def get_prop_targets_from_explanation(manager, factory, klass, explanation)
+    
+    # Create ontology model for results.
+    
+    source = StringDocumentSource.new(explanation)
+    model = manager.loadOntologyFromOntologyDocument(source)
+    
+    # Create class expression for unsatisfiable class.
+    
+    class_expr = factory.getOWLClass(IRI.create(klass))
+    
+    # Find implicated properties and targets.
+    
+    model.getSubClassAxiomsForSubClass(class_expr).map do |a|
+      a.getSuperClass
+    end.select do |c|
+      c.isAnonymous &&
+      c.isObjectRestriction
+    end.map { |r| [ r.getProperty, r.getFiller ] }.uniq.inject([]) do |m, o|
+        model.getSubClassAxiomsForSubClass(o[1]).map do |a|
+        a.getSuperClass
+      end.reject do |c|
+        c.isAnonymous
+      end.uniq.each do |x|
+        m << [o[0].getIRI.toString, x.getIRI.toString]
+      end
+      m
+    end
+
+  end
+  
+  def get_sups_from_explanation(manager, factory, klass, explanation)
+    
+    # Create ontology model for results.
+    
+    source = StringDocumentSource.new(explanation)
+    model = manager.loadOntologyFromOntologyDocument(source)
+    
+    # Create class expression for unsatisfiable class.
+    
+    class_expr = factory.getOWLClass(IRI.create(klass))
+    
+    # Find implicated superclasses.
+    
+    model.getSubClassAxiomsForSubClass(class_expr).map do |a|
+      a.getSuperClass
+    end.reject do |c|
+      c.isAnonymous
+    end.map { |s| [ s.getIRI.toString ] }.uniq
+
+  end
+  
+end
+
+exit(GetUnsats.new(APPLICATION_NAME).start)

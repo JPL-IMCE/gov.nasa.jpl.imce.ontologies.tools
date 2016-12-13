@@ -1,0 +1,291 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'logger'
+require 'uri'
+require 'yaml'
+require 'OntologyBundles'
+require 'Makefile'
+
+# Define utility functions.
+
+module Enumerable
+  
+  def map_filter(hash, method, args = [])
+    map { |i| hash[i].send(method, *args) }.reject { |r| r.nil? }
+  end
+  
+end
+
+# Process arguments.
+
+def usage
+  warn 'dependencies --parts parts --groups groups --bundles bundles --types types [ --validation ] [ imports ]'
+end
+
+log_level = Logger::FATAL
+parts = groups = bundles = types = validation = imports_file = nil
+
+GetoptLong.new(
+[ '--help',    '-h',       GetoptLong::NO_ARGUMENT ],
+[ '--debug',   '-d',       GetoptLong::NO_ARGUMENT ],
+[ '--info',    '-i',       GetoptLong::NO_ARGUMENT ],
+[ '--warn',    '-w',       GetoptLong::NO_ARGUMENT ],
+[ '--parts',               GetoptLong::REQUIRED_ARGUMENT ],
+[ '--types',               GetoptLong::REQUIRED_ARGUMENT ],
+[ '--groups',              GetoptLong::REQUIRED_ARGUMENT ],
+[ '--bundles',             GetoptLong::REQUIRED_ARGUMENT ],
+[ '--validation',          GetoptLong::NO_ARGUMENT ],
+[ '--imports-file',        GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt, arg|
+  case opt
+  when "--help"
+    usage
+    exit 0
+  when "--debug"
+    log_level = Logger::DEBUG
+  when "--info"
+    log_level = Logger::INFO
+  when "--warn"
+    log_level = Logger::WARN
+  when "--parts"
+    parts = arg
+  when "--groups"
+    groups = arg
+  when "--bundles"
+    bundles = arg
+  when "--types"
+    types = arg.split(',')
+  when '--validation'
+    validation = true
+  when '--imports-file'
+    imports_file = arg
+  else
+    warn "unknown option: #{opt}"
+    usage
+    exit 1
+  end
+end
+
+unless parts && groups && bundles && types && imports_file
+  usage
+  exit 1
+end
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Load ontology parts data.
+
+log.info('load ontology parts data')
+part_by_iri = Marshal.load(File.open(parts, 'rb'))
+log.debug("ontology parts #{part_by_iri.inspect}")
+
+# Load ontology groups data.
+
+log.info('load ontology groups data')
+group_by_iri = Marshal.load(File.open(groups, 'rb'))
+log.debug("ontology groups #{group_by_iri.inspect}")
+
+# Load ontology bundles data.
+
+log.info('load ontology bundles data')
+bundle_by_name = Marshal.load(File.open(bundles, 'rb'))
+log.debug("ontology bundles #{bundle_by_name.inspect}")
+
+# Load imports graph data.
+
+log.info('load imports graph')
+imports_graph = YAML.load(File.new(imports_file))
+closure_by_ontology = imports_graph['closure']
+log.debug("closure by ontology #{closure_by_ontology.inspect}")
+bundled_by_bundle = imports_graph['bundles']
+log.debug("bundled by bundle #{bundled_by_bundle.inspect}")
+
+# Write dependencies.
+
+log.info('write dependencies')
+
+if validation
+  
+  # 
+  # ONTOLOGY PART DEPENDENCIES
+  #
+  
+  #
+  # ONTOLOGY GROUP DEPENDENCIES
+  #
+  
+  # group validation file depends on ontology_production_sentinels and entailment_production_sentinels
+  # for all predecessor groups
+  
+  group_by_iri.each do |g_iri, group|
+    target = group.validation_file
+    log.debug("rule: #{target}")
+    rule = Makefile::Rule.new(target)
+    group.parts.each do |part|
+      rule.prereqs << part.ontology_production_sentinel
+      i_iris = closure_by_ontology[part.iri]
+      i_iris.each do |i_iri|
+        i_part = part_by_iri[i_iri]
+        rule.prereqs << i_part.ontology_production_sentinel
+      end
+    end
+    rule.prereqs += types.map { |type| group.entailments_production_sentinels(type) }.flatten
+    rule.prereqs += group.all_predecessors.inject(Set.new) do |m, g|
+      m += types.map { |type| g.entailments_production_sentinels(type) }.flatten
+      m
+    end
+    puts rule
+  end
+  
+  #
+  # ONTOLOGY BUNDLE DEPENDENCIES
+  #
+  
+  bundle_by_name.each do |name, bundle|
+    rule = Makefile::Rule.new(bundle.validation_file)
+    rule.prereqs << bundle.closure_production_sentinel
+    puts rule
+    
+    if bundle.type == 'imce'
+      rule = Makefile::Rule.new(bundle.embedding_validation_file)
+	  rule.prereqs << bundle.closure_embedding_production_sentinel if bundle.type ==  'imce'
+	  puts rule
+    end
+  end
+
+else
+  
+  # 
+  # ONTOLOGY PART DEPENDENCIES
+  #
+  
+  # entailments artifact depends on ontology artifact plus all imported artifacts, plus
+  # entailments of imported ontologies
+  
+  part_by_iri.each do |iri, part|
+    unless part.ontology_artifact_only?
+      types.each do |type|
+        target = part.entailments_artifact(type)
+        log.debug("rule: #{target}")
+        rule = Makefile::Rule.new(target)
+        rule.prereqs << part.ontology_artifact
+        rule.prereqs += closure_by_ontology[part.iri].map_filter(part_by_iri, :ontology_artifact)
+        rule.prereqs += closure_by_ontology[part.iri].map_filter(part_by_iri, :entailments_artifact, type)
+        puts rule
+      end
+    end
+  end
+  
+  #
+  # ONTOLOGY GROUP DEPENDENCIES
+  #
+  
+  group_by_iri.each do |g_iri, group|
+    group.parts.each do |part|
+      
+      # imports artifact depends on imported ontology files
+  
+      log.debug("rule: #{part.imports_artifact}")
+      rule = Makefile::Rule.new(part.imports_artifact)
+      rule.prereqs << part.file
+      rule.prereqs += closure_by_ontology[part.iri].map_filter(part_by_iri, :file)
+      puts rule
+    end
+  end
+    
+  #
+  # ONTOLOGY BUNDLE DEPENDENCIES
+  #
+  
+  bundle_by_name.each do |name, bundle|
+    
+    # closure artifact depends on ontology files for all bundled ontologies and
+    # their imports and all imported bundle artifacts.
+    
+    target = bundle.artifact
+    log.debug("rule: #{target}")
+    rule = Makefile::Rule.new(target)
+    bundle.groups.each do |group|
+      parts = group.non_embedding_parts
+      parts.each do |part|
+        i_iris = closure_by_ontology[part.iri].dup << part.iri
+        i_iris.each do |i_iri|
+          i_part = part_by_iri[i_iri]
+          rule.prereqs << i_part.file
+        end
+      end
+    end
+    rule.prereqs += bundle.imported_bundles.inject([]) do |m, b|
+      m << b.artifact if b.type == 'imce'
+      m
+    end
+    puts rule
+    
+    if bundle.type == 'imce'
+      
+      target = bundle.embedding_artifact
+      log.debug("rule: #{target}")
+      rule = Makefile::Rule.new(target)
+      (groups = bundle.groups.dup) << bundle.owl2_mof2_group
+      groups.each do |group|
+        parts = group.parts
+        parts.each do |part|
+          i_iris = closure_by_ontology[part.iri].dup << part.iri
+          i_iris.each do |i_iri|
+            i_part = part_by_iri[i_iri]
+            rule.prereqs << i_part.file
+          end
+        end
+      end
+      rule.prereqs << bundle.artifact
+      rule.prereqs += bundle.imported_bundles.inject([]) do |m, b|
+        m << (b.type == 'imce' ? b.embedding_artifact : b.artifact)
+        m
+      end
+      puts rule
+    
+    end
+    
+    # Digest depends on sentinels.
+    
+    target = bundle.digest_file
+    log.debug("rule: #{target}")
+    rule = Makefile::Rule.new(target)
+    rule.prereqs += bundle.groups.inject([]) do |m, group|
+      group.parts.each do |part|
+        m += (closure_by_ontology[part.iri].dup << part.iri).inject([]) do |n, p_iri|
+          p = part_by_iri[p_iri]
+          n << p.ontology_production_sentinel
+          n += types.map { |type| p.entailments_production_sentinel(type) }
+          n
+        end
+      end
+      m
+    end
+    puts rule
+    
+  end
+end
+
+# End.
+
+log.info('end')

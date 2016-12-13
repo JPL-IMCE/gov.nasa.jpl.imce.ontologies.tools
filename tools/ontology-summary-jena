@@ -1,0 +1,277 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'JenaApplication'
+require 'tsort'
+require 'rexml/document'
+require 'jpl/docbook'
+
+APPLICATION_NAME = 'ontology-summary-jena'
+
+class OntologySummaryApplication < JenaApplication
+
+  DEFAULT_DOTDIR = '.'
+  INTRO = %Q{
+    This document is a catalog of the Integrated Model-Centric Engineeering Ontologies.
+  }
+  COPYRIGHT_YEAR = '2013'
+  COPYRIGHT_HOLDER = 'California Institute of Technology'
+  LEGAL_NOTICE = [
+    'Government sponsorship acknowledged.',
+    'This research was carried out at the Jet Propulsion Laboratory, California Institute of Technology,
+      under a contract with the National Aeronautics and Space Administration.'
+  ]
+  TITLE = 'Ontology Summary'
+  SUBTITLE = 'Integrated Model-Centric Engineering'
+
+  def run
+    
+    # Add options.
+    
+    option_parser.on('--number NUMBER', "document number") do |v|
+      @options.number = v
+    end
+    @options.dotdir = DEFAULT_DOTDIR
+    option_parser.on('--dotdir DIR', "working directory") do |v|
+      @options.dotdir = v
+    end
+    option_parser.on('--dbcent ID', 'DocBook character entities ID') do |v|
+      @options.dbcent = v
+    end
+
+    super
+    
+    # Check option values.
+    
+    unless @options.number
+      log(FATAL, 'no document number specified')
+      return 1
+    end
+    
+    # Define variables.
+    
+    summary_date = Date.today.strftime('%Y-%m-%d')
+    ontologies = {}
+    imports_by_ontology = Hash.new { |h, k| h[k] = Set.new }
+    imports_by_ontology.extend(TSortMethods)
+      
+    # Find ontologies (and contexts).
+      
+    query = %Q{
+      #{@namespace_defs}
+      select distinct ?uri
+      #{@from_clauses_by_group['named']}
+      where {
+        ?uri rdf:type owl:Ontology .
+      }
+    }
+    run_select_query(query) do |resp|
+      s = OpenStruct.new
+      s.uri = resp.uri.to_string
+      s.imports = []
+      s.name = '[missing]'
+      s.desc = '[missing]'
+      s.creator = '[missing]'
+      ontologies[s.uri] = s
+    end
+    
+    # Get ontology properties.
+    
+    ontologies.each do |uri, s|
+      query = %Q{
+        #{@namespace_defs}
+        select distinct ?name ?desc ?import ?version ?creator ?category
+        from <#{uri}>
+        where {
+          ?uri rdf:type owl:Ontology .
+          optional { ?uri dc:title ?name }
+          optional { ?uri dc:description ?desc }
+          optional { ?uri owl:versionInfo ?version }
+          optional { ?uri owl:imports ?import }
+          optional { ?uri dc:creator ?creator }
+          optional { ?uri dc:type ?category }
+        }   
+      }
+      run_select_query(query) do |resp|
+        s.name = resp.name.lexical_form if resp.name
+        s.desc = resp.desc.lexical_form if resp.desc
+        s.creator = resp.creator.lexical_form if resp.creator
+        if resp.import
+          s.imports << resp.import.to_string
+          imports_by_ontology[s.uri] << resp.import.to_string
+        end
+        s.category = resp.category.lexical_form if resp.category
+        s.revision = resp.version.lexical_form.sub(/\A.*(\d{4}-\d{2}-\d{2}).*\z/, '\1') if resp.version
+      end
+    end
+      
+    log(DEBUG, "ontologies: #{ontologies.inspect}")
+    
+    # Create GraphViz work directory.
+    
+    begin
+      Dir.mkdir(@options.dotdir)
+    rescue Errno::EEXIST
+    end
+    
+    # Open DocBook document.
+    
+    log(INFO, 'open DocBook document')
+    doc = REXML::Document.new
+    doc << REXML::XMLDecl.new
+    
+    # Add DTD declaration for character entity definitions.
+    
+    entities = %Q{[
+    <!ENTITY % sgml.features "IGNORE">
+    <!ENTITY % xml.features "INCLUDE">
+    <!ENTITY % dbcent PUBLIC "#{@options.dbcent}" "dbcentx.mod">
+    %dbcent;
+    ]}
+    doc << doc_type = REXML::DocType.new('article', entities)
+    
+    # Start article.
+    
+    doc << ar = Article.new
+    ar.add_attribute('xmlns', 'http://docbook.org/ns/docbook')
+    ar.add_attribute('version', '5.0')
+    ar.add_attribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+    
+    ar << ti = Element.new('title')
+    ti.text = 'Ontology Summary'
+    ar << st = Element.new('subtitle')
+    st.text = SUBTITLE
+    
+    ar << ai = Element.new('info')
+    ai << bi = Element.new('biblioid')
+    bi.text = @options.number
+    ai << pd = Element.new('pubdate')
+    pd.text = summary_date
+    ai << co = Element.new('copyright')
+    co << yr = Element.new('year')
+    yr.text = COPYRIGHT_YEAR
+    co << ho = Element.new('holder')
+    ho.text = COPYRIGHT_HOLDER
+    ai << ln = Element.new('legalnotice')
+    LEGAL_NOTICE.each do |t|
+      ln << Para.new(t)
+    end
+    
+    # Intro section.
+    
+    log(INFO, 'write introduction section')
+    ar << se = Section.new('Introduction')
+    se << Para.new(INTRO)
+    
+    # Ontology section.
+    
+    %w{Foundation Discipline Application}.each do |category|
+    
+      ar << se = Section.new("#{category} Ontologies")
+      log(INFO, "#{category} section")
+      se << SimPara.new
+    
+      # Individual ontology subsections.
+    
+      imports_by_ontology.tsort_each do |o|
+        o = ontologies[o]
+        next unless o && o.category == category
+    
+        log(INFO, o.name.to_s)
+        se << os = Section.new(o.name)
+        os << PreferredIndexTerm.new(o.name)
+    
+        if o.desc
+          DocBook::Document.parse_fragment(o.desc).each { |p| os << p }
+        end
+    
+        os << vl = VariableList.new
+    
+        unless o.creator.empty?
+          vl << vle = VarListEntry.new
+          vle << Term.new('Authority:')
+          vle << li = ListItem.new
+          li << Para.new(o.creator)
+        end
+     
+        unless o.revision.empty?
+          vl << vle = VarListEntry.new
+          vle << Term.new('Current Revision:')
+          vle << li = ListItem.new
+          li << Para.new(o.revision)
+        end
+    
+        imports = o.imports.select do |i|
+          i.respond_to?(:name)
+        end.map { |i| ontologies[i].name.to_s }
+        unless imports.empty?
+          vl << vle = VarListEntry.new
+          vle << Term.new('Imports:')
+          vle << li = ListItem.new
+          li << Para.new(imports.join(', '))
+          imports.each { |i| li << IndexTerm.new(i) }
+        end
+    
+        vl << vle = VarListEntry.new
+        vle << Term.new('Ontology URI:')
+        vle << li = ListItem.new
+        li << pa = Para.new
+        pa << ln = Link.new
+        ln.add_attribute('xlink:href', o.uri)
+        ln << Text.new(o.uri)
+    
+        vl << vle = VarListEntry.new
+        vle << Term.new('HTML Documentation:')
+        vle << li = ListItem.new
+        rel_uri = o.uri.gsub(/(http:\/\/)(imce\.jpl\.nasa\.gov)\/(.*)/, '../\3-draft.html')
+        abs_uri = o.uri.gsub(/(http:\/\/)(imce\.jpl\.nasa\.gov)\/(.*)/, '\1\2/document/\3-draft.html')
+        li << pa = Para.new
+        pa << ln = Link.new
+        ln.add_attribute('xlink:href', rel_uri)
+        ln << Text.new(abs_uri)
+    
+        vl << vle = VarListEntry.new
+        vle << Term.new('PDF Documentation:')
+        vle << li = ListItem.new
+        rel_uri = o.uri.gsub(/(http:\/\/)(imce\.jpl\.nasa\.gov)\/(.*)/, '../\3-draft.pdf')
+        abs_uri = o.uri.gsub(/(http:\/\/)(imce\.jpl\.nasa\.gov)\/(.*)/, '\1\2/document/\3-draft.pdf')
+        li << pa = Para.new
+        pa << ln = Link.new
+        ln.add_attribute('xlink:href', rel_uri)
+        ln << Text.new(abs_uri)
+    
+      end
+    end
+    
+    # Index.
+    
+    log(INFO, 'write index')
+    ar << Index.new
+    
+    # Write DocBook instance.
+    
+    doc.write(STDOUT, -1)
+    log(INFO, 'done')
+    
+    # Exit.
+    
+    return 0
+    
+  end
+
+end
+
+exit(OntologySummaryApplication.new(APPLICATION_NAME).start)

@@ -1,0 +1,166 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $Revision$
+#    $Date$
+#
+#    $Author$
+#
+#    Copyright (c) 2009 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'graphviz'
+require 'logger'
+require 'rexml/document'
+require 'set'
+require 'time'
+require 'yaml'
+
+require 'jpl/rdf/sesame'
+
+# Define constants.
+
+# Define utility functions.
+
+class String
+  def tag
+    gsub(/[^[:alnum:]]/, '_')
+  end
+end
+
+log_level = Logger::FATAL
+
+# Process arguments.
+
+def usage
+  warn 'ontology-diagram [ --config config_file ]'
+end
+
+config_file = 'ontology-diagram.yaml'
+indent = -1
+pub_number = ''
+ns = nil
+
+GetoptLong.new(
+[ '--config',  '-c',       GetoptLong::REQUIRED_ARGUMENT ],
+[ '--help',    '-h',       GetoptLong::NO_ARGUMENT ],
+[ '--debug',   '-d',       GetoptLong::NO_ARGUMENT ],
+[ '--info',    '-i',       GetoptLong::NO_ARGUMENT ],
+[ '--warn',    '-w',       GetoptLong::NO_ARGUMENT ],
+[ '--date',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--ns',                  GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt, arg|
+case opt
+when "--help"
+  usage
+  exit 0
+when "--config"
+  config_file = arg.to_s
+when "--debug"
+  log_level = Logger::DEBUG
+  indent = 1
+when "--info"
+  log_level = Logger::INFO
+when "--warn"
+  log_level = Logger::WARN
+when "--ns"
+  ns = arg
+else
+  usage
+  exit 1
+end
+end
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Load parameters.
+
+begin
+  param = YAML.load(File.open(config_file))
+rescue
+  $stderr.puts "Can't open config file #{config_file}"
+  exit 1
+end
+
+# Define constants.
+
+DCNS = RDF::NamespaceMap.new('http://purl.org/dc/elements/1.1/')
+
+# Connect to Sesame Server
+
+log.info('connect to sesame server')
+session = RDF::Sesame::Session.new(param['host'], param['port'], param['path'])
+model = session.model(param['repo'])
+
+# Get namespace definitions.
+
+log.info('get namespace definitions')
+ns = {}
+model.namespaces.each do |nsd|
+  log.debug("namespace #{nsd.prefix}: #{nsd.namespace}")
+  ns[nsd.prefix.to_s] = RDF::NamespaceMap.new(nsd.namespace.to_s)
+end
+log.info("got #{ns.length} namespace definitions")
+RDF::Uri.ns_by_prf = ns
+RDF::Uri.default_prf = ''
+
+# Open GraphViz graph.
+
+g = GraphViz.new('G', {'output' => 'dot'})
+g['rankdir'] = 'BT'
+#g['size'] = '6.75, 10.0'
+#g['overlap'] = 'scale'
+g['sep'] = "0.2, 0.2"
+g.node['shape'] = 'record'
+g.node['fontname'] = 'Arial'
+g.node['fontsize'] = '8.0'
+g.edge['fontname'] = 'Arial'
+g.edge['fontsize'] = '7.0'
+
+# Find classes and subclass relationships.
+
+seen = Set.new
+log.info('find classes and subclass relationships')
+qstring = %Q{
+  select distinct ?klass ?super where {
+    ?klass #{ns['rdf']['type'].to_uriref} #{ns['owl']['Class'].to_uriref} .
+    optional {
+      ?klass <http://www.openrdf.org/schema/sesame#directSubClassOf> ?super .
+      ?super #{ns['rdf']['type'].to_uriref} #{ns['owl']['Class'].to_uriref} .
+    }
+    filter (?klass != ?super && !isBlank(?klass) && !isBlank(?super)) .
+  }
+}
+log.debug("query: #{qstring}")
+model.query({'query' => qstring, 'infer' => 'true'}).each do |r|
+  sub_tag = r.klass.to_prefixed.tag
+  sup_tag = r.super.to_prefixed.tag rescue nil
+
+  unless seen.include?(sub_tag)
+    log.debug("add node #{sub_tag}")
+    g.add_node(sub_tag)
+    seen << sub_tag
+  end
+
+  if sup_tag
+    log.debug("add edge #{sub_tag} -> #{sup_tag}")
+    g.add_edge(sub_tag, sup_tag)
+  end
+
+end
+
+# Write graph
+
+g.output
+
+log.info('done')

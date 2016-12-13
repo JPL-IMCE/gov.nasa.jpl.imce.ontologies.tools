@@ -1,0 +1,3 @@
+./fix-datatypes geography-original.owl > geography.owl
+./entail http://www.mooney.net/geo > ../geography-entailments.owl
+mv geography.owl ..

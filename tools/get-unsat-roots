@@ -1,0 +1,170 @@
+#!/usr/bin/env ruby
+
+require 'csv'
+require 'fileutils'
+require 'rexml/document'
+
+require 'owlapi'
+
+require 'jgrapht-core-0.9.0'
+
+require 'Application'
+
+APPLICATION_NAME = 'get-unsat-roots'
+
+class GetUnsatRoots < Application
+
+  java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
+  java_import 'org.semanticweb.owlapi.model.AxiomType'
+  java_import 'org.semanticweb.owlapi.model.ClassExpressionType'
+  
+  java_import 'org.jgrapht.graph.DefaultDirectedGraph'
+  java_import 'org.jgrapht.graph.DefaultEdge'
+  java_import 'org.jgrapht.alg.ConnectivityInspector'
+
+  def run
+  
+    super
+    
+    # Create ontology manager.
+    
+    log(INFO, 'create ontology manager')
+    manager = OWLManager.createOWLOntologyManager
+    raise "couldn't create owl ontology manager" unless manager
+
+    # Create data factory
+    
+    log(INFO, 'create data factory')
+    factory = manager.getOWLDataFactory
+    
+    # Initialize CSV output.
+    
+    log(INFO, 'initialize CSV output')
+    csv = CSV.new(STDOUT)
+    header = %w{ class length }
+    csv << header
+    
+    # Process test results.
+
+    log(INFO, 'process test results')
+    unsats = Set.new
+    pairs = []
+    doc = REXML::Document.new(ARGF)
+    top = doc.get_elements('testsuites/testsuite[@name="satisfiability"]').first
+    top.each_element('testcase') do |e|
+      next unless failure = e.get_elements('failure').first
+      name = e.attributes['name']
+      klass = name.split[1].sub(/\A<(.*)>\z/, '\1')
+      unsats << klass
+      explanation = failure.texts.join
+      model = get_model(manager, factory, explanation)
+      pairs += get_pairs(model) 
+    end
+    
+    # Find root causes.
+    
+    log(INFO, 'find root causes')
+    pairs.select! { |p| unsats.include?(p[1]) }
+    log(INFO, "found #{pairs.length} pairs")
+    log(INFO, 'get roots')
+    roots = get_roots(unsats, pairs)
+    
+    # Sort by chain length and write to output.
+    
+    log(INFO, 'write output')
+    roots.sort_by { |r| -r[1] }.each do |root|
+      log(DEBUG, "root #{root}")
+      csv << root
+    end
+    
+    return 0
+    
+  end
+  
+  def get_model(manager, factory, explanation)
+    
+    # Create ontology model for results.
+    
+    source = StringDocumentSource.new(explanation)
+    manager.loadOntologyFromOntologyDocument(source)
+  
+  end
+  
+  # Find pairs representing heritable unsatisfiability.
+  
+  def get_pairs(model)
+    
+    model.getAxioms(AxiomType::SUBCLASS_OF, false).inject([]) do |m, a|
+      sub = a.getSubClass.getIRI.toString
+      sup = a.getSuperClass
+      if sup.isAnonymous
+        if sup.isObjectRestriction &&
+          sup.getClassExpressionType == ClassExpressionType::OBJECT_SOME_VALUES_FROM
+          unless (filler = sup.getFiller).isAnonymous
+            
+            # "some values from" restriction.
+            
+            log(DEBUG, "some values #{sub} -> #{filler.getIRI.toString}")
+            m << [sub, filler.getIRI.toString]
+          end
+        end
+      else
+        log(DEBUG, "subclass #{sub} -> #{sup.getIRI.toString}")
+        
+        # Conventional subclass axiom.
+        
+        m << [sub, sup.getIRI.toString]
+      end
+      m
+    end
+    
+  end
+  
+  def get_roots(unsats, pairs)
+    
+    # Build directed graph of heritable unsatisfiability.
+    
+    log(DEBUG, 'create directed graph')
+    graph = DefaultDirectedGraph.new(DefaultEdge)
+    unsats.each do |unsat|
+      graph.addVertex(unsat)
+    end
+    pairs.each do |pair|
+      sub, sup = *pair
+      unless sub == sup
+        pair.each do |c|
+          graph.addVertex(c) unless graph.containsVertex(c)
+        end
+        unless graph.containsEdge(sup, sub)
+          log(DEBUG, "add edge #{sub} -> #{sup}")
+          graph.addEdge(sup, sub, DefaultEdge.new) # why do we need the edge?
+        end
+      end
+    end
+    
+    # Create connectivity inspector and find connected components.
+    
+    log(DEBUG, 'create connectivity inspector')
+    ci = ConnectivityInspector.new(graph)
+    log(DEBUG, 'find connected sets')
+    sets = ci.connectedSets
+    log(DEBUG, "found #{sets.length} connected sets")
+    
+    # Sort connected components and select first elements. Return an array of
+    # [element, length] pairs.
+    
+    log(DEBUG, 'extract root elements from connected components')
+    sets.inject([]) do |roots, set|
+      log(DEBUG, "set length #{set.length}")
+      set.select do |v|
+        graph.inDegreeOf(v) == 0
+      end.each do |root|
+        roots << [root, set.length]
+      end
+      roots
+    end
+  end
+  
+end
+
+exit(GetUnsatRoots.new(APPLICATION_NAME).start)

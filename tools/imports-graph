@@ -1,0 +1,186 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'logger'
+require 'tempfile'
+require 'time'
+require 'yaml'
+require 'jpl/rdf/sesame'
+
+include REXML
+
+# Define constants.
+
+# Define structs.
+
+# Define variables.
+
+imports_by_ontology = {}
+closure_by_ontology = {}
+  
+# Define utility functions.
+
+class Hash
+  def close(k, stop = nil)
+    if sk = self[k]
+      sk.inject(Set.new) do |m, o|
+        unless stop && o =~ stop
+          m << o
+          m += self.close(o, stop)
+        end
+        m
+      end
+    else
+      raise "no values for #{k} in close()"
+    end
+  end
+end
+
+#  Define modules.
+
+# Process arguments.
+
+def usage
+  warn 'imports-graph --host host --port port --path path --repo repo [ uri, uri, ...'
+end
+
+log_level = Logger::FATAL
+host = port = path = repo = nil
+
+GetoptLong.new(
+[ '--help',    '-h',       GetoptLong::NO_ARGUMENT ],
+[ '--debug',   '-d',       GetoptLong::NO_ARGUMENT ],
+[ '--info',    '-i',       GetoptLong::NO_ARGUMENT ],
+[ '--warn',    '-w',       GetoptLong::NO_ARGUMENT ],
+[ '--repo',    '-r',       GetoptLong::REQUIRED_ARGUMENT ],
+[ '--host',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--port',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--path',                GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt, arg|
+  case opt
+  when "--help"
+    usage
+    exit 0
+  when "--debug"
+    log_level = Logger::DEBUG
+  when "--info"
+    log_level = Logger::INFO
+  when "--warn"
+    log_level = Logger::WARN
+  when "--host"
+    host = arg
+  when "--port"
+    port = arg
+  when "--path"
+    path = arg
+  when "--repo"
+    repo = arg
+  else
+    warn "unknown option: #{opt}"
+    usage
+    exit 1
+  end
+end
+
+unless host && port && path && repo
+  usage
+  exit 1
+end
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Connect to Sesame server.
+
+log.info('begin session')
+session = RDF::Sesame::Session.new(host, port, path, log)
+raise 'no session' unless session
+log.info('create model')
+model = session.model(repo)
+raise 'no model' unless model
+
+nsm = {}
+namespace_by_prefix = {}
+model.namespaces.map do |defn|
+  prf = defn.prefix.to_s
+  ns = defn.namespace.to_s
+  nsm[prf] = RDF::NamespaceMap.new(ns)
+  namespace_by_prefix[prf] = ns
+end
+RDF::Uri.ns_by_prf = namespace_by_prefix
+
+# Create namespace definition string.
+
+NS_DEFS = nsm.map do |prf, ns|
+  "PREFIX #{prf}:#{nsm[prf][''].to_uriref}"
+end.join("\n")
+
+# Find ontologies and imports.
+
+log.info('find ontologies and imports')
+qstring = %Q{
+  #{NS_DEFS}
+  select distinct ?ontology ?import
+  where {
+    ?ontology rdf:type owl:Ontology .
+    optional {
+      ?ontology owl:imports ?import .
+    }
+  }
+}
+log.debug(qstring)
+model.query({'query' => qstring, 'infer' => 'false'}) do |resp|
+  ontology = resp.ontology.to_s
+  imports_by_ontology[ontology] ||= Set.new
+  if resp.import
+    import = resp.import.to_s
+    imports_by_ontology[ontology] << import
+    log.debug("#{ontology} imports #{import}")
+  end
+end
+log.debug("imports_by_ontology: #{imports_by_ontology.inspect}")
+
+# Compute imports closure.
+
+imports_by_ontology.each_key do |k|
+  closure_by_ontology[k] = imports_by_ontology.close(k)
+end
+
+# Clean up hashes for yaml output.
+
+closure_by_ontology.each do |ontology, closure|
+  closure_by_ontology[ontology] = closure.to_a.sort
+end
+imports_by_ontology.each do |ontology, imports|
+  imports_by_ontology[ontology] = imports.to_a.sort
+end
+
+# Consolidate output hashes.
+
+output = { 'imports' => imports_by_ontology, 'closure' => closure_by_ontology }
+  
+# Write output.
+
+puts output.to_yaml
+
+# End session.
+
+log.info('end')
+session.finish

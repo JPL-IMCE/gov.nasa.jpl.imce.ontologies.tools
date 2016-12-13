@@ -1,0 +1,655 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'guid'
+require 'logger'
+require 'rexml/document'
+require 'tsort'
+require 'yaml'
+require 'jpl/rdf/sesame'
+
+# Define constants.
+
+WWW_OMG_ORG = 'www.omg.org'
+WWW_OMG_ORG_ES = Regexp.escape(WWW_OMG_ORG)
+WWW_OMG_ORG_RE = Regexp.new(WWW_OMG_ORG_ES)
+WWW_OMG_ORG_SPARQL_RE = WWW_OMG_ORG_ES.gsub(/\\/, '\\\\\\')
+
+WWW_OMG_ORG_UML = 'www\.omg\.org/spec/UML/.+/UML'
+WWW_OMG_ORG_UML_RE = Regexp.new(WWW_OMG_ORG_UML)
+WWW_OMG_ORG_UML_SPARQL_RE = WWW_OMG_ORG_UML.gsub(/\\/, '\\\\\\')
+
+IMCE_JPL_NASA_GOV = 'imce.jpl.nasa.gov'
+IMCE_JPL_NASA_GOV_ES = Regexp.escape(IMCE_JPL_NASA_GOV)
+IMCE_JPL_NASA_GOV_RE = Regexp.new(IMCE_JPL_NASA_GOV_ES)
+IMCE_JPL_NASA_GOV_SPARQL_RE = IMCE_JPL_NASA_GOV_ES.gsub(/\\/, '\\\\\\')
+
+# Define structs.
+
+# Define variables.
+
+imports_by_ontology = Hash.new { |h, k| h[k] = Set.new }
+output = {}
+
+# Define utility functions.
+
+class String
+  def context(append = '')
+    RDF::Uri.new(self + append).to_uriref
+  end
+end
+
+class Hash
+  def close(k, stop = [])
+    self[k].inject(Set.new) do |m, o|
+      unless stop.any? { |s| o =~ s }
+        m << o
+        m += self.close(o, stop)
+      end
+      m
+    end
+  end
+end
+
+#  Define modules.
+
+module TSortMethods
+  include TSort
+  def tsort_each_node(&block)
+    each_key(&block)
+  end
+  def tsort_each_child(node, &block)
+    begin
+      self.fetch(node).each(&block)
+    rescue IndexError
+    end
+  end
+end
+
+#  Define modules.
+
+class Tree
+  
+  def initialize(hash, value = nil)
+    @hash = hash
+    @value = value
+    @children = []
+  end
+  
+  attr_reader :value
+  attr_accessor :children
+  
+  def add(new_value)
+    
+    # Return if value already exists.
+    
+    return if lookup(new_value)
+    
+    new_tree = Tree.new(@hash, new_value)
+    
+    # Find children of new value in tree.
+    
+    children_in_tree = []
+    descend do |n|
+      children_in_tree << n if @hash.has_key?(n.value) && @hash[n.value].include?(new_value)
+    end
+    
+    children_in_tree.each do |c|
+      new_tree.children << c
+      self.children.delete(c)
+    end
+    
+    # Find parents of new value in tree.
+    
+    if @hash.has_key?(new_value)
+      parents_in_tree = @hash[new_value].map { |pvalue| lookup(pvalue) }.select { |p| p }
+    else
+      parents_in_tree = []
+    end
+
+    if parents_in_tree.empty?
+
+      # Add new tree to children of self.
+
+      children << new_tree
+
+    else
+
+      # Add new tree to children of each parent.
+
+      parents_in_tree.each { |p| p.children << new_tree }
+
+    end
+
+  end
+  alias :<< :add
+  
+  def descend(&block)
+    yield self
+    children.each do |c|
+      c.descend(&block)
+    end
+  end
+  
+  def lookup(value)
+    descend do |tree|
+      return tree if tree.value == value
+    end
+    nil
+  end
+  
+  def to_h
+    h = {}
+    children.each do |c|
+      h[c.value] = c.to_h
+    end
+    h
+  end
+  
+end
+
+# Process arguments.
+
+def usage
+  warn 'omg-ontology-digest --host host --port port --path path --repo repo'
+end
+
+log_level = Logger::FATAL
+host = 'localhost'
+port = '8080'
+path = 'openrdf-sesame'
+repo = 'imce-ontologies-dev'
+
+GetoptLong.new(
+[ '--help',    '-h',       GetoptLong::NO_ARGUMENT ],
+[ '--debug',   '-d',       GetoptLong::NO_ARGUMENT ],
+[ '--info',    '-i',       GetoptLong::NO_ARGUMENT ],
+[ '--warn',    '-w',       GetoptLong::NO_ARGUMENT ],
+[ '--repo',    '-r',       GetoptLong::REQUIRED_ARGUMENT ],
+[ '--host',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--port',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--path',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--uml',                 GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt, arg|
+  case opt
+  when "--help"
+    usage
+    exit 0
+  when "--debug"
+    log_level = Logger::DEBUG
+  when "--info"
+    log_level = Logger::INFO
+  when "--warn"
+    log_level = Logger::WARN
+  when "--host"
+    host = arg
+  when "--port"
+    port = arg
+  when "--path"
+    path = arg
+  when "--repo"
+    repo = arg
+  else
+    warn "unknown option: #{opt}"
+    usage
+    exit 1
+  end
+end
+
+unless host && port && path && repo
+  usage
+  exit 1
+end
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Connect to Sesame server.
+
+log.info('begin session')
+session = RDF::Sesame::Session.new(host, port, path, log)
+raise 'no session' unless session
+log.info('create model')
+model = session.model(repo)
+raise 'no model' unless model
+
+# Get repository namespace defintions.
+
+nsm = {}
+namespace_by_prefix = {}
+model.namespaces.map do |defn|
+  prf = defn.prefix.to_s
+  ns = defn.namespace.to_s
+  unless prf.empty?
+    nsm[prf] = RDF::NamespaceMap.new(ns)
+    namespace_by_prefix[prf] = ns
+  end
+end
+RDF::Uri.ns_by_prf = namespace_by_prefix
+
+# Construct namespace definition string.
+
+namespace_defs = nsm.map do |prf, ns|
+  "PREFIX #{prf}:#{nsm[prf][''].to_uriref}"
+end.join("\n")
+
+# Find ontologies and imports.
+
+log.info('find ontologies and imports')
+qstring = %Q{
+  #{namespace_defs}
+  select distinct ?ontology ?import ?noMapping
+  where {
+    ?ontology rdf:type owl:Ontology .
+    optional {
+      ?ontology owl:imports ?import .
+    }
+    optional {
+      ?ontology annotation:noMapping ?noMapping .
+    }
+  }
+}
+log.debug(qstring)
+model.query({'query' => qstring, 'infer' => 'false'}) do |resp|
+  ontology = RDF::Uri.new(resp.ontology.to_s)
+  if import = resp.import
+    import = RDF::Uri.new(import.to_s)
+    imports_by_ontology[ontology] << import
+    log.debug("#{ontology} imports #{import}")
+  end
+end
+imports_by_ontology.extend(TSortMethods)
+log.debug("imports_by_ontology: #{imports_by_ontology.inspect}")
+sorted_ontologies = imports_by_ontology.tsort.reverse
+log.debug("sorted_ontologies: #{sorted_ontologies.inspect}")
+
+# Construct closures and ontology lists.
+
+imce_ontologies = ARGV.inject(Set.new) do |m, o|
+  u = RDF::Uri.new(o)
+  m << u
+  closure = imports_by_ontology.close(u, WWW_OMG_ORG_RE)
+  closure_by_ontology[u] = closure
+  m += closure
+end
+log.debug("imce ontologies: #{imce_ontologies.inspect}")
+
+omg_ontologies = imports_by_ontology.keys.select { |o| o =~ WWW_OMG_ORG_RE }
+log.debug("omg ontologies: #{omg_ontologies.inspect}")
+
+uml_ontologies = imports_by_ontology.keys.select { |o| o =~ WWW_OMG_ORG_UML_RE }
+log.debug("uml ontologies: #{uml_ontologies.inspect}")
+
+# Construct query contexts.
+
+log.info('construct query contexts')
+
+from_clauses = {}
+entailments = %w{ /ClassEntailments /PropertyEntailments } << ''
+ontology_lists = { 'imce' => imce_ontologies,'omg' => omg_ontologies, 'uml' => uml_ontologies }
+
+ontology_lists.each do |key, ontology_list|
+  from_clauses[key] = h = {}
+  entailments.each do |entailment|
+    h[entailment] = ontology_list.map { |o| "from #{o.context(entailment)}" }.join("\n")
+    log.debug("from_clauses[#{key}][#{entailment}] = #{h[entailment]}")
+  end
+end
+
+# find concrete subjects/objects.
+
+subjects_objects = Set.new
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?klass
+  
+  #{from_clauses['omg']['']}
+  #{from_clauses['omg']['/ClassEntailments']}
+  
+  where {
+  
+    ?predicate owl:propertyChainAxiom ?chain .
+    ?predicate rdfs:domain ?domain .
+    ?predicate rdfs:range ?range .
+    
+    { ?klass rdfs:subClassOf ?domain } union { ?klass rdfs:subClassOf ?range }
+        
+    filter (
+         not exists { ?klass annotation:isAbstract true }
+      && ?klass != owl:Thing
+      && ?klass != owl:Nothing
+    )
+  }
+}
+log.debug("subject/object query #{query}")
+model.query_bindings({'query' => query, 'infer' => 'false'}) do |resp|
+  subjects_objects << resp.klass.to_qname
+end
+
+output['concrete subjects/objects'] = subjects_objects.sort
+
+# IRI map.
+  
+iri_map = {}
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?iri
+  
+  #{from_clauses['omg']['']}
+  
+  where {
+  
+    ?iri rdf:type ?type
+    
+    filter (
+         not exists { ?iri annotation:isAbstract true }
+      && (
+           ?type = owl:Class
+        || ?type = owl:ObjectProperty
+        || ?type = owl:DatatypeProperty
+        || ?type = owl:Datatype
+      )
+      && ?iri != owl:Thing
+      && ?iri != owl:Nothing
+    )
+  }
+}
+log.debug("iri map query #{query}")
+model.query_bindings({'query' => query, 'infer' => 'false'}) do |resp|
+  iri = resp.iri.to_s
+  qname = resp.iri.to_qname
+  iri_map[qname] = iri
+end
+  
+output['iri map'] = iri_map
+  
+# Object property reification.
+
+property_reification = {}
+oprop_qnames = %w{relclass srcprop srctype trgprop trgtype }
+
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?property ?relclass ?srcprop ?srctype ?trgprop ?trgtype
+
+  #{from_clauses['omg']['']}
+  #{from_clauses['omg']['/ClassEntailments']}
+
+  where {
+    ?property rdf:type owl:ObjectProperty .
+  
+    # reification property chain
+    
+    ?property owl:propertyChainAxiom [
+      rdf:first [
+        owl:inverseOf ?srcprop ;
+      ] ;
+      rdf:rest [
+        rdf:first ?trgprop ;
+      ] ;
+    ] .
+    
+    # first clause with inverse source property.
+    
+    ?srcprop rdf:type owl:ObjectProperty .
+    
+    # second clause with target property
+    
+    ?trgprop rdf:type owl:ObjectProperty .
+    
+    # relationship class
+    
+    ?srcprop rdfs:domain ?relclass .
+    ?srcprop rdfs:range ?srctype .
+    
+    ?trgprop rdfs:domain ?relclass .
+    ?trgprop rdfs:range ?trgtype .
+    
+    filter (
+         not exists { ?property annotation:isAbstract true }
+      && not exists { ?property annotation:isDerived true }
+    )
+  }
+}
+log.debug("object property reification query #{query}")
+model.query({ 'query' => query, 'infer' => 'false'}) do |resp|
+  property_reification[resp.property.to_qname] = h = {}
+  oprop_qnames.each do |qname|
+    h[qname] = resp.send(qname).to_qname
+  end
+end
+output['object property reification'] = property_reification
+  
+# Valid subject-forward-predicate list.
+
+valid_sfp_list = Hash.new { |l, m| l[m] = Set.new }
+  
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?source ?property
+
+  #{from_clauses['omg']['']}
+  #{from_clauses['omg']['/ClassEntailments']}
+  #{from_clauses['omg']['/PropertyEntailments']}
+
+  where {
+  
+    # Find source that subclasses domain of a property.
+
+    ?source rdfs:subClassOf ?domain .
+    ?property rdf:type owl:ObjectProperty .
+    ?property rdfs:domain ?domain .
+    ?property owl:propertyChainAxiom ?chain .
+  
+    # Include only concrete classes and properties.
+
+    filter (
+         not exists { ?source annotation:isAbstract true }
+      && not exists { ?property annotation:isDerived true }
+      && ?source != owl:Nothing
+      && not exists { ?property annotation:isAbstract true }
+    )
+  }
+}
+log.debug("valid subject-forward-predicate list query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false'}) do |resp|
+  
+  source = resp.source.to_qname
+  property = resp.property.to_qname
+  
+  # Build valid subject-object-predicate list.
+  
+  valid_sfp_list[source] << property
+  
+end
+
+# Valid forward-predicate-object list.
+
+valid_fpo_list = Hash.new { |l, m| l[m] = Set.new }
+  
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?target ?property
+
+  #{from_clauses['omg']['']}
+  #{from_clauses['omg']['/ClassEntailments']}
+  #{from_clauses['omg']['/PropertyEntailments']}
+
+  where {
+  
+    # Find source that subclasses range of a property.
+
+    ?target rdfs:subClassOf ?range .
+    ?property rdfs:range ?range .
+    ?property rdf:type owl:ObjectProperty .
+    ?property owl:propertyChainAxiom ?chain .
+  
+    # Include only concrete classes and properties.
+
+    filter (
+         not exists { ?target annotation:isAbstract true }
+      && not exists { ?property annotation:isDerived true }
+      && ?target != owl:Nothing
+      && not exists { ?property annotation:isAbstract true }
+    )
+  }
+}
+log.debug("valid forward-predicate-object list query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false'}) do |resp|
+  
+  target = resp.target.to_qname
+  property = resp.property.to_qname
+  
+  # Build valid subject-object-predicate list.
+  
+  valid_fpo_list[property] << target
+  
+end
+
+# Valid subject-data-property list.
+
+valid_sdp_list = Hash.new { |l, m| l[m] = Set.new }
+  
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?source ?property
+
+  #{from_clauses['omg']['']}
+  #{from_clauses['omg']['/ClassEntailments']}
+  #{from_clauses['omg']['/PropertyEntailments']}
+
+  where {
+  
+    # Find source that subclasses domain of a property.
+
+    ?source rdfs:subClassOf ?domain .
+    ?property rdf:type owl:DatatypeProperty .
+    ?property rdfs:domain ?domain .
+  
+    # Include only concrete classes and properties.
+
+    filter (
+         not exists { ?source annotation:isAbstract true }
+      && not exists { ?property annotation:isDerived true }
+      && ?source != owl:Nothing
+      && not exists { ?property annotation:isAbstract true }
+    )
+  }
+}
+log.debug("valid subject-data-property list query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false'}) do |resp|
+  
+  source = resp.source.to_qname
+  property = resp.property.to_qname
+  
+  # Build valid subject-object-predicate list.
+  
+  valid_sdp_list[source] << property
+  
+end
+
+[valid_sfp_list, valid_fpo_list, valid_sdp_list].each do |h|
+  h.each do |k1, v1|
+    h[k1] = v1.to_a.sort
+  end
+end
+
+output['valid subject-forward-predicate list'] = valid_sfp_list
+output['valid forward-predicate-object list'] = valid_fpo_list
+output['valid subject-data-property list'] = valid_sdp_list
+
+# Datatype property domain and range.
+
+datatype_properties = {}
+oprop_qnames = %w{ domain range }
+  
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?property ?domain ?range
+
+  #{from_clauses['omg']['']}
+
+  where {
+
+    ?property rdf:type owl:DatatypeProperty .
+    ?property rdfs:domain ?domain .
+    ?property rdfs:range ?range .
+
+  }
+}
+log.debug("datatype property domain and range query #{query}")
+model.query({'query' => query, 'infer' => 'false'}) do |resp|
+  datatype_properties[resp.property.to_qname] = h = {}
+  oprop_qnames.each do |qname|
+    h[qname] = resp.send(qname).to_qname
+  end
+end
+output['datatype property domain and range'] = datatype_properties
+  
+# Entity OMG element ID.
+
+omg_element_id = {}
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?entity ?id
+
+  #{from_clauses['omg']['']}
+  
+  where {
+    ?entity annotation:omgElementId ?id
+  }
+}
+log.debug("entity omg element id query #{query}")
+model.query({ 'query' => query, 'infer' => 'false'}) do |resp|
+  entity = resp.entity.to_qname
+  id = resp.id.to_s
+  omg_element_id[entity] = id
+end
+output['entity omg element id'] = omg_element_id
+  
+# Namespace prefixes.
+
+ns_by_p = namespace_by_prefix.inject({}) { |m, pair| p, ns = *pair; m[p] = ns.sub(/\#$/, ''); m }
+output['namespace prefixes'] = ns_by_p
+
+# Write output digest.
+
+puts output.to_yaml
+  
+# End session.
+
+log.info('end')
+session.finish

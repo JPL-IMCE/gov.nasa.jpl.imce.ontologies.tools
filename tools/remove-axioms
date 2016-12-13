@@ -1,0 +1,100 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'OWLAPIApplication'
+
+java_import 'org.coode.xml.XMLWriterPreferences'
+java_import 'org.semanticweb.owlapi.model.AxiomType'
+
+APPLICATION_NAME = 'remove-axioms'
+
+TYPE_MAP = {
+  'DisjointClasses' => AxiomType::DISJOINT_CLASSES,
+  'DisjointUnion' => AxiomType::DISJOINT_UNION,
+}
+
+class RemoveAxioms < OWLAPIApplication
+  
+  def run
+    
+    # Add options.
+    
+    option_parser.on('--types TYPES', 'comma-separated list of axiom types to remove') do |v|
+      @options.types = v
+    end
+    
+    super
+    
+    types = @options.types.split(',')
+    log(DEBUG, "axiom types: #{types.inspect}")
+    
+    unless argv.length == 1
+      log(FATAL, "must specify a single ontology iri")
+      return 1
+    end
+    filename = argv.shift
+    log(DEBUG, "input filename: #{filename}")
+    
+    # Create ontology manager.
+    
+    log(DEBUG, 'create ontology manager')
+    manager = OWLManager.create_owl_ontology_manager
+    log(DEBUG, 'add location mappers')
+    location_mappers.each do |mapper|
+      manager.add_iri_mapper(mapper)
+    end
+   
+    # Create data factory.
+    
+    factory = manager.getOWLDataFactory
+    
+    # Set XML serialization preferences.
+    
+    xml_prefs = XMLWriterPreferences.get_instance
+    xml_prefs.set_use_namespace_entities(true)
+    
+    # Parse ontology.
+    
+    stream = File.new(filename).to_inputstream
+    log(INFO, "parse ontology #{filename}")
+    ontology = manager.loadOntologyFromOntologyDocument(stream)
+    
+    # Get ontology format (prefix manager).
+    
+    log(DEBUG, 'get ontology format')
+    format = manager.getOntologyFormat(ontology)
+      
+    # Remove designated axioms.
+    
+    TYPE_MAP.each do |name, axiom_type|
+      axioms = ontology.getAxioms(axiom_type)
+      log(INFO, "remove #{axioms.length} #{axiom_type} axioms")
+      manager.removeAxioms(ontology, axioms)
+    end
+    
+    # Serialize ontology.
+    
+    manager.saveOntology(ontology, format, STDOUT.to_outputstream)
+    
+    # Exit.
+    
+    return 0
+    
+  end
+  
+end
+
+exit(RemoveAxioms.new(APPLICATION_NAME).start)

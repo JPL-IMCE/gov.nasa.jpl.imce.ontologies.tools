@@ -1,0 +1,130 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'OWLAPIApplication'
+
+java_import 'org.coode.xml.XMLWriterPreferences'
+java_import 'org.semanticweb.owlapi.model.AddOntologyAnnotation'
+java_import 'org.semanticweb.owlapi.model.RemoveOntologyAnnotation'
+
+APPLICATION_NAME = 'update-cm-metadata'
+
+class UpdateCmMetadataApplication < OWLAPIApplication
+  
+  def run
+    
+    # Add options.
+    
+    option_parser.on('--date DATE', "ontology commit date") do |v|
+      @options.date = v
+    end
+    option_parser.on('--revision REVISION', "ontology revision identifier") do |v|
+      @options.revision = v
+    end
+    option_parser.on('--embedding', "mark as embedding") do |v|
+      @options.isEmbedding = true
+    end
+    option_parser.on('--view', "mark as view") do |v|
+      @options.isView = true
+    end
+    option_parser.on('--metamodel', "mark as metamodel") do |v|
+      @options.isMetamodel = true
+    end
+    
+    super
+    
+    unless argv.length == 1
+      log(FATAL, "must specify a single ontology iri")
+      return 1
+    end
+    iri = IRI.create(argv.shift)
+    
+    # Create ontology manager.
+    
+    log(DEBUG, 'create ontology manager')
+    manager = OWLManager.create_owl_ontology_manager
+    log(DEBUG, 'add location mappers')
+    location_mappers.each do |mapper|
+      manager.add_iri_mapper(mapper)
+    end
+   
+    # Create data factory.
+    
+    factory = manager.getOWLDataFactory
+    
+    # Set XML serialization preferences.
+    
+    xml_prefs = XMLWriterPreferences.get_instance
+    xml_prefs.set_use_namespace_entities(true)
+    
+    # Parse ontology.
+    
+    log(DEBUG, "parse ontology #{iri}")
+    ontology = manager.loadOntology(iri)
+    
+    # Get ontology format (prefix manager).
+    
+    log(DEBUG, 'get ontology format')
+    format = manager.getOntologyFormat(ontology)
+      
+    # Update annotation properties.
+    
+    annotations = ontology.getAnnotations
+    properties = { 'http://purl.org/dc/elements/1.1/date' => @options.date,
+                    'http://www.w3.org/2002/07/owl#versionInfo' => @options.revision }
+    properties.each do |property, value|
+      prop_iri = IRI.create(property)
+      prop = factory.getOWLAnnotationProperty(prop_iri)
+      annotations.each do |ann|
+        if ann.getProperty == prop
+          log(DEBUG, "remove annotation: #{ann}")
+          change = RemoveOntologyAnnotation.new(ontology, ann)
+          manager.applyChange(change)
+        end
+      end
+      val = factory.getOWLLiteral(value)
+      ann = factory.getOWLAnnotation(prop, val)
+      log(DEBUG, "add annotation: #{ann}")
+      change = AddOntologyAnnotation.new(ontology, ann)
+      manager.applyChange(change)
+    end
+    
+    %w{isEmbedding isView isMetamodel}.each do |name|
+      if options.send(name.to_sym)
+        property = format.getIRI('annotation:' + name).to_s
+        prop_iri = IRI.create(property)
+        prop = factory.getOWLAnnotationProperty(prop_iri)
+        val = factory.getOWLLiteral(true)
+        ann = factory.getOWLAnnotation(prop, val)
+        log(DEBUG, "add annotation: #{ann}")
+        change = AddOntologyAnnotation.new(ontology, ann)
+        manager.applyChange(change)
+      end
+    end
+    
+    # Serialize ontology.
+    
+    manager.saveOntology(ontology, format, STDOUT.to_outputstream)
+    
+    # Exit.
+    
+    return 0
+    
+  end
+  
+end
+
+exit(UpdateCmMetadataApplication.new(APPLICATION_NAME).start)

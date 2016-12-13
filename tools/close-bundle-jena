@@ -1,0 +1,395 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'rexml/document'
+
+require 'OWLAPIApplication'
+require 'OntologyBundles'
+
+require 'jgrapht-core-0.9.0'
+
+java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
+java_import 'org.coode.xml.XMLWriterPreferences'
+java_import 'org.semanticweb.owlapi.model.AddImport'
+
+java_import 'org.jgrapht.experimental.dag.DirectedAcyclicGraph'
+java_import 'org.jgrapht.graph.DefaultEdge'
+java_import 'org.jgrapht.alg.TransitiveClosure'
+  
+APPLICATION_NAME = 'close-bundle-jena'
+
+ANNOTATIONS = %w{ isAbstract importsBundle bundlesGroup groupsOntology }
+BACKBONE = '-backbone'
+BUNDLE = '-bundle'
+BACKBONE_CLASSES = { 'Thing' => %w{ Entity Aspect ReifiedObjectProperty ReifiedStructuredDataProperty StructuredDatatype } }
+EMBEDDING = '-embedding'
+
+class CloseBundleApplication < OWLAPIApplication
+  
+  def run
+    
+    option_parser.on('--name NAME', 'bundle name (required)') do |v|
+      @options.name = v
+    end
+    option_parser.on('--uri URI', 'bundle uri (required)') do |v|
+      @options.uri = v
+    end
+    option_parser.on('--type TYPE', 'bundle type (required)') do |v|
+      @options.type = v
+    end
+    option_parser.on('--bundles BUNDLES', "bundles data file") do |v|
+      @options.bundles = v
+    end
+    option_parser.on('--embedding', "embedding bundle") do
+      @options.embedding = true
+    end
+    option_parser.on('--backbone-disjoints "LIST"', 'backbone disjoints') do |v|
+      @options.backbone_disjoints = v.split
+    end
+    option_parser.on('--backbone-prefix PREFIX', 'backbone prefix') do |v|
+      @options.backbone_prefix = v
+    end
+
+    super
+    
+    if @options.name.nil?
+      log(FATAL, 'no bundle name')
+      return 1
+    end
+    if @options.uri.nil?
+      log(FATAL, 'no bundle uri')
+      return 1
+    end
+    if argv.empty?
+      log(FATAL, 'no named ontologies')
+      return 1
+    end
+    unless @options.bundles
+      log(FATAL, 'no bundles data file specified')
+      return 1
+    end
+    unless @options.backbone_disjoints
+      log(FATAL, 'no backbone disjoints specified')
+      return 1
+    end
+    unless @options.backbone_prefix
+      log(FATAL, 'no backbone prefix specified')
+      return 1
+    end
+    
+  	# Load ontology bundles data.
+  	
+  	log(INFO, 'load ontology bundles data')
+  	bundle_by_name = Marshal.load(File.open(@options.bundles, 'rb'))
+  	log(DEBUG, "ontology bundles #{bundle_by_name.inspect}")
+  
+    # Axiom storage.
+    
+    axioms = java.util.HashSet.new
+      
+    # Create ontology manager.
+    
+    log(DEBUG, 'create ontology manager')
+    manager = OWLManager.create_owl_ontology_manager
+    log(DEBUG, 'add location mappers')
+    location_mappers.each do |mapper|
+      manager.add_iri_mapper(mapper)
+    end
+   
+    # Load ontologies.
+    
+    ontologies = ARGV.map do |arg|
+      log(DEBUG, "load ontology #{arg}")
+      manager.loadOntology(IRI.create(arg))
+    end
+    format = manager.getOntologyFormat(ontologies.first)
+    imports_set = ontologies.inject(java.util.HashSet.new) do |m, o|
+      m += manager.getImportsClosure(o)
+      m
+    end
+    
+    # Create data factory.
+    
+    factory = OWLDataFactoryImpl.new
+    
+    # Set XML serialization preferences.
+    
+    xml_prefs = XMLWriterPreferences.get_instance
+    xml_prefs.set_use_namespace_entities(true)
+    
+    # Create annotation properties.
+    
+    annotations = ANNOTATIONS.inject({}) do |h, ps|
+      p_iri = format.getIRI('annotation:' + ps)
+      p = factory.getOWLAnnotationProperty(p_iri)
+      h[ps] = p
+      h
+    end
+    
+    # Create ontology.
+    
+    log(INFO, "create ontology for #{@options.uri}")
+    ontology = manager.createOntology(IRI.create(@options.uri))
+    
+    # Add ontology imports.
+    
+    argv.each do |import|
+      log(DEBUG, "add imports declaration for #{import}")
+      decl = factory.getOWLImportsDeclaration(IRI.create(import))
+      import = AddImport.new(ontology, decl)
+      manager.applyChange(import)
+    end
+    
+    # Add annotations.
+    
+    { 'rdfs:comment' => "created by #{APPLICATION_NAME}", 'owl:versionInfo' => Time.new.to_s }.each do |ps, vs|
+      p_iri = format.getIRI(ps)
+      p = factory.getOWLAnnotationProperty(p_iri)
+      v = factory.getOWLLiteral(vs)
+      ann = factory.getOWLAnnotation(p, v)
+      change = AddOntologyAnnotation.new(ontology, ann)
+      manager.applyChange(change)
+    end
+    unless bundle = bundle_by_name[@options.name]
+      log(FATAL, "no bundle data for #{@options.name}")
+      return 1
+    end
+    
+    # Create disjointness axioms.
+    
+    unless @options.embedding
+      
+      # Create subclasses graph.
+      
+      log(DEBUG, 'create subclass graph')
+      subclasses_graph = DirectedAcyclicGraph.new(DefaultEdge)
+      abstracts = Set.new
+      ontologies.each do |o|
+        o.getClassesInSignature(true).each do |klass|
+          unless klass.isAnonymous
+            klass_iri = klass.asOWLClass.getIRI.toString
+            subclasses_graph.addVertex(klass_iri)
+            abstract_annotations = klass.getAnnotations(o, annotations['isAbstract'])
+            abstracts << klass_iri if abstract_annotations.any? { |a| a.getValue.parseBoolean }
+            klass.getSubClasses(imports_set).reject do |sc|
+              sc.isAnonymous
+            end.map do |sc|
+              sc.asOWLClass.getIRI.toString
+            end.each do |sub_iri|
+              subclasses_graph.addVertex(sub_iri)
+              subclasses_graph.addEdge(klass_iri, sub_iri)
+            end
+          end
+        end
+      end
+      
+      # Find top-level classes.
+      
+      log(DEBUG, 'find top-level classes')
+      root_nodes = subclasses_graph.vertexSet.inject(Set.new) do |m, node|
+        m << node if subclasses_graph.inDegreeOf(node) == 0
+        m
+      end
+      log(DEBUG, "root_nodes #{root_nodes.inspect}")
+  
+      # Create descendants graph.
+      
+      descendants_graph = subclasses_graph.clone
+      TransitiveClosure::INSTANCE.closeSimpleDirectedGraph(descendants_graph)
+      
+      # Create maps.
+      
+      subclasses = Hash.new { |h, k| h[k] = Set.new }
+      descendants = Hash.new { |h, k| h[k] = Set.new }
+      iter = descendants_graph.iterator
+      while iter.hasNext
+        k = iter.next
+        s = subclasses_graph.outgoingEdgesOf(k).map { |e| e.getTarget }
+        d = descendants_graph.outgoingEdgesOf(k).map { |e| e.getTarget }
+        subclasses[k] = Set.new(s)
+        descendants[k] = Set.new(d)
+      end
+    
+      # Form disjoint sets.
+      
+      p_iri = format.getIRI('rdfs:comment')
+      p = factory.getOWLAnnotationProperty(p_iri)
+        subclasses.each do |klass, list|
+        log(DEBUG, "class #{klass}")
+        v = factory.getOWLLiteral("subclasses of #{format.getPrefixIRI(IRI.create(klass))}")
+        ann = factory.getOWLAnnotation(p, v)
+        (ah = java.util.HashSet.new) << ann
+        unless (minimal_list = remove_descendants(list, descendants)).empty?
+          partition = partition_list(minimal_list, descendants)
+          log(DEBUG, "partition: #{partition.inspect}")
+          expression = class_expression(partition, factory)
+          if abstracts.include?(klass)
+            c = factory.getOWLClass(IRI.create(klass.to_s))
+            axioms << factory.getOWLDisjointUnionAxiom(c, expression, ah)
+          elsif expression.length > 1
+            axioms << factory.getOWLDisjointClassesAxiom(expression, ah)
+          end
+        end
+      end
+      
+      # Declare selected backbone classes disjoint.
+      
+      ontologies.each do |o|
+        ontology_iri_s = o.getOntologyID.getOntologyIRI.to_string
+        log(DEBUG, "disjoint backbone classes of #{ontology_iri_s}")
+        v = factory.getOWLLiteral("disjoint backbone classes of #{ontology_iri_s}")
+        ann = factory.getOWLAnnotation(p, v)
+        (ah = java.util.HashSet.new) << ann
+        backbone_iri_strings = @options.backbone_disjoints.inject([]) do |m, stem|
+          m << [ to_backbone(@options.backbone_prefix, ontology_iri_s) + "##{stem}" ]
+        end
+        exp = class_expression(backbone_iri_strings, factory)
+        axioms << factory.getOWLDisjointClassesAxiom(exp, ah)
+      end
+      
+      # Create collecting subclass axioms for backbone classes.
+      
+      bundle_iri_s = to_backbone(@options.backbone_prefix, ontology.getOntologyID.getOntologyIRI.to_string)
+      BACKBONE_CLASSES.each do |top, list|
+        bundle_top_iri = IRI.create("#{bundle_iri_s}##{top}")
+        bundle_top = factory.getOWLClass(bundle_top_iri)
+        t = factory.getOWLLiteral(true)
+        ann = factory.getOWLAnnotation(annotations['isAbstract'], t)
+        axioms << factory.getOWLAnnotationAssertionAxiom(bundle_top_iri, ann)
+        list.each do |c|
+          bundle_sub_iri = IRI.create("#{bundle_iri_s}##{c}")
+          bundle_sub = factory.getOWLClass(bundle_sub_iri)
+          log(DEBUG, "#{bundle_sub_iri.toString} subclass of #{bundle_top_iri.toString}")
+          axioms << factory.getOWLSubClassOfAxiom(bundle_sub, bundle_top)
+          axioms << factory.getOWLAnnotationAssertionAxiom(bundle_sub_iri, ann)
+         ontologies.each do |o|
+            ontology_iri_s = to_backbone(@options.backbone_prefix, o.getOntologyID.getOntologyIRI.to_string)
+            ontology_sub_iri = IRI.create("#{ontology_iri_s}##{c}")
+            ontology_sub = factory.getOWLClass(ontology_sub_iri)
+            axioms << factory.getOWLSubClassOfAxiom(ontology_sub, bundle_sub)
+            log(DEBUG, "#{ontology_sub_iri.toString} subclass of #{bundle_sub_iri.toString}")
+          end
+        end
+      end
+      
+      # Add axioms to ontology.
+      
+      axioms.each do |axiom|
+        log(DEBUG, "add axiom #{axiom}")
+        manager.add_axiom(ontology, axiom)
+      end
+      
+    end
+      
+    # Construct format specification for RDF/XML.
+    
+    rdfxml_format = RDFXMLOntologyFormat.new
+    
+    # Copy prefixes from first bundled ontology.
+    
+    rdfxml_format.copyPrefixesFrom(format)
+    
+    # Add prefixes for bundle.
+    
+    {
+      bundle.abbrev => bundle.iri + '#',
+      bundle.backbone_abbrev => bundle.backbone_iri + '#'
+    }.each do |p, u|
+      log(DEBUG, "set prefix #{p} -> #{u}")
+      rdfxml_format.setPrefix(p, u)
+    end
+    
+    # Write modified ontology in OWL/XML.
+  
+    manager.save_ontology(ontology, rdfxml_format, STDOUT.to_outputstream)
+    
+    # Exit.
+    
+    return 0
+          
+  end
+  
+  # Remove classes from a list that are descendants of
+  # other classes.
+  
+  def remove_descendants(list, descendants)
+    list - list.inject(Set.new) do |m, o|
+      m += descendants[o]
+      m
+    end
+  end
+  
+  # Partition a list of classes into a list of lists, each of which
+  # has no common descendants with any of the others.
+
+  def partition_list(list, descendants)
+    log(DEBUG, "list: #{list.inspect}")
+    desc = Hash.new { |h, k| h[k] = Set.new }
+    result = []
+    list.each do |cand|
+      log(DEBUG, "cand: #{cand}")
+      cd = descendants[cand]
+      log(DEBUG, "desc[cand] #{cd.inspect}")
+      result, match = result.partition { |r| desc[r].intersection(cd).empty? }
+      if match.empty?
+        
+        # No match. Create a set for this class and add it to the result.
+        
+        log(DEBUG, 'no match')
+        result << (nr = [cand])
+        desc[nr] = cd
+        
+      else
+        
+        # Match. Add this class to an existing set in the result.
+        
+        log(DEBUG, 'match')
+        result << nr = match.inject([cand]) { |m, o| m += o; m }
+        desc[nr] = match.inject(Set.new(descendants[cand])) { |m, o| m += desc[o]; m }
+          
+      end
+      log(DEBUG, "result: #{result.inspect}")
+      log(DEBUG, "desc: #{desc.inspect}")
+    end
+    result
+  end
+  
+  # Create an OWL Class or a union of Classes from a list.
+  
+  def class_expression(disjoint_set, factory)
+    result = java.util.HashSet.new
+    disjoint_set.each do |union_list|
+      case union_list.length
+      when 1
+        result << factory.getOWLClass(IRI.create(union_list.first.to_s))
+      else
+        union_hash = union_list.inject(java.util.HashSet.new) do |m, c|
+          m << factory.getOWLClass(IRI.create(c.to_s))
+          m
+        end
+        result << factory.getOWLObjectUnionOf(union_hash)
+      end
+    end
+    result
+  end
+  
+  def to_backbone(prefix, iri)
+    prefix + iri.sub(/^http:\/\//, '')
+  end
+  
+end
+
+exit(CloseBundleApplication.new(APPLICATION_NAME).start)

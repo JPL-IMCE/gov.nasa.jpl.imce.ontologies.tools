@@ -1,0 +1,80 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'yaml'
+
+require 'OMFMetadataApplication'
+
+APPLICATION_NAME = 'omf-metadata-census'
+
+class OMFMetadataCensusApplication < OMFMetadataApplication
+  
+  def run
+    
+    super
+    
+    # Validate arguments.
+    
+    unless argv.length == 1
+      log(FATAL, 'no single named ontology metadata file')
+      return 1
+    end
+    
+    # Open metadata ontology.
+    
+    m_name = argv.shift
+    begin
+      m_file = File.open(m_name)
+    rescue
+      log(FATAL, "cannot open metadata file #{m_name}")
+      return 1
+    end
+    
+    # Load metadata
+    
+    log(INFO, "open metadata file #{m_name}")
+    metadata = OMFMetadata::Instance.new(m_file)
+    
+    # Find terminology graphs.
+    
+    log(INFO, "find terminology graphs")
+    tbox_graphs = metadata.terminology_graphs.values.reject { |g| g.mutable? }
+    log(DEBUG, "found #{tbox_graphs.length} terminology graphs")
+    
+    # Count content for each graph.
+    
+    census = {}
+    tbox_graphs.each do |g|
+      graph_key = g.uri_provenance
+      census[graph_key] = Hash.new { |h, k| h[k] = 0 } 
+      g.definitions.each do |d|
+        census[graph_key][d.class.to_s] += 1
+      end
+    end
+    
+    # Write output.
+    
+    puts census.to_yaml
+    
+    # Exit.
+        
+    return 0
+    
+  end
+  
+end
+
+exit(OMFMetadataCensusApplication.new(APPLICATION_NAME).start)

@@ -1,0 +1,396 @@
+%
+%    $HeadURL$
+%
+%    $Revision$
+%    $Date$
+%
+%    $Author$
+%
+%    Copyright (c) 2009,2010 California Institute of Technology.
+%    All rights reserved.
+%
+
+\usepackage[dvips,letterpaper,twoside]{geometry}
+\usepackage{mathptmx}
+\usepackage{helvet}
+\usepackage{courier}
+\usepackage{rotating}
+\usepackage{amsthm}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage[dvips]{color}
+\usepackage{colortbl}
+\usepackage{fancyhdr}
+\usepackage{afterpage}
+\usepackage[]{optional}
+\usepackage{multicol}
+\usepackage{pdflscape}
+\usepackage{xspace}
+\usepackage{makeidx}
+\usepackage{nextpage}
+\opt{draft,invalid}{\usepackage{draftcopy}}
+\opt{invalid}{\draftcopyName{INVALID}{170}}
+\usepackage{url}
+\usepackage{paralist}
+\usepackage{calc}
+% must be last
+\usepackage[colorlinks=false]{hyperref}
+%
+% set page geometry
+%
+\geometry{top = 1in}
+\geometry{bottom = 1in}
+\geometry{inner = 1.00in}
+\geometry{outer = 0.75in}
+\geometry{headheight = 14.6pt}
+%
+% create index and glossary
+%
+\makeindex
+\makeglossary
+%
+% set page headers
+%
+\pagestyle{fancy}
+\lhead[\fancyplain{}{\thepage}]{\fancyplain{}{\slshape\rightmark}}
+\chead{}
+\rhead[\fancyplain{}{\slshape\leftmark}]{\fancyplain{}{\thepage}}
+\renewcommand{\headrulewidth}{0pt}
+%
+% set page footers
+%
+\lfoot{}
+\cfoot{}
+\rfoot{}
+%
+% helpful for keeping requirements intact
+%
+\raggedbottom
+%
+% avoid overfull boxes
+%
+\sloppy
+%
+% title page parameters
+%
+\newcommand{\subtitle}{}
+\newcommand{\docno}{\empty}
+\newcommand{\project}{Project}
+\newcommand{\agency}{National Aeronautics and Space Administration}
+\newcommand{\logo}{nasalogo.eps}
+\newcommand{\office}{}
+\newcommand{\copyrightnotice}{}
+\newcommand{\legalnotice}{}
+\newcommand{\coverwarning}{}
+\newcommand{\releaseinfo}{}
+%
+% note
+%
+\newenvironment{note}%
+    {\begin{quote}\textbf{NOTE: }}
+    {\end{quote}}%
+%
+% warning
+%
+\newenvironment{warning}%
+    {\begin{quote}\textbf{WARNING: }}
+    {\end{quote}}%
+%
+% page breaks
+%
+\newcommand{\frontclear}{\cleardoublepage}
+\newcommand{\sectionclear}{\cleardoublepage}
+\newcommand{\beginpage}{\clearpage}
+\opt{draft}{
+    \renewcommand{\frontclear}{\clearpage}
+    \renewcommand{\sectionclear}{\clearpage}
+    \renewcommand{\beginpage}{\clearpage}
+}
+%
+% front matter
+%
+\newcommand{\frontmatter}{
+    \begin{titlepage}
+    \flushleft
+    \sffamily
+    \large \docno \\
+    \releaseinfo
+    \vspace{.1 in}
+    \flushleft
+    \today
+    \vspace{.5 in}
+    \flushleft
+    \Large \project
+    \vspace*{1 in}
+    \flushleft
+    \huge \title \\
+    \vspace*{.2 in}
+    \LARGE \subtitle
+    \vfill
+    \small \coverwarning
+    \vfill
+    \flushleft
+    \includegraphics[width=2cm]{\logo}
+    \vspace{1 cm}
+    \flushleft
+    \normalsize \agency
+    \vspace{\baselineskip}
+    \flushleft
+    \office
+    \thispagestyle{empty}
+    \end{titlepage}
+    %
+    \clearpage
+    \thispagestyle{empty}
+    \vspace*{0pt}\vfill
+    \begin{center}\copyrightnotice\end{center}
+    \begin{center}\legalnotice\end{center}
+    \vfill
+    %
+    \cleartooddpage[\thispagestyle{empty}]
+    \pagenumbering{roman}
+    %
+    \tableofcontents
+    \frontclear
+    %
+    \listoffigures
+    \frontclear
+    %
+    \listoftables
+    \cleartooddpage
+    %
+    \pagenumbering{arabic}
+}
+%
+% customize sectioning commands
+%
+%
+% new section starts on recto page
+%
+\newif\ifemitfrontm@tter \emitfrontm@ttertrue
+\newenvironment{bodysection}[1]{
+    \ifemitfrontm@tter \frontmatter \global\emitfrontm@tterfalse \fi
+    \sectionclear\section{#1}
+}{}
+\newenvironment{appendixsection}[1]{\dbappendix\sectionclear\section{#1}}{}
+\newenvironment{backsection}[1]
+    {\sectionclear\section*{#1}\addcontentsline{toc}{section}{#1}}{}
+\newenvironment{bodysubsection}[1]{\subsection{#1}}{}
+\newenvironment{appendixsubsection}[1]{\subsection{#1}}{}
+\newenvironment{bodysubsubsection}[1]{\subsubsection{#1}}{}
+\newenvironment{appendixsubsubsection}[1]{\subsubsection{#1}}{}
+%
+% paragraph and subparagraph headings should not run in
+%
+\newenvironment{bodyparagraph}[1]{\paragraph{#1}}{}
+\newenvironment{appendixparagraph}[1]{\paragraph{#1}}{}
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}%
+				 {-3.25ex\@plus -1ex \@minus -.2ex}%
+				 {1.5ex \@plus .2ex}%
+				 {\normalfont\normalsize\bfseries}}
+\newenvironment{bodysubparagraph}[1]{\subparagraph{#1}}{}
+\newenvironment{appendixsubparagraph}[1]{\subparagraph{#1}}{}
+\renewcommand\subparagraph{\@startsection{subparagraph}{5}{\z@}%
+				 {-3.25ex\@plus -1ex \@minus -.2ex}%
+				 {1.5ex \@plus .2ex}%
+				 {\normalfont\normalsize\bfseries}}
+%
+% emit \appendix before first appendix section
+%
+\newif\ifin@ppendix
+\newcommand{\dbappendix}{
+    \ifin@ppendix \else \appendix \global\in@ppendixtrue \fi
+}
+%
+% table of contents down to section level 5
+%
+\setcounter{secnumdepth}{5}
+\setcounter{tocdepth}{5}
+%
+% temporary storage for variable list elements
+%
+\newcommand{\vlterm}{}
+\newcommand{\vltitle}{}
+\newcommand{\vltext}{}
+%
+% requirement list
+%
+\newenvironment{requirementlist}%
+    {\begin{list}{}{}\item\begin{description}}%
+    {\end{description}\end{list}}%
+\newcommand{\requirement}[3][\empty]{\filbreak\item[#1] \textbf{#2} #3}
+%
+% rationale list
+%
+\newenvironment{rationalelist}%
+    {\begin{description}}%
+    {\end{description}}%
+\newcommand{\rationale}[3][\empty]{\item[Rationale] #3}
+%
+% issue list
+%
+\newenvironment{issuelist}%
+    {\begin{list}{}{}\item\begin{description}}%
+    {\end{description}\end{list}}%
+\newcommand{\issue}[3][\empty]{\filbreak\item[#1] \textbf{#2} #3}
+%
+% customize font size of tables
+%
+\newcommand{\tablesize}{\normalsize}
+\newcommand{\longtablesize}{\normalsize}
+%
+% glossary
+%
+\newenvironment{theglossary}
+    {\begin{description}}
+    {\end{description}}
+\newcommand{\glossarytitle}{Glossary}
+\newcommand{\glossaryitem}[2]{\item[#1] #2}
+%
+% index
+%
+\renewenvironment{theindex}
+               {\begin{multicols}{2}%
+                \thispagestyle{plain}\parindent\z@
+                \parskip\z@ \@plus .3\p@\relax
+                \columnseprule \z@
+                \columnsep 35\p@
+                \let\item\@idxitem}
+               {\end{multicols}}
+\newcommand{\indextitle}{Index}
+%
+% abstract
+%
+\newcommand{\dbabstract}{\empty}
+%
+% preferrred index term
+%
+\newcommand{\preferredindex}{\textbf}
+%
+% classname
+%
+\newcommand{\dbclassname}{\textsl}
+%
+% property
+%
+\newcommand{\dbproperty}{\textsl}
+%
+% varname
+%
+\newcommand{\dbvarname}{\ensuremath}
+%
+% replaceable
+%
+\newcommand{\dbreplaceable}{\ensuremath}
+%
+% calculate figure rotation angle from bounding box
+%
+\newlength\@rafigtextheight
+\newlength\@rafigwidth
+\newlength\@rafigheight
+\newlength\@rafiguhscale
+\newlength\@rafigumwidth
+\newlength\@rafiguvscale
+\newlength\@rafigumheight
+\newlength\@rafiguscale
+\newlength\@rafigrhscale
+\newlength\@rafigrmwidth
+\newlength\@rafigrvscale
+\newlength\@rafigrmheight
+\newlength\@rafigrscale
+\newlength\@rafigscale
+\newcommand{\epsangle}{}
+\newcommand{\epswidth}{}
+\newcommand{\epsheight}{}
+\newcommand\setepsgraphicspars[4]{%
+
+    % calculate figure width and height
+    \setlength\@rafigwidth{#3pt-#1pt}%
+    \wlog{figure width \the\@rafigwidth}%
+    \wlog{textwidth \the\textwidth}%
+    \setlength\@rafigheight{#4pt-#2pt}%
+    \wlog{figure height \the\@rafigheight}%
+    \wlog{textheight \the\textheight}%
+    \setlength\@rafigtextheight{.9\textheight}
+    \wlog{adjusted textheight \the\@rafigtextheight}%
+
+    % calculate scale factors for unrotated graphic
+    \ifthenelse{\lengthtest{\@rafigwidth > \textwidth}}%
+	{
+	    \setlength{\@rafiguhscale}{\textwidth*\ratio{1pt}{\@rafigwidth}}
+	    \setlength{\@rafigumwidth}{\textwidth}
+	} % else
+	{
+	    \setlength{\@rafiguhscale}{1pt}
+	    \setlength{\@rafigumwidth}{\@rafigwidth}
+	}
+    \wlog{unrotated hscale \the\@rafiguhscale}%
+
+    \ifthenelse{\lengthtest{\@rafigheight > \@rafigtextheight}}%
+	{
+    	    \setlength{\@rafiguvscale}{\@rafigtextheight*\ratio{1pt}{\@rafigheight}}
+	    \setlength{\@rafigumheight}{\@rafigtextheight}
+	} % else
+	{
+	    \setlength{\@rafiguvscale}{1pt}
+	    \setlength{\@rafigumheight}{\@rafigheight}
+	}
+    \wlog{unrotated vscale \the\@rafiguvscale}%
+
+    \ifthenelse{\lengthtest{\@rafiguhscale < \@rafiguvscale}}%
+	{
+	    \setlength{\@rafiguscale}{\@rafiguhscale}
+	} % else
+	{
+	    \setlength{\@rafiguscale}{\@rafiguvscale}
+	}
+    \wlog{unrotated minimum scale \the\@rafiguscale}%
+
+    % calculate scale factors for rotated graphic
+    \ifthenelse{\lengthtest{\@rafigheight > \textwidth}}%
+	{
+	    \setlength{\@rafigrhscale}{\textwidth*\ratio{1pt}{\@rafigheight}}
+	    \setlength{\@rafigrmwidth}{\textwidth}
+	} % else
+	{
+	    \setlength{\@rafigrhscale}{1pt}
+	    \setlength{\@rafigrmwidth}{\@rafigheight}
+	}%
+    \wlog{rotated hscale \the\@rafigrhscale}%
+
+    \ifthenelse{\lengthtest{\@rafigwidth > \@rafigtextheight}}%
+	{
+	    \setlength{\@rafigrvscale}{\@rafigtextheight*\ratio{1pt}{\@rafigwidth}}
+	    \setlength{\@rafigrmheight}{\@rafigtextheight}
+	} % else
+	{
+	    \setlength{\@rafigrvscale}{1pt}
+	    \setlength{\@rafigrmheight}{\@rafigwidth}
+	}
+    \wlog{rotated vscale \the\@rafigrvscale}%
+
+    \ifthenelse{\lengthtest{\@rafigrhscale < \@rafigrvscale}}%
+	{
+	    \setlength{\@rafigrscale}{\@rafigrhscale}
+	} % else
+	{
+	    \setlength{\@rafigrscale}{\@rafigrvscale}
+	}
+    \wlog{rotated minimum scale \the\@rafigrscale}%
+
+    % calculate rotation angle
+    \ifthenelse{\lengthtest{\@rafiguscale < \@rafigrscale}}
+	{
+	    \renewcommand{\epsangle}{90}
+	    \renewcommand{\epswidth}{\@rafigrmwidth}
+	    \renewcommand{\epsheight}{\@rafigrmheight}
+	}%
+	{
+	    \renewcommand{\epsangle}{0}
+	    \renewcommand{\epswidth}{\@rafigumwidth}
+	    \renewcommand{\epsheight}{\@rafigumheight}
+	}%
+    \wlog{epsangle \epsangle}
+    \wlog{epsewidth \the\epswidth}
+    \wlog{epseheight \the\epsheight}
+}

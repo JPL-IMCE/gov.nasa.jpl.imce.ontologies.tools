@@ -1,0 +1,264 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'logger'
+require 'set'
+require 'time'
+require 'tsort'
+require 'jpl/rdf/sesame'
+
+# Define constants.
+
+BACKBONE = /imce\.jpl\.nasa\.gov\/backbone\//
+
+#  Define utility methods.
+
+class String
+  def context(append = '')
+    RDF::Uri.new(self + append).to_uriref
+  end
+end
+
+class OpenStruct
+  def close(ontologies)
+    imports.inject(Set.new) do |m, o|
+      m << o
+      m += ontologies[o].close(ontologies)
+    end
+  end
+end
+
+# Define variables.
+
+ontologies = {}
+statements_by_context = Hash.new { |h, k| h[k] = Set.new }
+
+# Process arguments.
+
+def usage
+  warn 'minimize-entailments --host host --port port --path path --in_repo in_repo --out_repo out_repo --uri uri --type type [ --clear ]'
+end
+
+log_level = Logger::FATAL
+host = port = path = in_repo = out_repo = clear = uri = type = nil
+
+GetoptLong.new(
+[ '--help',     '-h',       GetoptLong::NO_ARGUMENT ],
+[ '--debug',    '-d',       GetoptLong::NO_ARGUMENT ],
+[ '--info',     '-i',       GetoptLong::NO_ARGUMENT ],
+[ '--warn',     '-w',       GetoptLong::NO_ARGUMENT ],
+[ '--clear',    '-c',       GetoptLong::NO_ARGUMENT ],
+[ '--in_repo',              GetoptLong::REQUIRED_ARGUMENT ],
+[ '--out_repo',             GetoptLong::REQUIRED_ARGUMENT ],
+[ '--host',                 GetoptLong::REQUIRED_ARGUMENT ],
+[ '--port',                 GetoptLong::REQUIRED_ARGUMENT ],
+[ '--uri',                  GetoptLong::REQUIRED_ARGUMENT ],
+[ '--type',                 GetoptLong::REQUIRED_ARGUMENT ],
+[ '--path',                 GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt, arg|
+  case opt
+  when "--help"
+    usage
+    exit 0
+  when "--debug"
+    log_level = Logger::DEBUG
+  when "--info"
+    log_level = Logger::INFO
+  when "--warn"
+    log_level = Logger::WARN
+  when "--clear"
+    clear = true
+  when "--host"
+    host = arg
+  when "--port"
+    port = arg
+  when "--path"
+    path = arg
+  when "--in_repo"
+    in_repo = arg
+  when "--out_repo"
+    out_repo = arg
+  when "--uri"
+    uri = arg
+  when "--type"
+    type = arg
+  else
+    usage
+    exit 1
+  end
+end
+
+unless host && port && path && in_repo && out_repo && uri && type
+  usage
+  exit 1
+end
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Connect to Sesame server.
+
+log.info('begin session')
+session = RDF::Sesame::Session.new(host, port, path, log)
+raise 'no session' unless session
+log.info('create in model')
+in_model = session.model(in_repo)
+raise 'no in model' unless in_model
+log.info('create out model')
+out_model = session.model(out_repo)
+raise 'no out model' unless out_model
+
+# Find namespaces.
+
+prefix = nil
+log.info('find namespaces')
+namespace_by_prefix = {}
+nsm = {}
+in_model.namespaces.each do |defn|
+  prf = defn.prefix.to_s
+  ns = defn.namespace.to_s
+  namespace_by_prefix[prf] = ns
+  nsm[prf] = RDF::NamespaceMap.new(ns)
+  namespace_by_prefix[prf] = RDF::NamespaceMap.new(ns)
+  log.debug("namespace_by_prefix[#{prf}] = #{ns}")
+end
+RDF::Uri.ns_by_prf = namespace_by_prefix
+log.debug("default namespace prefix #{prefix}")
+
+# Construct prefix declarations.
+
+PREFIX_DECLS = namespace_by_prefix.map do |p, n|
+  "prefix #{p}:#{n[''].to_uriref}"
+end .join("\n")
+log.debug("prefix declarations: #{PREFIX_DECLS}")
+
+# Find ontologies and imports.
+
+ontology_query = %Q{
+  #{PREFIX_DECLS}
+  select distinct ?ontology ?import
+  where {
+    ?ontology rdf:type owl:Ontology .
+    optional { ?ontology owl:imports ?import . }
+  }
+}
+log.debug("ontology query: #{ontology_query}")
+in_model.query({'query' => ontology_query, 'infer' => 'false'}) do |resp|
+  ont = resp.ontology
+  unless ontologies[ont]
+    resp.ont = ont
+    resp.imports = Set.new
+    ontologies[ont] = resp
+    log.debug("ontology: #{ont}")
+  end
+  if import = resp.import
+    ontologies[ont].imports << import
+    log.debug("#{ont} imports #{import}")
+  end
+end
+log.debug("ontologies: #{ontologies.inspect}")
+
+log.info("minimize #{uri}")
+ontology = ontologies[uri]
+raise "no ontology for #{uri}" unless ontology
+
+# Calculate imports closure for all ontologies.
+
+ontologies.each_value do |o|
+  o.imports = o.close(ontologies)
+  log.debug("#{o} imports closure: #{o.imports.inspect}")
+end
+
+append = "/#{type}"
+
+# Construct context for this ontology.
+
+this_context = uri.context(append)
+log.debug("this context: #{this_context}")
+
+# Get statements for this ontology from input repo.
+
+this_statements = Set.new(in_model.get_statements({'context' => this_context}))
+log.debug("this: #{this_statements.length} statements")
+
+# Partition statements by output context.
+
+this_statements.each do |s|
+  
+  subject_ontology_uri = RDF::Uri.new(s.subject.split.first.chop.sub(BACKBONE, ''))
+  subject_ontology = ontologies[subject_ontology_uri]
+  object_ontology_uri = RDF::Uri.new(s.object.split.first.chop.sub(BACKBONE, ''))
+  object_ontology = ontologies[object_ontology_uri]
+  
+  if subject_ontology && !object_ontology
+    out_ontology = subject_ontology
+  elsif object_ontology && !subject_ontology
+    out_ontology = object_ontology
+  elsif !subject_ontology && !object_ontology
+    log.fatal("statement #{s}")
+    log.fatal('both ontologies nil')
+  elsif subject_ontology == object_ontology
+    out_ontology = subject_ontology
+  elsif subject_ontology.imports.include?(object_ontology_uri)
+    out_ontology = subject_ontology
+  elsif object_ontology.imports.include?(subject_ontology_uri)
+    out_ontology = object_ontology
+  else
+    log.fatal("statement #{s}")
+    log.fatal("subject imports #{subject_ontology.imports.inspect}")
+    log.fatal("object imports #{object_ontology.imports.inspect}")
+    raise "no order between #{subject_ontology.ontology} and #{object_ontology.ontology}"
+  end
+  
+  context = out_ontology.ontology.context(append)
+  statements_by_context[context] << s
+  log.debug("statements_by_context[#{context}] << #{s}")
+  
+end
+
+# Remove redundant statements and load distributed statements for each context.
+
+statements_by_context.each do |context, statements|
+  log.debug("delete context #{context}")
+  out_model.delete_statements({'context' => context})
+  log.debug("load context #{context}")
+  out_model.add_statements(new_statements, {'context' => context})
+  log.info("loaded #{out_model.size({'context' => context}).to_i} #{type} statements")
+end
+log.info("repository size: #{out_model.size} statements")
+
+# Clear input contexts if requested.
+
+if clear
+  minimize.each do |uri|
+    context = uri.context("/#{type}")
+    log.info("clear input context #{context}")
+    in_model.delete_statements({ 'context' => context })
+  end
+end
+
+#  End session.
+
+log.info('end session')
+session.finish
+
+# End.
+
+log.info('done')

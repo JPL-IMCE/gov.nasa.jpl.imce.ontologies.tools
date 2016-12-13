@@ -1,0 +1,177 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'logger'
+require 'set'
+require 'time'
+require 'yaml'
+require 'jpl/rdf/sesame'
+
+#  Define utility methods.
+
+class String
+  def context(append = '')
+    RDF::Uri.new(self + append).to_uriref
+  end
+end
+
+# Define variables.
+
+ontologies = {}
+
+# Process arguments.
+
+def usage
+  warn 'minimize-entailments --host host --port port --path path --in_repo in_repo --out_repo out_repo --uri uri --type type --imports imports_file uri1 [ uri2 ...])'
+end
+
+log_level = Logger::FATAL
+uris = []
+host = port = path = in_repo = out_repo = clear = type = uri = imports_file = nil
+
+GetoptLong.new(
+[ '--help',     '-h',       GetoptLong::NO_ARGUMENT ],
+[ '--debug',    '-d',       GetoptLong::NO_ARGUMENT ],
+[ '--info',     '-i',       GetoptLong::NO_ARGUMENT ],
+[ '--warn',     '-w',       GetoptLong::NO_ARGUMENT ],
+[ '--in_repo',              GetoptLong::REQUIRED_ARGUMENT ],
+[ '--out_repo',             GetoptLong::REQUIRED_ARGUMENT ],
+[ '--host',                 GetoptLong::REQUIRED_ARGUMENT ],
+[ '--port',                 GetoptLong::REQUIRED_ARGUMENT ],
+[ '--type',                 GetoptLong::REQUIRED_ARGUMENT ],
+[ '--uri',                  GetoptLong::REQUIRED_ARGUMENT ],
+[ '--imports',              GetoptLong::REQUIRED_ARGUMENT ],
+[ '--path',                 GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt, arg|
+  case opt
+  when "--help"
+    usage
+    exit 0
+  when "--debug"
+    log_level = Logger::DEBUG
+  when "--info"
+    log_level = Logger::INFO
+  when "--warn"
+    log_level = Logger::WARN
+  when "--clear"
+    clear = true
+  when "--host"
+    host = arg
+  when "--port"
+    port = arg
+  when "--path"
+    path = arg
+  when "--in_repo"
+    in_repo = arg
+  when "--out_repo"
+    out_repo = arg
+  when "--type"
+    type = arg
+  when '--uri'
+    uri = arg
+  when '--imports'
+    imports_file = arg
+  else
+    usage
+    exit 1
+  end
+end
+
+unless host && port && path && in_repo && out_repo && type && uri && imports_file
+  usage
+  exit 1
+end
+
+uris = ARGV.dup
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Connect to Sesame server.
+
+log.info('begin session')
+session = RDF::Sesame::Session.new(host, port, path, log)
+raise 'no session' unless session
+log.info('create in model')
+in_model = session.model(in_repo)
+raise 'no in model' unless in_model
+log.info('create out model')
+out_model = session.model(out_repo)
+raise 'no out model' unless out_model
+
+# Load imports graph.
+
+imports_graph = YAML.load(File.open(imports_file))['closure']
+log.debug("imports graph #{imports_graph.inspect}")
+
+append = "/#{type}"
+
+# Construct contexts for named ontologies.
+
+named_contexts = uris.inject([]) { |memo, uri| memo << uri.context(append); memo }
+log.debug("named contexts: #{named_contexts.inspect}")
+
+# Construct contexts for imports.
+
+imports_contexts = uris.inject([]) do |memo, named_uri|
+  memo << named_uri.context
+  imports_graph[named_uri].each do |imported_uri|
+    memo << imported_uri.context
+    memo << imported_uri.context(append)
+  end
+  memo
+end
+imports_contexts -= named_contexts
+log.debug("imports contexts: #{imports_contexts.inspect}")
+
+# Get statements for this ontology from input repo.
+
+this_statements = Set.new(in_model.get_statements({'context' => named_contexts}))
+log.debug("this: #{this_statements.length} statements")
+
+# Get statements from imported ontologies.
+
+imports_statements = Set.new(in_model.get_statements({'context' => imports_contexts}))
+log.debug("imports: #{imports_statements.length} statements")
+
+# Construct set difference.
+
+new_statements = this_statements - imports_statements
+log.debug("new: #{new_statements.length} statements")
+
+# Remove redundant statements and load set difference.
+
+context = uri.context(append)
+log.debug("delete context #{context}")
+out_model.delete_statements({'context' => context})
+log.debug("load context #{context}")
+out_model.add_statements(new_statements, {'context' => context})
+log.info("loaded #{out_model.size({'context' => context}).to_i} #{type} statements")
+
+log.info("repository size: #{out_model.size} statements")
+
+#  End session.
+
+log.info('end session')
+session.finish
+
+# End.
+
+log.info('done')

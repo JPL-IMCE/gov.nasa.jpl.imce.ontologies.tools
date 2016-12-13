@@ -1,0 +1,417 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $Revision$
+#    $Date$
+#
+#    $Author$
+#
+#    Copyright (c) 2009 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'graphviz'
+require 'logger'
+require 'set'
+require 'time'
+require 'tsort'
+require 'yaml'
+
+require 'jpl/docbook'
+require 'jpl/rdf/sesame'
+
+# Define constants.
+
+log_level = Logger::FATAL
+
+INTRO = <<'EOF'
+  This document is a catalog of the Integrated Model-Centric Engineeering Ontologies.
+EOF
+
+COPYRIGHT_YEAR = '2011'
+COPYRIGHT_HOLDER = 'California Institute of Technology'
+LEGAL_NOTICE = [
+  'Government sponsorship acknowledged.',
+  'This research was carried out at the Jet Propulsion Laboratory, California Institute of Technology,
+    under a contract with the National Aeronautics and Space Administration.'
+]
+
+# Define modules.
+
+module TSortMethods
+  include TSort
+  def tsort_each_node(&block)
+    each_key(&block)
+  end
+  def tsort_each_child(node, &block)
+    begin
+      fetch(node).imports.each(&block)
+    rescue IndexError
+    end
+  end
+end
+
+# Define utility functions.
+
+class String
+
+  def strip_parens
+    sub(/\A\(?([^)]*)\)?\z/, '\1')
+  end
+
+end
+
+def import_tree(prefix, klass, dotdir)
+  name = klass.subject.to_prefixed
+  node_name = name.gsub(/[#\/.:-]/, '_')
+  filebase = "#{dotdir}/#{prefix}-#{node_name}".gsub(/_/, '-')
+
+  g = GraphViz.new('G', {'output' => 'dot', 'file' => "#{filebase}.dot"})
+  g['rankdir'] = 'BT'
+  g['size'] = '6.75, 10.0'
+  g['overlap'] = 'scale'
+  g['sep'] = "0.2, 0.2"
+  g.node['shape'] = 'record'
+  g.node['fontname'] = 'Arial'
+  g.node['fontsize'] = '8.0'
+  g.edge['fontname'] = 'Arial'
+  g.edge['fontsize'] = '7.0'
+
+  dt_prop_string = []
+  dt_props = klass['props']['Direct']['Datatype']
+  dt_props.sort_by { |p| p.subject.to_prefixed.downcase }.each do |pi|
+    next if pi[DCNS['type']].first == 'abstract'
+    range = pi['range'].to_a.first.subject.to_prefixed rescue ''
+    dt_prop_string << "#{pi.subject.to_prefixed}: #{range}"
+  end
+  g.add_node(node_name, {:label => "{#{name}|#{dt_prop_string.join('\\n')}}"})
+
+    klass['parents'].each do |p|
+      p = p.subject
+      p_name = p.to_prefixed
+      p_node_name = p_name.gsub(/[.:-]/, '_')
+      g.add_node(p_node_name, {:label => p_name})
+      g.add_edge(node_name, p_node_name, {:arrowhead => 'onormal'})
+    end
+
+    ob_props = klass['props']['Direct']['Object']
+    ob_props.sort_by { |p| p.subject.to_prefixed.downcase }.each do |pi|
+      p_name = pi.subject.to_prefixed
+      rl = pi['range']
+      if allv = klass['allv'][pi]
+        rl = allv unless allv.empty?
+      end
+      rl.each do |r|
+        r_name = r.subject.to_prefixed
+        r_node_name = r_name.gsub(/[.:-]/, '_')
+        g.add_node(r_node_name, {:label => r_name}) unless r_name == node_name
+        g.add_edge(node_name, r_node_name, {:arrowhead => 'normal', :label => p_name, :dir => 'none'})
+      end
+    end
+
+    g.output
+
+    mo = MediaObject.new
+
+    %w{ eps png svg }.each do |fmt|
+      outfile = "#{filebase}.#{fmt}"
+      system("neato -T#{fmt} #{filebase}.dot -o #{outfile}")
+      mo << io = ImageObject.new
+      io << id = ImageData.new(outfile, fmt.upcase)
+    end
+
+    mo << Caption.new("Class definition diagram for #{name}.")
+    mo
+end
+
+# Process arguments.
+
+def usage
+  warn 'ontology-summary --host host --port port --path path --repo repo --ns namespace [ --dotdir dotdir ]'
+end
+
+pub_number = ''
+summary_date = Date.today.strftime('%Y-%m-%d')
+host = port = path = repo = ns = nil
+dotdir = '.'
+dbcent = '-//OASIS//ENTITIES DocBook Character Entities V4.5//EN'
+
+GetoptLong.new(
+  [ '--help',    '-h',       GetoptLong::NO_ARGUMENT ],
+  [ '--debug',   '-d',       GetoptLong::NO_ARGUMENT ],
+  [ '--info',    '-i',       GetoptLong::NO_ARGUMENT ],
+  [ '--warn',    '-w',       GetoptLong::NO_ARGUMENT ],
+  [ '--number',              GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--date',                GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--host',                GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--port',                GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--path',                GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--repo',                GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--ns',                  GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--dotdir',              GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--dbcent',              GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt, arg|
+  case opt
+  when "--help"
+    usage
+    exit 0
+  when "--number"
+    pub_number = arg.to_s
+  when "--debug"
+    log_level = Logger::DEBUG
+  when "--info"
+    log_level = Logger::INFO
+  when "--warn"
+    log_level = Logger::WARN
+  when "--host"
+    host = arg
+  when "--port"
+    port = arg
+  when "--path"
+    path = arg
+  when "--repo"
+    repo = arg
+  when "--ns"
+    ns = arg
+  when "--dotdir"
+      dotdir = arg
+  when '--dbcent'
+    dbcent = arg
+  else
+    usage
+    exit 1
+  end
+end
+
+case ARGV.length
+when 0
+else
+  usage
+  exit 1
+end
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Define constants.
+
+CTNS = RDF::NamespaceMap.new(ns)
+TITLE = 'Ontology Summary'
+SUBTITLE = 'Integrated Model-Centric Engineering'
+
+DOCNS = RDF::NamespaceMap.new('http://eis.jpl.nasa.gov/imce/documents/')
+
+# Connect to Sesame Server
+
+log.info('connect to sesame server')
+session = RDF::Sesame::Session.new(host, port, path, log)
+model = session.model(repo)
+
+# Find namespaces.
+
+log.info('find namespaces')
+namespace_by_prefix = {}
+nsm = {}
+model.namespaces.each do |defn|
+  namespace_by_prefix[defn.prefix.to_s] = defn.namespace.to_s
+  nsm[defn.prefix.to_s] = RDF::NamespaceMap.new(defn.namespace.to_s)
+  namespace_by_prefix[defn.prefix.to_s] = RDF::NamespaceMap.new(defn.namespace.to_s)
+  log.debug("namespace_by_prefix[#{defn.prefix}] = #{defn.namespace}")
+end
+RDF::Uri.ns_by_prf = namespace_by_prefix
+
+RDFNS = nsm['rdf']
+RDFSNS = nsm['rdfs']
+DCNS = nsm['dc']
+OWLNS = nsm['owl']
+
+# Iterate over ontologies.
+
+ontologies = {}
+ontologies.extend(TSortMethods)
+ont_query = %Q{
+  select distinct ?uri ?name ?desc ?import ?version ?creator ?category
+  where {
+    ?uri #{RDFNS['type'].to_uriref} #{OWLNS['Ontology'].to_uriref} .
+    optional { ?uri #{DCNS['title'].to_uriref} ?name . }
+    optional { ?uri #{DCNS['description'].to_uriref} ?desc .  }
+    optional { ?uri #{OWLNS['versionInfo'].to_uriref} ?version .  }
+    optional { ?uri #{OWLNS['imports'].to_uriref} ?import .  }
+    optional { ?uri #{DCNS['creator'].to_uriref} ?creator .  }
+    optional { ?uri #{DCNS['type'].to_uriref} ?category .  }
+  }
+}
+log.debug(ont_query)
+model.query({'query' => ont_query, 'infer' => 'false'}) do |resp|
+  resp.uri = resp.uri.to_s
+  unless o = ontologies[resp.uri]
+    o = ontologies[resp.uri] = OpenStruct.new
+    o.uri = resp.uri
+    o.imports = []
+    o.name = '[missing]'
+    o.desc = '[missing]'
+    o.creator = '[missing]'
+    log.debug("found #{resp.uri}")
+  end
+  o.name = resp.name.to_s if resp.name
+  o.desc = resp.desc.to_s if resp.desc
+  o.creator = resp.creator.to_s if resp.creator
+  o.imports << resp.import.to_s if resp.import
+  o.category = resp.category.to_s if resp.category
+  o.revision = resp.version.to_s.split[1] if resp.version
+end
+
+# Create GraphViz work directory.
+
+begin
+  Dir.mkdir(dotdir)
+rescue Errno::EEXIST
+end
+
+# Open DocBook document.
+
+log.info('open DocBook document')
+doc = REXML::Document.new
+doc << REXML::XMLDecl.new
+
+# Add DTD declaration for character entity definitions.
+
+entities = %Q{[
+<!ENTITY % sgml.features "IGNORE">
+<!ENTITY % xml.features "INCLUDE">
+<!ENTITY % dbcent PUBLIC "#{dbcent}" "dbcentx.mod">
+%dbcent;
+]}
+doc << doc_type = REXML::DocType.new('article', entities)
+
+# Start article.
+
+doc << ar = Article.new
+ar.add_attribute('xmlns', 'http://docbook.org/ns/docbook')
+ar.add_attribute('version', '5.0')
+ar.add_attribute('xmlns:xlink', 'http://www.w3.org/1999/xlink')
+
+ar << ti = Element.new('title')
+ti.text = 'Ontology Summary'
+ar << st = Element.new('subtitle')
+st.text = SUBTITLE
+
+ar << ai = Element.new('info')
+ai << bi = Element.new('biblioid')
+bi.text = pub_number
+ai << pd = Element.new('pubdate')
+pd.text = summary_date
+ai << co = Element.new('copyright')
+co << yr = Element.new('year')
+yr.text = COPYRIGHT_YEAR
+co << ho = Element.new('holder')
+ho.text = COPYRIGHT_HOLDER
+ai << ln = Element.new('legalnotice')
+LEGAL_NOTICE.each do |t|
+  ln << Para.new(t)
+end
+
+# Intro section.
+
+log.info('write introduction section')
+ar << se = Section.new('Introduction')
+se << Para.new(INTRO)
+
+# Ontology section.
+
+%w{Foundation Discipline Application}.each do |category|
+
+  ar << se = Section.new("#{category} Ontologies")
+  log.info("#{category} section")
+  se << SimPara.new
+
+  # Individual ontology subsections.
+
+  ontologies.tsort_each do |o|
+    o = ontologies[o]
+    next unless o && o.category == category
+
+    log.info(o.name.to_s)
+    se << os = Section.new(o.name)
+    os << PreferredIndexTerm.new(o.name)
+
+    if o.desc
+      DocBook::Document.parse_fragment(o.desc).each { |p| os << p }
+    end
+
+    os << vl = VariableList.new
+
+    unless o.creator.empty?
+      vl << vle = VarListEntry.new
+      vle << Term.new('Authority:')
+      vle << li = ListItem.new
+      li << Para.new(o.creator)
+    end
+ 
+    unless o.revision.empty?
+      vl << vle = VarListEntry.new
+      vle << Term.new('Current Revision:')
+      vle << li = ListItem.new
+      li << Para.new(o.revision)
+    end
+
+    imports = o.imports.select do |i|
+      i.respond_to?(:name)
+    end.map { |i| ontologies[i].name.to_s }
+    unless imports.empty?
+      vl << vle = VarListEntry.new
+      vle << Term.new('Imports:')
+      vle << li = ListItem.new
+      li << Para.new(imports.join(', '))
+      imports.each { |i| li << IndexTerm.new(i) }
+    end
+
+    vl << vle = VarListEntry.new
+    vle << Term.new('Ontology URI:')
+    vle << li = ListItem.new
+    li << pa = Para.new
+    pa << ln = Link.new
+    ln.add_attribute('xlink:href', o.uri)
+    ln << Text.new(o.uri)
+
+    vl << vle = VarListEntry.new
+    vle << Term.new('HTML Documentation:')
+    vle << li = ListItem.new
+    rel_uri = o.uri.gsub(/(http:\/\/)(imce\.jpl\.nasa\.gov)\/(.*)/, '../\3-draft.html')
+    abs_uri = o.uri.gsub(/(http:\/\/)(imce\.jpl\.nasa\.gov)\/(.*)/, '\1\2/document/\3-draft.html')
+    li << pa = Para.new
+    pa << ln = Link.new
+    ln.add_attribute('xlink:href', rel_uri)
+    ln << Text.new(abs_uri)
+
+    vl << vle = VarListEntry.new
+    vle << Term.new('PDF Documentation:')
+    vle << li = ListItem.new
+    rel_uri = o.uri.gsub(/(http:\/\/)(imce\.jpl\.nasa\.gov)\/(.*)/, '../\3-draft.pdf')
+    abs_uri = o.uri.gsub(/(http:\/\/)(imce\.jpl\.nasa\.gov)\/(.*)/, '\1\2/document/\3-draft.pdf')
+    li << pa = Para.new
+    pa << ln = Link.new
+    ln.add_attribute('xlink:href', rel_uri)
+    ln << Text.new(abs_uri)
+
+  end
+
+end
+
+# Index.
+
+log.info('write index')
+ar << Index.new
+
+# Write DocBook instance.
+
+doc.write(STDOUT, -1)
+log.info('done')

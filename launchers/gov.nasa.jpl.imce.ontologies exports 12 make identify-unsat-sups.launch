@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<launchConfiguration type="org.eclipse.ui.externaltools.ProgramLaunchConfigurationType">
+<stringAttribute key="org.eclipse.debug.core.ATTR_REFRESH_SCOPE" value="${working_set:&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;&#10;&lt;resources&gt;&#10;&lt;item path=&quot;/gov.nasa.jpl.imce.ontologies&quot; type=&quot;4&quot;/&gt;&#10;&lt;/resources&gt;}"/>
+<mapAttribute key="org.eclipse.debug.core.environmentVariables">
+<mapEntry key="FUSEKI_DIR" value="${FUSEKI_DIR}"/>
+<mapEntry key="GEM_PATH" value="${GEM_PATH}"/>
+<mapEntry key="JENA_DATASET" value="${JENA_DATASET}"/>
+<mapEntry key="JENA_HOST" value="${JENA_HOST}"/>
+<mapEntry key="JENA_PORT" value="${JENA_PORT}"/>
+<mapEntry key="JRUBY" value="${JRUBY}"/>
+<mapEntry key="RUBYLIB" value="../lib/Application:../lib/Audit:../lib/IMCE:../lib/Jena:../lib/Makefile:../lib/OWLAPI:../lib/OntologyBundles:../lib/Pellet:../lib/ruby-jena:../lib/ruby-owlapi:../lib/ruby-pellet:../lib/JGraphT:../lib/OMFMetadata"/>
+</mapAttribute>
+<stringAttribute key="org.eclipse.debug.ui.ATTR_CAPTURE_IN_FILE" value="${workspace_loc:/gov.nasa.jpl.imce.ontologies/exports/logs}/identify-unsat-sups.log"/>
+<listAttribute key="org.eclipse.debug.ui.favoriteGroups">
+<listEntry value="org.eclipse.ui.externaltools.launchGroup"/>
+</listAttribute>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_LAUNCH_CONFIGURATION_BUILD_SCOPE" value="${none}"/>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="${system_path:time}"/>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="-p nice make identify-unsat-sups"/>
+<stringAttribute key="org.eclipse.ui.externaltools.ATTR_WORKING_DIRECTORY" value="${workspace_loc:/gov.nasa.jpl.imce.ontologies/exports}"/>
+</launchConfiguration>

@@ -1,0 +1,71 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'guid'
+require 'yaml'
+require 'graphviz'
+
+class Array
+  def paths(pr_hash)
+  end
+end
+
+prereqs_by_target = {}
+id_by_name = {}
+phony = []
+paths = []
+edge = {}
+
+TARGET_PAT = /^([[:alnum:].][^:]*):([^;=].*$)/
+PHONY_PAT = /^\.PHONY:\s+(.*)$/
+
+data = ARGF.read.gsub(/\\\n/m, ' ')
+data.each_line do |line|
+  if match = line.match(PHONY_PAT)
+    phony += match[1].strip.split
+  elsif match = line.match(TARGET_PAT)
+    target = match[1]
+    prereqs = match[2].strip.split
+    prereqs_by_target[target] = prereqs
+  end
+end
+phony.each do |p|
+  prereqs_by_target.delete(p)
+end
+
+g = GraphViz.new('G', (p = ENV['GRAPHVIZ_PATH']) ? { :path => p } : {})
+g['rankdir'] = 'LR'
+g['overlap'] = 'scale'
+g['sep'] = "0.4, 0.2"
+g.node['shape'] = 'record'
+g.node['fontname'] = 'Arial'
+g.node['fontsize'] = '8.0'
+g.edge['fontname'] = 'Arial'
+g.edge['fontsize'] = '7.0'
+  
+prereqs_by_target.each do |target, prereqs|
+  (prereqs.dup << target).each do |name|
+    unless id_by_name[name]
+      id = id_by_name[name] = 'node_' + name.gsub(/[.:-]/, '_')
+      g.add_node(id, {:label => name})
+    end
+  end
+  prereqs.each do |prereq|
+    g.add_edge(id_by_name[prereq], id_by_name[target])
+  end
+end
+
+g.output('svg' => 'analyze-embedding.svg')

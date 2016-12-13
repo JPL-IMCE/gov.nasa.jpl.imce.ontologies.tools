@@ -1,0 +1,598 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'guid'
+require 'logger'
+require 'rexml/document'
+require 'jpl/rdf/sesame'
+
+# Define constants.
+
+LEADING_URI = 'http://'
+LEADING_URI_RE = Regexp.new('\A' + Regexp.escape(LEADING_URI))
+BACKBONE_PREFIX = 'http://imce.jpl.nasa.gov/backbone/'
+
+REPAIR = {
+  'add' => {
+    'every ontology declares an abstract unmapped top class' => :add_top_class,
+    'every ontology declares an abstract unmapped top object property' => :add_top_object_property,
+    'every ontology declares an abstract unmapped top datatype property' => :add_top_datatype_property,
+  },
+  'embed' => {
+    'top class embedding' => :embed_class,
+    'top object property embedding' => :embed_object_property,
+    'top data property embedding' => :embed_data_property,
+  },
+    'reify' => {
+    'every object property is completely reified' => :reify_object_property,
+  },
+    'declare' => {
+    'entity not declared in ontology not for its namespace' => :remove_redundant_declaration,
+  },
+    'misplaced-disjoint' => {
+    'every disjoint axiom in ontology O names at least one class in O' => :remove_misplaced_disjoint
+  },
+    'missing-disjoint' => {
+    'every pair of classes without a common subclass is declared disjoint' => :repair_missing_disjoint
+  },
+    'add-label' => {
+    'every entity has a label' => :add_label
+  }
+}
+
+# Define structs.
+
+Task = Struct.new(:method, :element, :text)
+
+# Define variables.
+
+task = Hash.new { |h, k| h[k] = [] }
+temp_context = {}
+
+# Define utility functions.
+
+class RDF::Sesame::Model
+  def ontology_title(ontology, nsm, log)
+    ontology_uri = RDF::Uri.new(ontology)
+    ts = statements({'subj' => ontology_uri.to_uriref,
+      'pred' => nsm['dc']['title'].to_uriref}).first
+    title = ts.object.to_s rescue nil
+  end
+
+  def add_top_class(nsm, context, ontology, unused, text, log)
+    backbone_ontology = BACKBONE_PREFIX + ontology.sub(LEADING_URI, '')
+    thing_uri = RDF::Uri.new("#{backbone_ontology}#Thing").to_uriref
+    true_literal = RDF::Literal.new('true', nsm['xsd']['boolean'])
+    stmts = []
+    
+    defects = text.gsub(/\s+/m, ' ').split('.').map { |d| d.strip }.reject { |d| d.empty? }
+    defects.each do |defect|
+      log.info(defect)
+      case defect
+      when /\Ano ([[:print:]]*)\z/
+        klass = $1
+        klass_uri = RDF::Uri.new("#{backbone_ontology}##{klass}").to_uriref
+        stmts << RDF::Statement.new(klass_uri, nsm['rdf']['type'], nsm['owl']['Class'])
+        if klass == 'Thing' && title = ontology_title(ontology, nsm, log)
+          desc = RDF::StringLiteral.new("<classname>Thing</classname>" +
+          " is a common superclass" +
+          " of all classes defined in the" +
+          " #{title}.")
+          stmts << RDF::Statement.new(klass_uri, nsm['dc']['description'], desc)
+        end
+        log.info("add #{klass_uri}")
+
+      when /\A([[:print:]]*) missing annotation:([[:print:]]*)\z/
+
+        klass = $1
+        klass_uri = RDF::Uri.new("#{backbone_ontology}##{klass}").to_uriref
+        annotation = $2
+        stmts << RDF::Statement.new(klass_uri, nsm['annotation'][annotation], true_literal)
+        log.info("add #{annotation} for #{klass_uri}")
+
+      when /\A([[:print:]]*) not subclass of Thing\z/
+
+        klass = $1
+        klass_uri = RDF::Uri.new("#{backbone_ontology}##{klass}").to_uriref
+        stmts << RDF::Statement.new(klass_uri, nsm['rdfs']['subClassOf'], thing_uri)
+        log.info("add #{klass_uri} subclass of #{thing_uri}")
+
+      end
+    end
+    
+    add_statements(stmts, {'context' => context})
+  end
+
+  def embed_class(nsm, context, ontology, klass, unused, log)
+    klass_uri = RDF::Uri.new("#{ontology}##{klass}")
+    thing_uri = RDF::Uri.new("#{ontology}#Thing")
+    log.info("embed #{klass_uri} in #{thing_uri}")
+    if statements({'subj' => klass_uri, 'pred' => nsm['rdfs']['subClassOf']}).empty?
+      s = RDF::Statement.new(klass_uri, nsm['rdfs']['subClassOf'], thing_uri)
+      add_statement(s, {'context' => context})
+    end
+  end
+
+  def add_top_object_property(nsm, context, ontology, unused, text, log)
+    backbone_ontology = BACKBONE_PREFIX + ontology.sub(LEADING_URI, '')
+    top = RDF::Uri.new("#{backbone_ontology}#topObjectProperty").to_uriref
+    true_literal = RDF::Literal.new('true', nsm['xsd']['boolean'])
+    stmts = []
+      
+    defects = text.gsub(/\s+/m, ' ').split('.').map { |d| d.strip }.reject { |d| d.empty? }
+    defects.each do |defect|
+      log.info(defect)
+      case defect
+      when /\Ano ([[:print:]]*)\z/
+        
+        property = $1
+        property_uri = RDF::Uri.new("#{backbone_ontology}##{property}").to_uriref
+        stmts << RDF::Statement.new(property_uri, nsm['rdf']['type'], nsm['owl']['ObjectProperty'])
+        log.info("add #{property}")
+        if property == 'topObjectProperty' 
+          if title = ontology_title(ontology, nsm, log)
+            stmts << RDF::Statement.new(property_uri, nsm['dc']['description'],
+            RDF::StringLiteral.new("<property>topObjectProperty</property>" +
+            " is a common superproperty of" +
+            " all object properties" +
+            " defined in the #{title}."))
+          else
+            stmts << RDF::Statement.new(property_uri, nsm['rdfs']['subPropertyOf'], top)
+          end
+        end
+        
+      when /\A([[:print:]]*) missing annotation:([[:print:]]*)\z/
+        
+        property = $1
+        property_uri = RDF::Uri.new("#{backbone_ontology}##{property}").to_uriref
+        annotation = $2
+        stmts << RDF::Statement.new(property_uri, nsm['annotation'][annotation], true_literal)
+        log.info("add #{annotation} for #{property}")
+        
+      when /\A([[:print:]]*) not subproperty of ([[:print:]]*)\z/
+        
+        property = $1
+        property_uri = RDF::Uri.new("#{backbone_ontology}##{property}").to_uriref
+        super_property = $2
+        super_property_uri = RDF::Uri.new("#{backbone_ontology}##{super_property}").to_uriref
+        stmts << RDF::Statement.new(property_uri, nsm['rdfs']['subPropertyOf'], super_property_uri)
+        log.info("add #{property} subproperty of #{super_property}")
+        
+      end
+    end
+    
+    stmts.each do |s|
+      log.info(s.to_s)
+    end
+    add_statements(stmts, {'context' => context})
+  end
+
+  def embed_object_property(nsm, context, ontology, property, unused, log)
+    property_uri = RDF::Uri.new("#{ontology}##{property}")
+    top_uri = RDF::Uri.new("#{ontology}#topObjectProperty")
+    log.info("embed #{property_uri} in #{top_uri}")
+    if statements({'subj' => property_uri, 'pred' => nsm['rdfs']['subPropertyOf']}).empty?
+      s = RDF::Statement.new(property_uri, nsm['rdfs']['subPropertyOf'], top_uri)
+      add_statement(s, {'context' => context})
+    end
+  end
+
+  def add_top_datatype_property(nsm, context, ontology, unused, text, log)
+    backbone_ontology = BACKBONE_PREFIX + ontology.sub(LEADING_URI, '')
+    tdp = RDF::Uri.new("#{backbone_ontology}#topDataProperty").to_uriref
+    true_literal = RDF::Literal.new('true', nsm['xsd']['boolean'])
+    stmts = []
+    
+    defects = text.gsub(/\s+/m, ' ').split('.').map { |d| d.strip }.reject { |d| d.empty? }
+    defects.each do |defect|
+      log.info(defect)
+      case defect
+      when 'no top datatype property'
+        
+        stmts << RDF::Statement.new(tdp, nsm['rdf']['type'], nsm['owl']['DatatypeProperty'])
+        log.info("add #{tdp}")
+        if title = ontology_title(ontology, nsm, log)
+          stmts << RDF::Statement.new(tdp, nsm['dc']['description'],
+          RDF::StringLiteral.new("<property>topDataProperty</property>" +
+          " is a common superproperty of" +
+          " all datatype properties" +
+          " defined in the #{title}."))
+        end
+        
+      when /\Amissing annotation:([[:print:]]*)\z/
+        
+        annotation = $1
+        stmts << RDF::Statement.new(tdp, nsm['annotation'][annotation], true_literal)
+        log.info("add #{annotation} for #{tdp}")
+        
+      end
+    end
+    
+    add_statements(stmts, {'context' => context})
+  end
+
+  def embed_data_property(nsm, context, ontology, property, unused, log)
+    property_uri = RDF::Uri.new("#{ontology}##{property}")
+    top_uri = RDF::Uri.new("#{ontology}#topDataProperty")
+    log.info("embed #{property_uri} in #{top_uri}")
+    if statements({'subj' => property_uri, 'pred' => nsm['rdfs']['subPropertyOf']}).empty?
+      s = RDF::Statement.new(property_uri, nsm['rdfs']['subPropertyOf'], top_uri)
+      add_statement(s, {'context' => context})
+    end
+  end
+
+  def reify_object_property(nsm, context, ontology, property, text, log)
+    cmof_ontology = ontology.sub(/-embedding\z/, '')
+    backbone_ontology = BACKBONE_PREFIX + ontology.sub(LEADING_URI, '')
+    property_uri = RDF::Uri.new("#{cmof_ontology}##{property}")
+    klass = property[0..0].upcase + property[1..-1]
+    class_uri = RDF::Uri.new("#{ontology}##{klass}")
+    rop_uri = RDF::Uri.new("#{backbone_ontology}#ReifiedObjectProperty")
+    src_prop_uri = RDF::Uri.new("#{ontology}#has#{klass}Source")
+    trg_prop_uri = RDF::Uri.new("#{ontology}#has#{klass}Target")
+    top_sprop_uri = RDF::Uri.new("#{backbone_ontology}#topReifiedObjectPropertySource")
+    top_tprop_uri = RDF::Uri.new("#{backbone_ontology}#topReifiedObjectPropertyTarget")
+    bnode_uri = 0.upto(2).map { |n| RDF::Bnode.new("b#{rand(100000)}") }
+
+    rdf = nsm['rdf']
+    rdfs = nsm['rdfs']
+    owl = nsm['owl']
+    ds = statements({'subj' => property_uri.to_uriref, 'pred' => rdfs['domain'].to_uriref}).first
+    domain = ds.object rescue nil
+
+    rs = statements({'subj' => property_uri.to_uriref, 'pred' => rdfs['range'].to_uriref}).first
+    range = rs.object rescue nil
+
+    statements = []
+      
+    if derived = text.match(/derived from (([^#]+)#(.+))\.(\s|\z)/)
+      
+      inv_ontology = derived[2]
+      inv_property = derived[3]
+      inv_property_uri = RDF::Uri.new(derived[1])
+      klass = inv_property[0..0].upcase + inv_property[1..-1]
+      class_uri = RDF::Uri.new("#{inv_ontology}##{klass}")
+      
+      inv_src_prop_uri = RDF::Uri.new("#{inv_ontology}#has#{klass}Source")
+      inv_trg_prop_uri = RDF::Uri.new("#{inv_ontology}#has#{klass}Target")
+      
+    else 
+
+      if text =~ /no reified object property class/
+  
+        # Create reification class.
+  
+        statements << RDF::Statement.new(class_uri, rdf['type'], owl['Class'])
+        statements << RDF::Statement.new(class_uri, rdfs['subClassOf'], rop_uri)
+  
+      end
+  
+      if text =~ /no source property/
+  
+        # Create source property.
+  
+        statements << RDF::Statement.new(src_prop_uri, rdf['type'], owl['ObjectProperty'])
+        statements << RDF::Statement.new(src_prop_uri, rdf['type'], owl['FunctionalProperty'])
+        statements << RDF::Statement.new(src_prop_uri, rdfs['subPropertyOf'], top_sprop_uri)
+        statements << RDF::Statement.new(src_prop_uri, rdfs['domain'], class_uri)
+        statements << RDF::Statement.new(src_prop_uri, rdfs['range'], domain) if domain
+  
+      end
+  
+      if text =~ /no target property/
+  
+        # Create target property.
+  
+        statements << RDF::Statement.new(trg_prop_uri, rdf['type'], owl['ObjectProperty'])
+        statements << RDF::Statement.new(trg_prop_uri, rdf['type'], owl['FunctionalProperty'])
+        statements << RDF::Statement.new(trg_prop_uri, rdfs['subPropertyOf'], top_tprop_uri)
+        statements << RDF::Statement.new(trg_prop_uri, rdfs['domain'], class_uri)
+        statements << RDF::Statement.new(trg_prop_uri, rdfs['range'], range) if range
+  
+      end
+      
+    end
+
+    if text =~ /no property chain/
+
+      # Create property chain.
+
+      statements << RDF::Statement.new(property_uri, owl['propertyChainAxiom'], bnode_uri[0])
+      statements << RDF::Statement.new(bnode_uri[0], rdf['first'], bnode_uri[1])
+      statements << RDF::Statement.new(bnode_uri[0], rdf['rest'], bnode_uri[2])
+
+      statements << RDF::Statement.new(bnode_uri[1], owl['inverseOf'], derived ? inv_trg_prop_uri : src_prop_uri)
+
+      statements << RDF::Statement.new(bnode_uri[2], rdf['first'], derived ? inv_src_prop_uri : trg_prop_uri)
+      statements << RDF::Statement.new(bnode_uri[2], rdf['rest'], owl['nil'])
+
+    end
+
+    # Add statements.
+
+    add_statements(statements, {'context' => context})
+
+  end
+
+  def remove_redundant_declaration(nsm, context, ontology, entity, text, log)
+    entity_uri = RDF::Uri.new(entity)
+    delete_statements({'subj' => entity_uri.to_uriref, 'pred' => nsm['rdf']['type'].to_uriref,
+      'context' => context})
+    log.info("#{entity_uri} declaration removed from #{ontology}")
+  end
+
+  def remove_misplaced_disjoint(nsm, context, ontology, entity, text, log)
+    c1_uri, c2_uri = entity.map do |e|
+      prefix, stem = e.split(/:/)
+      RDF::Uri.new(nsm[prefix][stem])
+    end
+    delete_statements({'subj' => c1_uri.to_uriref, 'pred' => nsm['owl']['disjointWith'].to_uriref, 'obj' => c2_uri.to_uriref,
+      'context' => context})
+    log.info("#{c1_uri} disjointWith #{c2_uri} declaration removed from #{ontology}")
+  end
+
+  def repair_missing_disjoint(nsm, context, ontology, entity, text, log)
+    c1_uri, c2_uri = entity[0..1].map do |e|
+      prefix, stem = e.split(/:/)
+      RDF::Uri.new(nsm[prefix][stem])
+    end
+    which = entity[2]
+    case which
+    when 'missing'
+      statement = RDF::Statement.new(c1_uri, nsm['owl']['disjointWith'], c2_uri)
+      add_statement(statement, {'context' => context})
+      log.info("#{c1_uri} disjointWith #{c2_uri} declaration added to #{ontology}")
+    when 'redundant'
+      delete_statements({'subj' => c1_uri.to_uriref, 'pred' => nsm['owl']['disjointWith'].to_uriref, 'obj' => c2_uri.to_uriref,
+        'context' => context})
+      delete_statements({'subj' => c2_uri.to_uriref, 'pred' => nsm['owl']['disjointWith'].to_uriref, 'obj' => c1_uri.to_uriref,
+        'context' => context})
+      log.info("#{c1_uri} disjointWith #{c2_uri} declaration removed from #{ontology}")
+    end
+  end
+  
+  def add_label(nsm, context, ontology, entity, text, log)
+    entity_uri = RDF::Uri.new(entity)
+    label = RDF::StringLiteral.new(text)
+    statement = RDF::Statement.new(entity_uri, nsm['rdfs']['label'], label)
+    add_statement(statement, {'context' => context})
+    log.info("#{entity} label #{label} added to #{ontology}")
+  end
+
+end
+
+class String
+  def uri_to_filename
+    sub(LEADING_URI_RE, '') + '.owl'
+  end
+end
+
+#  Define modules.
+
+# Process arguments.
+
+def usage
+  warn 'repair-embedding --host host --port port --path path --repo repo [ validation-file ]'
+end
+
+log_level = Logger::FATAL
+host = 'localhost'
+port = '8080'
+path = 'openrdf-sesame'
+repo = 'imce-ontologies-dev'
+
+GetoptLong.new(
+[ '--help',    '-h',       GetoptLong::NO_ARGUMENT ],
+[ '--debug',   '-d',       GetoptLong::NO_ARGUMENT ],
+[ '--info',    '-i',       GetoptLong::NO_ARGUMENT ],
+[ '--warn',    '-w',       GetoptLong::NO_ARGUMENT ],
+[ '--repo',    '-r',       GetoptLong::REQUIRED_ARGUMENT ],
+[ '--host',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--port',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--path',                GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt, arg|
+  case opt
+  when "--help"
+    usage
+    exit 0
+  when "--debug"
+    log_level = Logger::DEBUG
+  when "--info"
+    log_level = Logger::INFO
+  when "--warn"
+    log_level = Logger::WARN
+  when "--host"
+    host = arg
+  when "--port"
+    port = arg
+  when "--path"
+    path = arg
+  when "--repo"
+    repo = arg
+  else
+    warn "unknown option: #{opt}"
+    usage
+    exit 1
+  end
+end
+
+unless host && port && path && repo
+  usage
+  exit 1
+end
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Connect to Sesame server.
+
+log.info('begin session')
+session = RDF::Sesame::Session.new(host, port, path, log)
+raise 'no session' unless session
+
+log.info('create model')
+model = session.model(repo)
+raise 'no model' unless model
+
+# Get repository namespace defintions.
+
+nsm = {}
+namespace_by_prefix = {}
+model.namespaces.map do |defn|
+  prf = defn.prefix.to_s
+  ns = defn.namespace.to_s
+  nsm[prf] = RDF::NamespaceMap.new(ns)
+  namespace_by_prefix[prf] = ns
+end
+RDF::Uri.ns_by_prf = namespace_by_prefix
+
+# Parse embedding validation report.
+
+log.info('parse embedding validation report')
+report = REXML::Document.new(ARGF)
+
+# Accumulate repair tasks by ontology.
+
+%w{add embed reify declare misplaced-disjoint missing-disjoint add-label}.each do |type|
+  log.debug("repair type #{type}")
+  REPAIR[type].each do |testsuite, method|
+    testsuite = testsuite.to_s
+    xpath = "testsuites/testsuite[@name='#{testsuite}']"
+    log.debug("search for #{xpath}")
+    method = REPAIR[type][testsuite]
+    report.each_element(xpath) do |ts|
+      log.info("testsuite: #{testsuite}")
+      ts.each_element('testcase') do |tc|
+        testcase = tc.attribute('name')
+        tc.each_element('failure') do |f|
+          entity = tc.attribute('name').to_s
+          text = f.text.gsub(/\s+/m, ' ')
+          case type
+          when 'add'
+            ontology = entity
+            element = nil
+            task[ontology] << Task.new(method, element, text)
+          when 'embed'
+            prefix, element = entity.split(/:/)
+            ontology = nsm[prefix][''].slice(0..-2)
+            task[ontology] << Task.new(method, element, text)
+          when 'reify'
+            prefix, element = entity.split(/:/)
+            ontology = nsm[prefix][''].slice(0..-2)
+            task[ontology] << Task.new(method, element, text)
+          when 'declare'
+            prefix, element = entity.split(/:/)
+            element = nsm[prefix][element]
+            f.texts.map { |t| t.to_s.strip }.join(' ').split(/\s+/).each do |ontology|
+              task[ontology] << Task.new(method, element, text)
+            end
+          when 'misplaced-disjoint'
+            if m = entity.match(/(.*) declares (.*), (.*) disjoint/)
+              ontology = m[1]
+              element = m[2..3]
+              task[ontology] << Task.new(method, element, text) if text =~ /properly declared/
+            else
+              raise "unmatched entity #{entity}"
+            end
+          when 'missing-disjoint'
+            if m = entity.match(/(.+)\s+(.+)/)
+              element = m[1, 2]
+              if m = text.match(/(missing|redundant)\s+disjointWith\s+axiom\s+in\s+(\S+)/m)
+                element << m[1]
+                ontology = m[2]
+                task[ontology] << Task.new(method, element, text)
+                log.debug("task[#{ontology.inspect}] = Task.new(#{method.inspect}, #{element.inspect}, #{text.inspect})")
+              else
+                raise "unmatched failure text #{text}"
+              end
+            end
+          when 'add-label'          
+            if m = text.match(/ontology\s+(\S+)\s+entity\s+(\S+)\s+lacks\s+label\s+'([^']+)'/)
+              ontology = m[1]
+              element = m[2]
+              text = m[3]
+              task[ontology] << Task.new(method, element, text)
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+at_exit do
+
+  # Clear temporary contexts.
+
+  temp_context.values.each do |c|
+    log.info("clear temporary context #{c}")
+    model.delete_statements({'context' => c})
+  end
+
+  session.finish
+
+end
+
+# Iterate over ontologies.
+
+task.each do |ontology, tl|
+  log.info("ontology: #{ontology}")
+  filename = ontology.uri_to_filename
+  log.debug("ontology filename: #{filename}")
+
+  # Set up temporary context.
+
+  tc = RDF::Uri.new('http://dummy.org/' + Guid.new.to_s).to_uriref
+  temp_context[ontology] = tc
+  log.debug("temp context for #{ontology}: #{tc}")
+
+  # Load selected ontology into temporary context.
+
+  File.open(filename) do |f|
+    log.debug("load from #{filename}")
+    model.import(f, {'context' => tc})
+  end
+
+  # Execute tasks for this ontology.
+
+  tl.each do |t|
+    log.debug("send(#{t.method.to_s}, #{nsm.object_id}, #{tc.to_s}, #{ontology.to_s}, #{t.element.to_s},  #{t.text.to_s}")
+    model.send(t.method, nsm, tc, ontology, t.element, t.text, log)
+  end
+
+  # Write modified ontology.
+
+  log.debug("write ontology #{filename}")
+  File.open(filename, 'w') do |f|
+    model.export({'context' => tc}) do |s|
+      f.write(s)
+    end
+  end
+
+  # Clear temporary contexts.
+
+  log.info("clear temporary context #{tc}")
+  model.delete_statements({'context' => tc})
+
+end
+
+# End session.
+
+log.info('end')

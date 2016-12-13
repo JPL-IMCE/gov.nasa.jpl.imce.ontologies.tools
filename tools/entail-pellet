@@ -1,0 +1,233 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL: https://sscae-cm.jpl.nasa.gov/svn/ontologies/trunk/gov.nasa.jpl.imce.ontologies/tools/validate-owl $
+#
+#    $LastChangedRevision: 3623 $
+#    $LastChangedDate: 2014-03-25 20:04:39 -0700 (Tue, 25 Mar 2014) $
+#
+#    $LastChangedBy: sjenkins $
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'PelletApplication'
+
+APPLICATION_NAME = 'entail-pellet'
+
+class EntailApplication < PelletApplication
+  
+  java_import org.mindswap.pellet.jena.ModelExtractor
+  java_import org.mindswap.pellet.jena.ModelExtractor::StatementType
+  java_import org.semanticweb.owlapi.apibinding.OWLManager
+  java_import com.hp.hpl.jena.rdf.model.ModelFactory
+  java_import com.hp.hpl.jena.ontology.OntModelSpec
+  java_import com.hp.hpl.jena.rdf.model.ResourceFactory
+  java_import com.hp.hpl.jena.vocabulary.RDFS
+  java_import com.hp.hpl.jena.vocabulary.OWL2
+  
+  STATEMENT_TYPES = {
+    'AllClassStatements' => StatementType::ALL_CLASS_STATEMENTS,
+    'AllIndividualStatements' => StatementType::ALL_INDIVIDUAL_STATEMENTS,
+    'AllPropertyStatements' => StatementType::ALL_PROPERTY_STATEMENTS,
+    'AllStatements' => StatementType::ALL_STATEMENTS,
+    'AllStatementsIncludingJena' => StatementType::ALL_STATEMENTS_INCLUDING_JENA,
+    'DefaultStatements' => StatementType::DEFAULT_STATEMENTS,
+    'PropertyValue' => StatementType::PROPERTY_VALUE,
+    'AllInstance' => StatementType::ALL_INSTANCE,
+    'AllSubclass' => StatementType::ALL_SUBCLASS,
+    'AllSubproperty' => StatementType::ALL_SUBPROPERTY,
+    'ComplementClass' => StatementType::COMPLEMENT_CLASS,
+    'DataPropertyValue' => StatementType::DATA_PROPERTY_VALUE,
+    'DifferentFrom' => StatementType::DIFFERENT_FROM,
+    'DirectInstance' => StatementType::DIRECT_INSTANCE,
+    'DirectSubclass' => StatementType::DIRECT_SUBCLASS,
+    'DirectSubproperty' => StatementType::DIRECT_SUBPROPERTY,
+    'DisjointClass' => StatementType::DISJOINT_CLASS,
+    'DisjointProperty' => StatementType::DISJOINT_PROPERTY,
+    'EquivalentClass' => StatementType::EQUIVALENT_CLASS,
+    'EquivalentProperty' => StatementType::EQUIVALENT_PROPERTY,
+    'InverseProperty' => StatementType::INVERSE_PROPERTY,
+    'JenaDirectInstance' => StatementType::JENA_DIRECT_INSTANCE,
+    'JenaDirectSubclass' => StatementType::JENA_DIRECT_SUBCLASS,
+    'JenaDirectSubproperty' => StatementType::JENA_DIRECT_SUBPROPERTY,
+    'ObjectPropertyValue' => StatementType::OBJECT_PROPERTY_VALUE,
+    'SameAs' => StatementType::SAME_AS
+  }
+
+  def run
+
+    option_parser.on('--input-iri IRI', "IRI of input ontology") do |v|
+      @options.input_iri = v
+    end
+    option_parser.on('--output-iri IRI', "IRI of output ontology") do |v|
+      @options.output_iri = v
+    end
+    @options.types = ''
+    option_parser.on('--types TYPES', "string of space-separated entailment types") do |v|
+      @options.types << v
+    end
+    @options.format = 'RDF/XML'
+    option_parser.on('--format FORMAT', "output format [#{@options.format}]") do |v|
+      @options.format = v
+    end
+    @options.remove_unsats = false
+    option_parser.on('--remove-unsats', "remove entailments due to unsatisfiability [#{@options.remove_unsats}]") do
+      @options.remove_unsats = true
+    end
+    
+    super
+    
+    unless @options.input_iri
+      log(DEBUG, "no input IRI")
+      return 1
+    end
+    unless @options.output_iri
+      log(DEBUG, "no output IRI")
+      return 1
+    end
+
+    files = ARGV
+    
+    # Map requested types.
+    
+    types = java.util.EnumSet.noneOf(StatementType)
+    @options.types.split.each do |type|
+      if enum = STATEMENT_TYPES[type]
+        types << enum
+      else
+        log(FATAL, "invalid entailment type #{type}")
+        log(FATAL, "legal types: #{STATEMENT_TYPES.keys.join(' ')}")
+      end
+    end
+    
+    # Create ontology manager.
+    
+    logger.log(Logger::DEBUG, 'create ontology manager')
+    manager = OWLManager.createOWLOntologyManager
+    raise "couldn't create owl ontology manager" unless manager
+    log(DEBUG, 'add location mappers')
+    location_mappers.each do |mapper|
+      manager.add_iri_mapper(mapper)
+    end
+
+    # Load input ontology.
+    
+    logger.log(INFO, "load ontology from #{@options.input_iri}")
+    input_ontology = manager.loadOntology(IRI.create(@options.input_iri))
+    raise "couldn't load ontology" unless input_ontology
+    
+    # Get ontology format.
+    
+    logger.log(INFO, "get ontology format")
+    format = manager.getOntologyFormat(input_ontology)
+    raise "couldn't get ontology format" unless format
+      
+    # Extract entailments
+    
+    log(INFO, 'extract entailments')
+    entailments = extract_entailments(input_ontology, types, logger)
+    
+    # Remove trivial axioms involving owl:Thing and owl:Nothing.
+    
+    entailments = remove_trivial(entailments, @options.remove_unsats)
+    
+    # Minimize entailments.
+    
+    log(INFO, 'minimize entailments')
+    entailments = minimize_entailments(entailments, files)
+    
+    # Create ontology model for results.
+    
+    log(INFO, 'create ontology model')
+    model = ModelFactory.createOntologyModel(OntModelSpec::OWL_MEM, entailments)
+    
+    # Create ontology from model.
+    
+    log(INFO, "create ontology #{@options.output_iri} from model")
+    output_ontology = model.createOntology(@options.output_iri)
+    output_ontology.addImport(ResourceFactory.createResource(@options.input_iri))
+    output_ontology.addComment("generated by #{APPLICATION_NAME}", nil)
+    output_ontology.addVersionInfo(Time.new.to_s)
+        
+    # Serialize ontology.
+        
+    log(INFO, "serialize #{model.size} entailments")
+    model.write(STDOUT.to_outputstream, @options.format)
+    
+    # Return.
+    
+    return 0
+	    
+  end
+  
+  def extract_entailments(ontology, types, logger)
+    
+    java_import com.clarkparsia.pellet.owlapiv3.PelletReasonerFactory
+  
+    # Create Pellet reasoner.
+    
+    logger.log(Logger::DEBUG, 'create pellet reasoner factory')
+    reasoner_factory = PelletReasonerFactory.new
+    raise "couldn't create reasoner factory" unless reasoner_factory
+    logger.log(Logger::DEBUG, 'create pellet reasoner')
+    reasoner = reasoner_factory.createReasoner(ontology)
+    raise "couldn't create reasoner" unless reasoner
+
+    # Extract entailments.
+    
+    kb = reasoner.getKB
+    raise "couldn't get knowledge base" unless kb
+    extractor = ModelExtractor.new(kb)
+    raise "couldn't create extractor" unless extractor
+    extractor.setSelector(types)
+    result = extractor.extractModel
+    logger.log(Logger::INFO, "extracted #{result.size} entailed axioms")
+      
+    # Return result.
+        
+    result
+      
+  end
+  
+  # Remove trivial entailments involving owl:Thing, owl:Nothing, owl:topObjectProperty, owl:topDataProperty
+  
+  def remove_trivial(entailments, remove_unsats)
+    iterator = entailments.listStatements
+    trivial = []
+    while iterator.hasNext
+      statement = iterator.next
+      subject = statement.getSubject
+      predicate = statement.getPredicate
+      object = statement.getObject
+      if (predicate == RDFS.subClassOf && (subject == OWL2::Nothing || (remove_unsats && object == OWL2::Nothing) || object == OWL2::Thing)) ||
+         (predicate == RDFS.subPropertyOf &&
+           (object == OWL2::topObjectProperty || object == OWL2::topDataProperty) ||
+           (subject == OWL2::bottomObjectProperty || subject == OWL2::bottomDataProperty))
+        trivial << statement
+      end
+    end
+    entailments.remove(trivial)
+    logger.log(Logger::INFO, "removed #{trivial.size} trivial axioms")
+    entailments
+  end
+  
+  def minimize_entailments(entailments, files)
+    model = ModelFactory.createDefaultModel
+    files.each do |file|
+      logger.log(Logger::DEBUG, "load axioms from #{file}")
+      model.read(File.open(file).to_inputstream, nil)
+      orig_size = entailments.size
+      entailments.remove(model.listStatements)
+      new_size = entailments.size
+      logger.log(Logger::INFO, "removed #{orig_size - new_size} axioms already in #{file}")
+    end
+    entailments
+  end
+  
+end
+    
+exit(EntailApplication.new(APPLICATION_NAME).start)

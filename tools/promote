@@ -1,0 +1,36 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'ftools'
+require 'fileutils'
+
+ONTOLOGIES = %w{all base math physics mission project analysis hardware state-analysis state-analysis-functional-design life-cycle artifact sysml-embedding project-sysml architecture-description}
+DATE = ARGV.shift ||  Time.new.strftime('%Y-%m-%d')
+TARGET = "/afs/jpl.nasa.gov/group/imce/www/ontologies"
+
+ONTOLOGIES.each do |o|
+  source = "#{o}.owl"
+  reldest = "#{o}-#{DATE}"
+  absdest = "#{TARGET}/#{reldest}"
+  symlink = "#{TARGET}/#{o}"
+  if File.file?(source)
+    unless File.file?(absdest) && File.compare(source, absdest)
+      File.cp(source, absdest, [:preserve])
+    end
+    FileUtils.rm(symlink)  if File.exist?(symlink)
+    FileUtils.ln_s(reldest, symlink)
+  end
+end

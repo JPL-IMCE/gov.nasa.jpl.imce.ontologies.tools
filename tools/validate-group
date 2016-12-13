@@ -1,0 +1,1879 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'logger'
+require 'tempfile'
+require 'time'
+require 'tsort'
+require 'yaml'
+
+require 'jpl/rdf/sesame'
+
+include REXML
+
+# Define constants.
+
+ANNOTATION_IRI = 'http://imce.jpl.nasa.gov/foundation/annotation/annotation'
+
+WWW_OMG_ORG = 'http://www.omg.org'
+WWW_OMG_ORG_ES = Regexp.escape(WWW_OMG_ORG)
+WWW_OMG_ORG_RE = Regexp.new(WWW_OMG_ORG_ES)
+WWW_OMG_ORG_SPARQL_RE = WWW_OMG_ORG_ES.gsub(/\\/, '\\\\\\')
+
+WWW_W3_ORG = 'http://www.w3.org'
+WWW_W3_ORG_ES = Regexp.escape(WWW_W3_ORG)
+WWW_W3_ORG_RE = Regexp.new(WWW_W3_ORG_ES)
+WWW_W3_ORG_SPARQL_RE = WWW_W3_ORG_ES.gsub(/\\/, '\\\\\\')
+
+IMCE_JPL_NASA_GOV = 'http://imce.jpl.nasa.gov'
+IMCE_JPL_NASA_GOV_ES = Regexp.escape(IMCE_JPL_NASA_GOV)
+IMCE_JPL_NASA_GOV_RE = Regexp.new(IMCE_JPL_NASA_GOV_ES)
+IMCE_JPL_NASA_GOV_SPARQL_RE = IMCE_JPL_NASA_GOV_ES.gsub(/\\/, '\\\\\\')
+
+PURL_ORG = 'http://purl.org/dc/elements'
+PURL_ORG_ES = Regexp.escape(PURL_ORG)
+PURL_ORG_RE = Regexp.new(PURL_ORG_ES)
+PURL_ORG_SPARQL_RE = PURL_ORG_ES.gsub(/\\/, '\\\\\\')
+
+ENTAILMENTS = %w{ClassEntailments PropertyEntailments}
+
+# Define structs.
+
+EntityStruct = Struct.new(:mapped, :text)
+SubpropertyStruct = Struct.new(:domain_ok, :range_ok)
+RestrictionStruct = Struct.new(:domain_ok, :range_ok)
+SubpropertyMappingStruct = Struct.new(:rel_ok, :src_ok, :trg_ok)
+
+# Define variables.
+
+imports_by_ontology = Hash.new { |h, k| h[k] = Set.new }
+closure_by_ontology = Hash.new { |h, k| h[k] = Set.new }
+noMapping_by_ontology = {}
+  
+maps = {}
+
+# Define utility functions.
+
+module Enumerable
+  def equal_any(var)
+    '(' + map { |val| "#{var} = #{val.to_uriref}" }.push('false').join(' || ') + ')'
+  end
+end
+
+class String
+  def context(append = '')
+    RDF::Uri.new(self + append).to_uriref
+  end
+end
+
+class RDF::Uri
+  def cmof_uri
+    RDF::Uri.new(to_s.sub(/#{EMBEDDING}\z/, ''))
+  end
+  def embedding_uri
+    RDF::Uri.new(cmof_uri.to_s + EMBEDDING)
+  end
+  def category
+    case to_s
+    when EMBEDDING_RE
+      :embedding
+    else
+      :cmof
+    end
+  end
+  def rewrite(category)
+    case category
+    when :cmof
+      cmof_uri
+    when :embedding
+      embedding_uri
+    else
+      raise "invalid category #{category} for #{self}"
+    end
+  end
+end
+
+class TestSuites < REXML::Element
+  def initialize
+    super('testsuites')
+  end
+end
+class TestSuite < REXML::Element
+  def initialize(name)
+    super('testsuite')
+    add_attribute('name', name)
+  end
+end
+class TestCase < REXML::Element
+  def initialize(name)
+    super('testcase')
+    add_attribute('name', name)
+  end
+end
+class Failure < REXML::Element
+  def initialize(text = nil)
+    super('failure')
+    self << Text.new(text) if text
+  end
+end
+
+# Process arguments.
+
+def usage
+  warn 'validate-group --host host --port port --path path --repo repo --type type --imports imports_file uri [ uri ...]'
+end
+
+log_level = Logger::FATAL
+host = port = path = repo = type = imports_file = nil
+
+GetoptLong.new(
+  [ '--help',    '-h',       GetoptLong::NO_ARGUMENT ],
+  [ '--debug',   '-d',       GetoptLong::NO_ARGUMENT ],
+  [ '--info',    '-i',       GetoptLong::NO_ARGUMENT ],
+  [ '--warn',    '-w',       GetoptLong::NO_ARGUMENT ],
+  [ '--repo',    '-r',       GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--host',                GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--port',                GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--type',                GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--imports',             GetoptLong::REQUIRED_ARGUMENT ],
+  [ '--path',                GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt, arg|
+  case opt
+  when "--help"
+    usage
+    exit 0
+  when "--debug"
+    log_level = Logger::DEBUG
+  when "--info"
+    log_level = Logger::INFO
+  when "--warn"
+    log_level = Logger::WARN
+  when "--host"
+    host = arg
+  when "--port"
+    port = arg
+  when "--path"
+    path = arg
+  when "--repo"
+    repo = arg
+  when '--type'
+    type = arg
+  when '--imports'
+    imports_file = arg
+  else
+    warn "unknown option: #{opt}"
+    usage
+    exit 1
+  end
+end
+
+unless host && port && path && repo && imports_file && !ARGV.empty?
+  usage
+  exit 1
+end
+
+named_uris = ARGV
+do_embedding = (type == 'imce')
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Connect to Sesame server.
+
+log.info('begin session')
+session = RDF::Sesame::Session.new(host, port, path, log)
+raise 'no session' unless session
+log.info('create model')
+model = session.model(repo)
+raise 'no model' unless model
+
+nsm = {}
+namespace_by_prefix = {}
+model.namespaces.map do |defn|
+  prf = defn.prefix.to_s
+  ns = defn.namespace.to_s
+  nsm[prf] = RDF::NamespaceMap.new(ns)
+  namespace_by_prefix[prf] = ns
+end
+RDF::Uri.ns_by_prf = namespace_by_prefix
+
+# Construct namespace definition string.
+
+namespace_defs = nsm.map do |prf, ns|
+  "PREFIX #{prf}:#{nsm[prf][''].to_uriref}"
+end.join("\n")
+
+# Load imports graph.
+
+imports_by_ontology = YAML.load(File.open(imports_file))['closure']
+log.debug("imports_by_ontology: #{imports_by_ontology.inspect}")
+
+# Collect ontology IRIs.
+
+named_ontologies = Set.new(named_uris.map { |u| RDF::Uri.new(u) })
+imported_ontologies = named_uris.inject(Set.new) do |m, u|
+  m += imports_by_ontology[u].map { |i| RDF::Uri.new(i)  }
+  m
+end
+imported_ontologies -= named_ontologies
+ontologies = named_ontologies + imported_ontologies
+  
+# Partition ontologies by group: imce/omg and named/imported.
+
+ontologies_by_group = {}
+{ 'imce' => IMCE_JPL_NASA_GOV_RE, 'omg' => WWW_OMG_ORG_RE }.each do |group, re|
+  ontologies_by_group[group] = ontologies.select { |o| o.to_s =~ re }
+end
+{ 'named' => named_ontologies, 'imported' => imported_ontologies,
+  'annotation' => [RDF::Uri.new(ANNOTATION_IRI)] }.each do |group, olist|
+  ontologies_by_group[group] = olist
+end
+ontologies_by_group.each do |group, olist|
+  log.debug("ontologies_by_group['#{group}'] = #{olist.inspect}")
+end
+
+# Construct ontology URIs for entailments.
+
+ontologies_by_group_by_type = Hash.new { |h, k| h[k] = Hash.new { |l, m| l[m] = [] } }
+ontologies_by_group.each do |group, olist|
+  ENTAILMENTS.each do |etype|
+    ontologies_by_group_by_type[group][etype] = olist.map { |o| RDF::Uri.new(o + "/#{etype}") }
+    log.debug("ontologies_by_group_by_type['#{group}']['#{etype}'] = #{ontologies_by_group_by_type[olist][etype].inspect}")
+  end
+end
+
+# Construct SPARQL 'from' clauses.
+
+from_clauses_by_group = {}
+ontologies_by_group.each do |group, list|
+  from_clauses_by_group[group] = list.map { |ont| "from #{ont.to_uriref}" }.join("\n")
+  log.debug("from_clauses_by_group['#{group}'] = #{from_clauses_by_group[group].inspect}")
+end
+
+from_clauses_by_group_by_type = Hash.new { |h, k| h[k] = Hash.new { |l, m| l[m] = [] } }
+ontologies_by_group_by_type.each do |group, hash|
+  hash.each do |etype, list|
+    from_clauses_by_group_by_type[group][etype] = list.map { |ont| "from #{ont.to_uriref}" }.join("\n")
+    log.debug("from_clauses_by_group_by_type['#{group}']['#{etype}'] = #{from_clauses_by_group_by_type[group][etype].inspect}")
+  end
+end
+
+# Construct SPARQL 'from named' clauses.
+
+from_named_clauses_by_group = {}
+from_clauses_by_group.each do |group, c| 
+  from_named_clauses_by_group[group] = c.gsub(/^from /, 'from named ')
+  log.debug("from_named_clauses_by_group['#{group}'] = #{from_named_clauses_by_group[group].inspect}")
+end
+
+from_named_clauses_by_group_by_type = Hash.new { |h, k| h[k] = Hash.new { |l, m| l[m] = [] } }
+from_clauses_by_group_by_type.each do |group, hash|
+  hash.each do |etype, c|
+    from_named_clauses_by_group_by_type[group][etype] = c.gsub(/^from /, 'from named ')
+    log.debug("from_named_clauses_by_group_by_type['#{group}']['#{etype}'] = #{from_named_clauses_by_group_by_type[group][etype].inspect}")
+  end
+end
+
+# Create output document.
+
+doc = Document.new
+doc << tss = TestSuites.new
+
+# Every class embedded in UML.
+
+if do_embedding
+  test = 'every class embedded in UML'
+  log.info("test: #{test}")
+  tss << ts = TestSuite.new(test)
+
+  query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?klass ?isAbstract ?embedded ?embedded_concrete ?embedded_ok
+
+  #{from_clauses_by_group['named']}
+  #{from_named_clauses_by_group['named']}
+  #{from_clauses_by_group['imported']}
+  #{from_clauses_by_group_by_type['named']['ClassEntailments']}
+  #{from_clauses_by_group_by_type['imported']['ClassEntailments']}
+
+  where {
+
+    graph ?graph { ?klass rdf:type owl:Class . }
+
+    bind(exists {
+      ?klass rdfs:subClassOf ?metaclass .
+      ?metaclass annotation:isMetaclass true.
+    } as ?embedded_metaclass)
+
+    bind(exists {
+      ?klass rdfs:subClassOf ?stereotypeMetaclass .
+      ?stereotypeMetaclass annotation:isStereotypeMetaclass true.
+    } as ?embedded_stereotypeMetaclass)
+
+    bind(exists {
+      ?klass rdfs:subClassOf ?metaclassSpecificExtension .
+      ?metaclassSpecificExtension annotation:isMetaclassSpecificExtension true.
+    } as ?embedded_metaclassSpecificExtension)
+    
+    bind(exists {
+      ?klass rdfs:subClassOf owl2-mof2:GroupViewDiagram .
+    } as ?embedded_owl2mof2_GroupViewDiagram)
+
+  bind(exists { ?klass annotation:isAbstract true } as ?isAbstract )
+    bind(exists { ?klass rdfs:subClassOf UML:Element } as ?embedded_element)
+    bind(
+      (?embedded_metaclass || ?embedded_stereotypeMetaclass || ?embedded_metaclassSpecificExtension || ?embedded_owl2mof2_GroupViewDiagram)
+      as ?embedded_concrete
+    )
+    bind(exists { ?klass rdfs:subClassOf owl2-mof2-backbone:ReifiedObjectProperty } as ?reified)
+    bind((?reified || ?embedded_element) as ?embedded)
+    bind((?reified || (?embedded_element && (?isAbstract || ?embedded_concrete))) as ?embedded_ok)
+
+    filter (
+         #{ontologies_by_group['named'].equal_any('?graph')}
+      && ?klass != owl:Thing
+      && ?klass != owl:Nothing
+      && not exists { ?klass annotation:noMapping true }
+    )
+  }
+  order by ?klass
+}
+  log.debug("#{test} query: #{query}")
+  model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+    klass = resp.klass.to_qname
+    embedded_ok = resp.embedded_ok.true?
+    isAbstract = resp.isAbstract.true?
+    embedded_concrete = resp.embedded_concrete.true?
+    ts << tc = TestCase.new(klass)
+    unless embedded_ok
+      if isAbstract || embedded_concrete
+        text = 'not embedded'
+      else
+        text = 'concrete class without concrete embedding'
+      end
+      tc << Failure.new(text)
+      log.debug("class: #{klass} embedded: #{embedded_ok}")
+    end
+  end
+end
+
+# Every entity declared in some ontology.
+
+test = 'every entity declared in some ontology'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?entity ?ok
+
+  #{from_clauses_by_group['named']}
+  #{from_clauses_by_group['imported']}
+
+  where {
+    
+    { ?entity ?predicate ?object } union { ?subject ?entity ?object } union { ?subject ?predicate ?entity }
+    bind(exists { ?entity rdf:type ?type } as ?ok)
+
+    filter (
+         isiri(?entity)
+     && !regex(str(?entity), "#{PURL_ORG_SPARQL_RE}", "i")
+     && !regex(str(?entity), "#{WWW_W3_ORG_SPARQL_RE}", "i")
+    )
+  }
+  order by ?entity
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  entity = resp.entity.to_qname
+  ok = resp.ok.true?
+  ts << tc = TestCase.new(entity)
+  tc << Failure.new unless ok
+  log.debug("#{entity} ok: #{ok}")
+end
+  
+# Every entity declaration in the proper ontology.
+
+test = 'every entity declaration in the proper ontology'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?entity ?graph ?ok
+
+  #{from_named_clauses_by_group['named']}
+
+  where {
+    graph ?graph { ?entity rdf:type ?type . }
+    bind(
+      ( strstarts(str(?entity), str(?graph))
+        || strstarts(str(?entity), concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://")))
+      ) as ?ok
+    )
+
+    filter (
+         !isblank(?entity)
+      && !(
+           ?type = owl:AnnotationProperty
+        || regex(str(?entity), "#{PURL_ORG_SPARQL_RE}", "i")
+        || regex(str(?entity), "#{WWW_W3_ORG_SPARQL_RE}", "i")
+      )
+    )
+  }
+  order by ?graph ?entity
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  entity = resp.entity.to_qname
+  graph = resp.graph
+  ok = resp.ok.true?
+  name = "#{graph} declares #{entity}"
+  ts << tc = TestCase.new(name)
+  tc << Failure.new unless ok
+  log.debug("#{name} ok: #{ok}")
+end
+
+# Every ontology declares an abstract unmapped top class.
+
+test = 'every ontology declares an abstract unmapped top class'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?ontology ?graph ?thingExists ?thingIsAbstract ?thingNoMapping
+                  ?entityExists ?entityIsAbstract ?entityNoMapping
+                  ?ropExists ?ropIsAbstract ?ropNoMapping
+                  ?sdtExists ?sdtIsAbstract ?sdtNoMapping
+                  ?entitySubThing ?ropSubThing ?sdtSubThing
+
+  #{from_named_clauses_by_group['named']}
+
+  where {
+    graph ?graph {
+
+      ?ontology rdf:type owl:Ontology .
+
+      optional {
+        ?thing rdf:type owl:Class .
+        filter (?thing = iri(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://"), "#Thing")))
+      }
+
+      optional {
+        ?entity rdf:type owl:Class .
+        filter (?entity = iri(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://"), "#Entity")))
+      }
+
+      optional {
+        ?rop rdf:type owl:Class .
+        filter (?rop = iri(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://"), "#ReifiedObjectProperty")))
+      }
+
+      optional {
+        ?sdt rdf:type owl:Class .
+        filter (?sdt = iri(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://"), "#StructuredDatatype")))
+      }
+
+      bind(bound(?thing) as ?thingExists)
+      bind(?thingExists && exists { ?thing annotation:isAbstract true } as ?thingIsAbstract)
+      bind(?thingExists && exists { ?thing annotation:noMapping true } as ?thingNoMapping)
+
+      bind(bound(?entity) as ?entityExists)
+      bind(?entityExists && exists { ?entity annotation:isAbstract true } as ?entityIsAbstract)
+      bind(?entityExists && exists { ?entity annotation:noMapping true } as ?entityNoMapping)
+      bind(?entityExists && exists { ?entity rdfs:subClassOf ?thing } as ?entitySubThing)
+
+      bind(bound(?rop) as ?ropExists)
+      bind(?ropExists && exists { ?rop annotation:isAbstract true } as ?ropIsAbstract)
+      bind(?ropExists && exists { ?rop annotation:noMapping true } as ?ropNoMapping)
+      bind(?ropExists && exists { ?rop rdfs:subClassOf ?thing } as ?ropSubThing)
+
+      bind(bound(?sdt) as ?sdtExists)
+      bind(?sdtExists && exists { ?sdt annotation:isAbstract true } as ?sdtIsAbstract)
+      bind(?sdtExists && exists { ?sdt annotation:noMapping true } as ?sdtNoMapping)
+      bind(?sdtExists && exists { ?sdt rdfs:subClassOf ?thing } as ?sdtSubThing)
+    }
+  }
+  order by ?ontology
+}
+log.debug("#{test} query: #{query}")
+rules = {
+  :thingExists => 'no Thing',
+  :thingIsAbstract => 'Thing missing annotation:isAbstract',
+  :thingNoMapping => 'Thing missing annotation:noMapping',
+  :entityExists => 'no Entity',
+  :entityIsAbstract => 'Entity missing annotation:isAbstract',
+  :entityNoMapping => 'Entity missing annotation:noMapping',
+  :entitySubThing => 'Entity not subclass of Thing',
+  :ropExists => 'no ReifiedObjectProperty',
+  :ropIsAbstract => 'ReifiedObjectProperty missing annotation:isAbstract',
+  :ropNoMapping => 'ReifiedObjectProperty missing annotation:noMapping',
+  :ropSubThing => 'ReifiedObjectProperty not subclass of Thing',
+  :sdtExists => 'no StructuredDatatype',
+  :sdtIsAbstract => 'StructuredDatatype missing annotation:isAbstract',
+  :sdtNoMapping => 'StructuredDatatype missing annotation:noMapping',
+  :sdtSubThing => 'StructuredDatatype not subclass of Thing',
+}
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  ontology = resp.ontology
+  thingExists = resp.thingExists.true?
+  thingIsAbstract = resp.thingIsAbstract.true?
+  thingNoMapping = resp.thingNoMapping.true?
+  ts << tc = TestCase.new(ontology)
+  msg = rules.inject([]) do |memo, kv|
+    method, msg = *kv
+    memo << msg + '.' unless resp.send(method).true?
+    memo
+  end.join(' ')
+  unless msg.empty?
+    tc << Failure.new(msg)
+  end
+  log.debug("#{ontology}: #{msg.empty? || msg}")
+end
+
+# Every class in ontology O is a subclass of O-backbone:Thing.
+
+test = 'every class in ontology O is a subclass of O-backbone:Thing'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?graph ?klass ?thing ?ok
+
+  #{from_named_clauses_by_group['named']}
+  #{from_named_clauses_by_group_by_type['named']['ClassEntailments']}
+
+  where {
+    graph ?graph {
+      ?klass rdf:type owl:Class .
+    }
+    bind(iri(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://"), "#Thing")) as ?thing)
+    bind(exists { graph ?any { ?klass rdfs:subClassOf ?thing } } as ?ok)
+    filter (
+      ?klass != ?thing
+      && ?klass != owl:Thing
+      && ?klass != owl:Nothing
+    )
+  }
+  order by ?klass
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  thing = resp.thing.to_qname
+  klass = resp.klass.to_qname
+  ok = resp.ok.true?
+  name = "#{klass} subclass of #{thing}"
+  ts << tc = TestCase.new(name)
+  tc << Failure.new unless ok
+  log.debug("#{name}: #{ok}")
+end
+
+# Every object property is completely reified.
+
+test = 'every object property is completely reified'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+  
+  #{namespace_defs}
+  
+  select distinct ?oprop ?isDerived ?chain_exists ?relclass_exists ?relclass_mapped
+                  ?srcprop_exists ?srcprop_mapped ?trgprop_exists ?trgprop_mapped
+                  ?srcprop_range_ok ?trgprop_range_ok ?chain ?srcprop ?trgprop ?relclass
+                  ?func_ok ?invfunc_ok ?inv_oprop ?toprop
+  
+  #{from_clauses_by_group['named']}
+  #{from_clauses_by_group_by_type['named']['ClassEntailments']}
+  #{from_clauses_by_group_by_type['named']['PropertyEntailments']}
+  #{from_named_clauses_by_group['named']}
+  #{from_named_clauses_by_group_by_type['named']['ClassEntailments']}
+  #{from_named_clauses_by_group_by_type['named']['PropertyEntailments']}
+  
+  where {
+    graph ?graph {
+       ?oprop rdf:type owl:ObjectProperty
+    }
+
+    bind(iri(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://"), "#topReifiedObjectProperty")) as ?toprop)
+    ?oprop rdfs:subPropertyOf ?toprop .
+    
+    optional {
+      { ?oprop owl:inverseOf ?inv_oprop } union { ?inv_oprop owl:inverseOf ?oprop }
+      filter (!isBlank(?inv_oprop))
+    }
+    
+    optional {
+    
+      # find property chain axiom.
+      
+      ?oprop owl:propertyChainAxiom ?chain .
+  
+      optional {
+  
+        # find first clause with inverse source property.
+      
+        ?chain rdf:first [ owl:inverseOf ?srcprop ; ] .
+      
+        # Find second clause with target property
+      
+        ?chain rdf:rest [ rdf:first ?trgprop ; ] .
+      
+        optional {
+      
+          # find relationship class
+      
+          ?srcprop rdfs:domain ?relclass .
+          ?trgprop rdfs:domain ?relclass .
+  
+        }
+  
+        # find domain and range of object property, ranges of source and target properties.
+  
+        optional {
+          ?srcprop rdfs:range ?srcprop_range .
+        }
+        optional {
+          ?trgprop rdfs:range ?trgprop_range .
+        }
+      }
+      optional {
+        ?oprop rdfs:domain ?oprop_domain .
+      }
+      optional {
+        ?oprop rdfs:range ?oprop_range .
+      }
+    }
+   
+    bind(exists { ?oprop annotation:noMapping true } as ?oprop_noMapping)
+    bind(exists { ?oprop annotation:isDerived true } as ?isDerived)
+    bind(exists { ?oprop rdf:type owl:FunctionalProperty } as ?oprop_func)
+    bind(exists { ?oprop rdf:type owl:InverseFunctionalProperty } as ?oprop_invfunc)
+      
+    bind(bound(?chain) as ?chain_exists)
+    
+    bind(bound(?srcprop) as ?srcprop_exists)
+    bind(?srcprop_exists && exists { ?srcprop rdfs:subPropertyOf owl2-mof2-backbone:topReifiedObjectPropertySource } as ?srcprop_fwd_mapped)
+    bind(?srcprop_exists && exists { ?srcprop rdfs:subPropertyOf owl2-mof2-backbone:topReifiedObjectPropertyTarget } as ?srcprop_rev_mapped)
+    bind(((?isDerived && ?srcprop_rev_mapped) || ?srcprop_fwd_mapped) as ?srcprop_mapped)
+    bind(exists { ?srcprop rdf:type owl:FunctionalProperty } as ?srcprop_func)
+    bind(exists { ?srcprop rdf:type owl:InverseFunctionalProperty } as ?srcprop_invfunc)
+    
+    bind(bound(?trgprop) as ?trgprop_exists)
+    bind(?trgprop_exists && exists { ?trgprop rdfs:subPropertyOf owl2-mof2-backbone:topReifiedObjectPropertyTarget } as ?trgprop_fwd_mapped)
+    bind(?trgprop_exists && exists { ?trgprop rdfs:subPropertyOf owl2-mof2-backbone:topReifiedObjectPropertySource } as ?trgprop_rev_mapped)
+    bind(((?isDerived && ?trgprop_rev_mapped) || ?trgprop_fwd_mapped) as ?trgprop_mapped)
+    bind(exists { ?trgprop rdf:type owl:FunctionalProperty } as ?trgprop_func)
+    bind(exists { ?trgprop rdf:type owl:InverseFunctionalProperty } as ?trgprop_invfunc)
+        
+    bind(bound(?relclass) as ?relclass_exists)
+    bind(?relclass_exists && exists { ?relclass rdfs:subClassOf owl2-mof2-backbone:ReifiedObjectProperty } as ?relclass_mapped)
+  
+    bind((!bound(?oprop_domain) && !bound(?srcprop_range)) || (bound(?oprop_domain) && bound(?srcprop_range) && ?oprop_domain = ?srcprop_range) as ?srcprop_range_ok)
+    bind((!bound(?oprop_range)  && !bound(?trgprop_range)) || (bound(?oprop_range)  && bound(?trgprop_range) && ?oprop_range  = ?trgprop_range) as ?trgprop_range_ok)
+    
+    bind(?oprop_func = ?srcprop_invfunc as ?func_ok)
+    bind(?oprop_invfunc = ?trgprop_invfunc as ?invfunc_ok)
+
+    # Restrict object properties to embedded properties in IMCE namespace.
+    
+    filter (
+         #{ontologies_by_group['named'].equal_any('?graph')}
+      && ?oprop != ?toprop
+      && !?oprop_noMapping
+    )
+  }
+  
+  order by ?oprop
+}
+log.debug("#{test} query: #{query}")
+rules = {
+  :chain_exists => 'no property chain',
+  :relclass_exists => 'no reified object property class',
+  :srcprop_exists => 'no source property',
+  :trgprop_exists => 'no target property',
+  :func_ok => 'property functional and source property inverse functional inconsistent',
+  :invfunc_ok => 'property inverse functional and target property inverse functional inconsistent',
+}
+rules.merge!({
+  :relclass_mapped => 'reified object property class not mapped',
+  :srcprop_mapped => 'source property not mapped',
+  :trgprop_mapped => 'target property not mapped',
+}) if do_embedding
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  property = resp.oprop.to_qname
+  isDerived = resp.isDerived.true?
+  inv_oprop = resp.inv_oprop
+  name = property
+  ts << tc = TestCase.new(name)
+  msg = rules.inject([]) do |memo, kv|
+    method, msg = *kv
+    memo << msg + '.' unless resp.send(method).true?
+    memo
+  end.join(' ')
+  unless msg.empty?
+    msg << " derived from #{inv_oprop}." if isDerived
+    tc << Failure.new(msg)
+  end
+  log.debug("#{property}: #{msg}")
+end
+
+# Every ontology declares an abstract unmapped top object property.
+
+test = 'every ontology declares an abstract unmapped top object property'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?ontology ?top_exists ?top_isAbstract ?top_noMapping
+    ?toprop_exists ?toprop_isAbstract ?toprop_noMapping ?toprop_subprop
+    ?toprops_exists ?toprops_isAbstract ?toprops_noMapping ?toprops_subprop
+    ?topropt_exists ?topropt_isAbstract ?topropt_noMapping ?topropt_subprop
+    ?topsdp_exists ?topsdp_isAbstract ?topsdp_noMapping ?topsdp_subprop
+
+  #{from_named_clauses_by_group['named']}
+
+  where {
+    graph ?graph {
+
+      ?ontology rdf:type owl:Ontology .
+
+      optional {
+        ?top rdf:type owl:ObjectProperty .
+        filter (?top = iri(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://"), "#topObjectProperty")))
+      }
+
+      optional {
+        ?toprop rdf:type owl:ObjectProperty .
+        filter (?toprop = iri(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://"), "#topReifiedObjectProperty")))
+      }
+
+      optional {
+        ?toprops rdf:type owl:ObjectProperty .
+        filter (?toprops = iri(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://"), "#topReifiedObjectPropertySource")))
+      }
+      
+      optional {
+        ?topropt rdf:type owl:ObjectProperty .
+        filter (?topropt = iri(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://"), "#topReifiedObjectPropertyTarget")))
+      }
+      
+      optional {
+        ?topsdp rdf:type owl:ObjectProperty .
+        filter (?topsdp = iri(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://"), "#topStructuredDataProperty")))
+      }
+
+      bind(bound(?top) as ?top_exists)
+      bind(?top_exists && exists { ?top annotation:isAbstract true } as ?top_isAbstract)
+      bind(?top_exists && exists { ?top annotation:noMapping true } as ?top_noMapping)
+
+      bind(bound(?toprop) as ?toprop_exists)
+      bind(?toprop_exists && exists { ?toprop annotation:isAbstract true } as ?toprop_isAbstract)
+      bind(?toprop_exists && exists { ?toprop annotation:noMapping true } as ?toprop_noMapping)
+      bind(?toprop_exists && exists { ?toprop rdfs:subPropertyOf ?top } as ?toprop_subprop)
+
+      bind(bound(?toprops) as ?toprops_exists)
+      bind(?toprops_exists && exists { ?toprops annotation:isAbstract true } as ?toprops_isAbstract)
+      bind(?toprops_exists && exists { ?toprops annotation:noMapping true } as ?toprops_noMapping)
+      bind(?toprops_exists && exists { ?toprops rdfs:subPropertyOf ?top } as ?toprops_subprop)
+      
+      bind(bound(?topropt) as ?topropt_exists)
+      bind(?topropt_exists && exists { ?topropt annotation:isAbstract true } as ?topropt_isAbstract)
+      bind(?topropt_exists && exists { ?topropt annotation:noMapping true } as ?topropt_noMapping)
+      bind(?topropt_exists && exists { ?topropt rdfs:subPropertyOf ?top } as ?topropt_subprop)
+
+      bind(bound(?topsdp) as ?topsdp_exists)
+      bind(?topsdp_exists && exists { ?topsdp annotation:isAbstract true } as ?topsdp_isAbstract)
+      bind(?topsdp_exists && exists { ?topsdp annotation:noMapping true } as ?topsdp_noMapping)
+      bind(?topsdp_exists && exists { ?topsdp rdfs:subPropertyOf ?top } as ?topsdp_subprop)
+
+    }
+  }
+  order by ?ontology
+}
+log.debug("#{test} query: #{query}")
+rules = {
+  :top_exists => 'no topObjectProperty',
+  :top_isAbstract => 'topObjectProperty missing annotation:isAbstract',
+  :top_noMapping => 'topObjectProperty missing annotation:noMapping',
+  :toprop_exists => 'no topReifiedObjectProperty',
+  :toprop_isAbstract => 'topReifiedObjectProperty missing annotation:isAbstract',
+  :toprop_noMapping => 'topReifiedObjectProperty missing annotation:noMapping',
+  :toprop_subprop => 'topReifiedObjectProperty not subproperty of topObjectProperty',
+  :toprops_exists => 'no topReifiedObjectPropertySource',
+  :toprops_isAbstract => 'topReifiedObjectPropertySource missing annotation:isAbstract',
+  :toprops_noMapping => 'topReifiedObjectPropertySource missing annotation:noMapping',
+  :toprops_subprop => 'topReifiedObjectPropertySource not subproperty of topObjectProperty',
+  :topropt_exists => 'no topReifiedObjectPropertyTarget',
+  :topropt_isAbstract => 'topReifiedObjectPropertyTarget missing annotation:isAbstract',
+  :topropt_noMapping => 'topReifiedObjectPropertyTarget missing annotation:noMapping',
+  :topropt_subprop => 'topReifiedObjectPropertyTarget not subproperty of topObjectProperty',
+  :topsdp_exists => 'no topStructuredDataProperty',
+  :topsdp_isAbstract => 'topStructuredDataProperty missing annotation:isAbstract',
+  :topsdp_noMapping => 'topStructuredDataProperty missing annotation:noMapping',
+  :topsdp_subprop => 'topStructuredDataProperty not subproperty of topObjectProperty'
+}
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  ontology = resp.ontology
+  topObjectProperty = RDF::Uri.new(ontology + '#topObjectProperty').to_qname
+  ts << tc = TestCase.new(ontology)
+  msg = rules.inject([]) do |memo, kv|
+    method, msg = *kv
+    memo << msg + '.' unless resp.send(method).true?
+    memo
+  end.join(' ')
+  unless msg.empty?
+    tc << Failure.new(msg)
+  end
+  log.debug("#{topObjectProperty}: #{msg.empty? || msg}")
+end
+
+
+# Every object property in ontology O is an indirect subproperty of O-backbone:topObjectProperty.
+
+test = 'every object property in ontology O is an indirect subproperty of O-backbone:topObjectProperty'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?graph ?property ?topObjectProperty ?ok
+  
+  #{from_named_clauses_by_group['named']}
+  #{from_named_clauses_by_group_by_type['named']['PropertyEntailments']}
+  
+  where {
+    graph ?graph {
+      ?property rdf:type owl:ObjectProperty .
+    }
+    bind(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://")) as ?backbone_iri)
+    bind(iri(concat(?backbone_iri, "#topObjectProperty")) as ?topObjectProperty)
+    bind(iri(concat(?backbone_iri, "#topReifiedObjectProperty")) as ?topReifiedObjectProperty)
+    bind(iri(concat(?backbone_iri, "#topReifiedObjectPropertySource")) as ?topReifiedObjectPropertySource)
+    bind(iri(concat(?backbone_iri, "#topReifiedObjectPropertyTarget")) as ?topReifiedObjectPropertyTarget)
+    bind(iri(concat(?backbone_iri, "#topStructuredDataProperty")) as ?topStructuredDataProperty)
+    bind(exists { graph ?any { { ?property rdfs:subPropertyOf ?topReifiedObjectProperty } union
+                               { ?property rdfs:subPropertyOf ?topReifiedObjectPropertySource } union
+                               { ?property rdfs:subPropertyOf ?topReifiedObjectPropertyTarget } union
+                               { ?property rdfs:subPropertyOf ?topStructuredDataProperty }
+                  } } as ?ok)
+    filter (
+         ?property != ?topObjectProperty
+      && ?property != ?topReifiedObjectProperty
+      && ?property != ?topReifiedObjectPropertySource
+      && ?property != ?topReifiedObjectPropertyTarget
+      && ?property != ?topStructuredDataProperty
+      && ?property != owl:topObjectProperty
+      && ?property != owl:bottomObjectProperty
+    )
+  }
+  order by ?property
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  topObjectProperty = resp.topObjectProperty.to_qname
+  property = resp.property.to_qname
+  ok = resp.ok.true?
+  name = "#{property} subproperty of #{topObjectProperty}"
+  ts << tc = TestCase.new(name)
+  tc << Failure.new unless ok
+  log.debug("#{name}: #{ok}")
+end
+
+# Every ontology declares an abstract unmapped top datatype property.
+
+test = 'every ontology declares an abstract unmapped top datatype property'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?ontology ?exists ?isAbstract ?noMapping
+
+  #{from_named_clauses_by_group['named']}
+
+  where {
+    graph ?graph {
+
+      ?ontology rdf:type owl:Ontology .
+
+      optional {
+        ?thing rdf:type owl:DatatypeProperty .
+        filter (?thing = iri(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://"), "#topDataProperty")))
+      }
+
+      bind(bound(?thing) as ?exists)
+      bind(?exists && exists { ?thing annotation:isAbstract true } as ?isAbstract)
+      bind(?exists && exists { ?thing annotation:noMapping true } as ?noMapping)
+    }
+  }
+  order by ?ontology
+}
+log.debug("#{test} query: #{query}")
+rules = {
+  :exists => 'no top datatype property',
+  :isAbstract => 'missing annotation:isAbstract',
+  :noMapping => 'missing annotation:noMapping'
+}
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  ontology = resp.ontology
+  topDataProperty = RDF::Uri.new(ontology + '#topDataProperty').to_qname
+  exists = resp.exists.true?
+  isAbstract = resp.isAbstract.true?
+  noMapping = resp.noMapping.true?
+  ts << tc = TestCase.new(ontology)
+  msg = rules.inject([]) do |memo, kv|
+    method, msg = *kv
+    memo << msg + '.' unless resp.send(method).true?
+    memo
+  end.join(' ')
+  unless msg.empty?
+    tc << Failure.new(msg)
+  end
+  log.debug("#{topDataProperty}: #{msg.empty? || msg}")
+end
+
+
+# Every datatype property in ontology O is a subproperty of O:topDatatypeProperty.
+
+test = 'every datatype property in ontology O is a subproperty of O:topDataProperty'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?graph ?property ?topDataProperty ?ok
+  
+  #{from_named_clauses_by_group['named']}
+  #{from_named_clauses_by_group_by_type['named']['PropertyEntailments']}
+  
+  where {
+    graph ?graph {
+      ?property rdf:type owl:DatatypeProperty .
+    }
+    bind(iri(concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://"), "#topDataProperty")) as ?topDataProperty)
+    bind(exists { graph ?any { ?property rdfs:subPropertyOf ?topDataProperty } } as ?ok)
+    filter (
+      ?property != ?topDataProperty
+      && ?property != owl:topDataProperty
+      && ?property != owl:bottomDataProperty
+    )
+  }
+order by ?property
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  topDataProperty = resp.topDataProperty.to_qname
+  property = resp.property.to_qname
+  ok = resp.ok.true?
+  name = "#{property} subproperty of #{topDataProperty}"
+  ts << tc = TestCase.new(name)
+  tc << Failure.new unless ok
+  log.debug("#{name}: #{ok}")
+end
+
+# Every range restriction is of type owl:allValuesFrom.
+
+test = 'every range restriction is of type owl:allValuesFrom'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?klass ?rest ?rtype ?property ?ok
+
+  #{from_clauses_by_group['named']}
+
+  where {
+
+    ?klass rdfs:subClassOf ?rest .
+    ?rest rdf:type owl:Restriction .
+    ?rest owl:onProperty ?property .
+    ?rest ?rtype ?value .
+
+    bind(?rtype = owl:allValuesFrom as ?ok)
+
+    filter (
+         ?rtype = owl:someValuesFrom
+      || ?rtype = owl:allValuesFrom
+      || ?rtype = owl:hasValue
+      || ?rtype = owl:hasSelf
+      || ?rtype = owl:minCardinality
+      || ?rtype = owl:minQualifiedCardinality
+      || ?rtype = owl:maxCardinality
+      || ?rtype = owl:maxQualifiedCardinality
+      || ?rtype = owl:Qardinality
+      || ?rtype = owl:QualifiedCardinality
+    )
+  }
+  order by ?klass ?property ?rest ?rtype
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  klass = resp.klass.to_qname
+  rest = resp.rest
+  rtype = resp.rtype.to_qname
+  ok = resp.ok.true?
+  property = resp.property.to_qname
+  name = "#{klass} restriction #{rest} on #{property}"
+  ts << tc = TestCase.new(name)
+  tc << Failure.new(rtype) unless ok
+  log.debug("#{name}: #{ok}")
+end
+
+# Every value of an xsd:boolean-typed annotation property has type xsd:boolean.
+  
+test = 'every value of an xsd:boolean-typed annotation property has type xsd:boolean'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?entity ?property ?datatype ?ok
+
+  #{from_clauses_by_group['named']}
+  #{from_named_clauses_by_group['named']}
+  #{from_clauses_by_group['imported']}
+  
+  where {
+
+    graph ?graph { ?entity ?property ?value }
+    ?property rdf:type owl:AnnotationProperty .
+    ?property rdfs:range xsd:boolean .
+
+    bind(datatype(?value) as ?datatype)
+    bind(?datatype = xsd:boolean as ?ok)
+    
+    filter(#{ontologies_by_group['named'].equal_any('?graph')})
+  }
+  order by ?entity ?property
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  entity = resp.entity.to_qname
+  property = resp.property.to_qname
+  datatype = resp.datatype.to_qname
+  ok = resp.ok.true?
+  name = "#{entity} #{property}"
+  ts << tc = TestCase.new(name)
+  tc << Failure.new(datatype) unless ok
+  log.debug("#{name} (#{datatype}) #{ok}")
+end
+
+# Every literal typed as xsd:boolean has value 'true' or 'false'.
+
+test = %q{every literal typed as xsd:boolean has value 'true' or 'false'}
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?entity ?property ?value ?ok
+
+  #{from_clauses_by_group['named']}
+  
+  where {
+    ?entity ?property ?value .
+
+    bind(?value = true || ?value = false as ?ok)
+      
+    filter (datatype(?value) = xsd:boolean)
+  }
+  order by ?entity ?property
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  entity = resp.entity.to_qname
+  property = resp.property.to_qname
+  value = resp.value.to_s
+  ok = resp.ok.true? rescue false # rescue works around possible Sesame bug
+  name = "#{entity} #{property}"
+  ts << tc = TestCase.new(name)
+  tc << Failure.new(value) unless ok
+  log.debug("#{name} (#{value}): #{ok}")
+end
+
+# Every subproperty domain/range consistent with superproperty.
+
+test = 'every subproperty domain/range consistent with superproperty'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?sub_prop ?sup_prop ?domain_ok ?range_ok
+
+  #{from_named_clauses_by_group['named']}
+  #{from_clauses_by_group['named']}
+  #{from_clauses_by_group_by_type['named']['ClassEntailments']}
+  #{from_clauses_by_group['imported']}
+  #{from_clauses_by_group_by_type['imported']['ClassEntailments']}
+  
+  where {
+    
+    graph ?graph { ?sub_prop rdfs:subPropertyOf ?sup_prop }
+
+    optional {
+      ?sub_prop rdfs:domain ?sub_domain .
+    }
+    optional {
+      ?sub_prop rdfs:range ?sub_range .
+    }
+
+    optional {
+      ?sup_prop rdfs:domain ?sup_domain .
+    }
+    optional {
+      ?sup_prop rdfs:range ?sup_range .
+    }
+
+    bind(exists { ?sub_prop rdf:type owl:ObjectProperty } as ?object_property)
+    bind(!bound(?sup_domain) || (bound(?sub_domain) && exists { ?sub_domain rdfs:subClassOf ?sup_domain }) as ?domain_ok)
+    bind(
+      !?object_property || (
+           !bound(?sup_range)
+        || (bound(?sub_range)  && exists { ?sub_range  rdfs:subClassOf ?sup_range  })
+      ) as ?range_ok
+    )
+  }
+  order by ?sub_prop ?sup_prop
+}
+log.debug("#{test} query: #{query}")
+rules = {
+  :domain_ok => 'invalid domain',
+  :range_ok => 'invalid range'
+}
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  sub_prop = resp.sub_prop.to_qname
+  sup_prop = resp.sup_prop.to_qname
+  name = "#{sub_prop} subproperty of #{sup_prop}"
+  ts << tc = TestCase.new(name)
+  msg = rules.inject([]) do |memo, kv|
+    method, msg = *kv
+    memo << msg + '.' unless resp.send(method).true?
+    memo
+  end.join(' ')
+  unless msg.empty?
+    tc << Failure.new(msg)
+  end
+  log.debug("#{name}: #{msg.empty? || msg}")
+end
+
+# Every object property range restriction consistent with property domain/range.
+
+test = 'every object property range restriction consistent with property domain/range'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?source ?property ?rest ?rest_type ?rest_range ?domain_ok ?range_ok
+
+  #{from_clauses_by_group['named']}
+  #{from_clauses_by_group_by_type['named']['ClassEntailments']}
+  
+  where {
+    
+    ?property rdf:type owl:ObjectProperty .
+    ?property rdfs:domain ?domain .
+    ?property rdfs:range ?range .
+
+    ?source rdfs:subClassOf ?rest .
+    ?rest rdf:type owl:Restriction .
+    ?rest owl:onProperty ?property .
+    ?rest ?rest_type ?rest_range .
+
+    bind(exists { ?source rdfs:subClassOf ?domain } as ?domain_ok)
+    bind(exists { ?rest_range rdfs:subClassOf ?range } as ?range_ok)
+      
+    filter ( ?rest_type = owl:allValuesFrom || ?rest_type = owl:someValuesFrom )
+  }
+  order by ?source ?rest ?property
+}
+log.debug("#{test} query: #{query}")
+rules = {
+  :domain_ok => 'invalid domain',
+  :range_ok => 'invalid range'
+}
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  source = resp.source.to_qname
+  property = resp.property.to_qname
+  rest = resp.rest.to_s
+  rest_type = resp.rest_type.to_qname
+  rest_range = resp.rest_range.to_qname
+  name = "#{source} #{rest} on #{property} #{rest_type} #{rest_range}"
+  ts << tc = TestCase.new(name)
+  msg = rules.inject([]) do |memo, kv|
+    method, msg = *kv
+    memo << msg + '.' unless resp.send(method).true?
+    memo
+  end.join(' ')
+  unless msg.empty?
+    tc << Failure.new(msg)
+  end
+  log.debug("#{name}: #{msg.empty? || msg}")
+end
+
+# Every subproperty reification consistent with its superproperties.
+
+test = 'every subproperty reification consistent with its superproperties'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?sub_prop ?sup_prop ?rel_ok ?src_ok ?trg_ok
+  
+  #{from_clauses_by_group['named']}
+  #{from_named_clauses_by_group['named']}
+  #{from_clauses_by_group['imported']}
+  
+  where {
+    
+    graph ?graph { ?sub_prop rdfs:subPropertyOf ?sup_prop }
+
+    ?sub_prop owl:propertyChainAxiom [
+      rdf:first [
+        owl:inverseOf ?sub_src ;
+      ] ;
+      rdf:rest [
+        rdf:first ?sub_trg ;
+      ] ;
+    ] .
+
+    ?sub_src rdfs:domain ?sub_rel .
+    ?sub_trg rdfs:domain ?sub_rel .
+    
+    ?sup_prop owl:propertyChainAxiom [
+      rdf:first [
+        owl:inverseOf ?sup_src ;
+      ] ;
+      rdf:rest [
+        rdf:first ?sup_trg ;
+      ] ;
+    ] .
+
+    ?sup_src rdfs:domain ?sup_rel .
+    ?sup_trg rdfs:domain ?sup_rel .
+    
+    bind (exists { ?sub_rel rdfs:subClassOf ?sup_rel } as ?rel_ok)
+    bind (exists { ?sub_src rdfs:subPropertyOf ?sup_src } as ?src_ok)
+    bind (exists { ?sub_trg rdfs:subPropertyOf ?sup_trg } as ?trg_ok)
+      
+    filter (
+      #{ontologies_by_group['named'].equal_any('?graph')}
+      && ?sub_prop != ?sup_prop
+      && not exists { ?sub_prop annotation:noMapping true }
+      && not exists { ?sup_prop annotation:noMapping true }
+    )
+  }
+  order by ?sub_prop ?sup_prop
+}
+log.debug("#{test} query: #{query}")
+rules = {
+  :rel_ok => 'invalid reification class',
+  :src_ok => 'invalid source property',
+  :trg_ok => 'invalid target property'
+}
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  sub_prop = resp.sub_prop.to_qname
+  sup_prop = resp.sup_prop.to_qname
+  name = "#{sub_prop} subproperty of #{sup_prop}"
+  ts << tc = TestCase.new(name)
+  msg = rules.inject([]) do |memo, kv|
+    method, msg = *kv
+    memo << msg + '.' unless resp.send(method).true?
+    memo
+  end.join(' ')
+  unless msg.empty?
+    tc << Failure.new(msg)
+  end
+  log.debug("#{name}: #{msg.empty? || msg}")
+end
+
+# Every subproperty pair has consistent inverses.
+
+test = 'every subproperty pair has consistent inverses'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?sub_prop ?sup_prop ?inverse_ok
+  
+  #{from_clauses_by_group['named']}
+  #{from_named_clauses_by_group['named']}
+  #{from_clauses_by_group['imported']}
+  
+  where {
+    
+    graph ?graph { ?sub_prop rdfs:subPropertyOf ?sup_prop }
+    
+    { ?sub_prop owl:inverseOf ?sub_inverse } union { ?sub_inverse owl:inverseOf ?sub_prop }
+    { ?sup_prop owl:inverseOf ?sup_inverse } union { ?sup_inverse owl:inverseOf ?sup_prop }
+      
+    bind (exists { ?sub_inverse rdfs:subPropertyOf ?sup_inverse } as ?inverse_ok)
+      
+    filter (
+         #{ontologies_by_group['named'].equal_any('?graph')}
+      && !isblank(?sub_inverse)
+      && !isblank(?sup_inverse)
+      && ?sub_prop != ?sup_prop
+    )
+  }
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  sub_prop = resp.sub_prop.to_qname
+  sup_prop = resp.sup_prop.to_qname
+  inverse_ok = resp.inverse_ok.true?
+  name = "#{sub_prop} subclass of #{sup_prop}"
+  ts << tc = TestCase.new(name)
+  tc << Failure.new('inconsistent inverses.') unless inverse_ok
+  log.debug("#{name}: #{inverse_ok}")
+end
+
+# Every inverse property pair has consistent embeddings.
+
+if do_embedding
+  test = 'every inverse property pair has consistent embeddings'
+  log.info("test: #{test}")
+  tss << ts = TestSuite.new(test)
+  query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?prop1 ?prop2 ?rel_ok ?src_ok ?trg_ok
+
+  #{from_clauses_by_group['named']}
+
+  where {
+
+    ?prop1 owl:inverseOf ?prop2 .
+
+    ?prop1 owl:propertyChainAxiom [
+      rdf:first [
+        owl:inverseOf ?src1 ;
+      ] ;
+      rdf:rest [
+        rdf:first ?trg1 ;
+      ] ;
+    ] .
+
+    ?src1 rdfs:domain ?rel1 .
+    ?trg1 rdfs:domain ?rel1 .
+
+    ?prop2 owl:propertyChainAxiom [
+      rdf:first [
+        owl:inverseOf ?src2 ;
+      ] ;
+      rdf:rest [
+        rdf:first ?trg2 ;
+      ] ;
+    ] .
+
+    ?src2 rdfs:domain ?rel2 .
+    ?trg2 rdfs:domain ?rel2 .
+
+    bind (?rel1 = ?rel2 as ?rel_ok)
+    bind (?src1 = ?trg2 as ?src_ok)
+    bind (?src2 = ?trg1 as ?trg_ok)
+
+  }
+}
+  log.debug("#{test} query: #{query}")
+  rules = {
+    :rel_ok => 'invalid reification class',
+    :src_ok => 'invalid source property',
+    :trg_ok => 'invalid target property'
+  }
+  model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+    prop1 = resp.prop1.to_qname
+    prop2 = resp.prop2.to_qname
+    name = "#{prop1} inverse of #{prop2}"
+    ts << tc = TestCase.new(name)
+    msg = rules.inject([]) do |memo, kv|
+      method, msg = *kv
+      memo << msg + '.' unless resp.send(method).true?
+      memo
+    end.join(' ')
+    unless msg.empty?
+      tc << Failure.new(msg)
+    end
+    log.debug("#{name}: #{msg.empty? || msg}")
+  end
+end
+
+# Every inverse property pair has exactly one derived property.
+
+test = 'every inverse property pair has exactly one derived property'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?prop1 ?prop2 ?ok
+  
+  #{from_clauses_by_group['named']}
+  
+  where {
+    
+    ?prop1 owl:inverseOf ?prop2 .
+
+    bind(exists {?prop1 annotation:isDerived true} as ?prop1_derived)
+    bind(exists {?prop2 annotation:isDerived true} as ?prop2_derived)
+    bind((?prop1_derived &&  !?prop2_derived) || (?prop2_derived && !?prop1_derived) as ?ok)
+
+    filter (!isBlank(?prop1) && !isBlank(?prop2))
+  }
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  prop1 = resp.prop1.to_qname
+  prop2 = resp.prop2.to_qname
+  name = "#{prop1} inverse of #{prop2}"
+  ok = resp.ok.true?
+  ts << tc = TestCase.new(name)
+  unless ok
+    tc << Failure.new
+  end
+  log.debug("#{name}: ok: #{ok}")
+end
+
+# Every derived object property has a non-derived inverse.
+
+test = 'every derived object property has a non-derived inverse'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?prop  ?ok
+  
+  #{from_clauses_by_group['named']}
+  
+  where {
+    
+    ?prop rdf:type owl:ObjectProperty .
+    ?prop annotation:isDerived true .
+
+    optional {
+      { ?invprop owl:inverseOf ?prop } union { ?prop owl:inverseOf ?invprop }
+      filter (!isBlank(?invprop))
+    }
+    bind(bound(?invprop) as ?ok)
+
+    filter (!isBlank(?prop))
+  }
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  prop = resp.prop.to_qname
+  ok = resp.ok.true?
+  ts << tc = TestCase.new(prop)
+  unless ok
+    tc << Failure.new
+  end
+  log.debug("#{prop}: ok: #{ok}")
+end
+
+# Every subclass embedding consistent with its superclass.
+
+if do_embedding
+  test = 'every subclass embedding consistent with its superclass'
+  log.info("test: #{test}")
+  tss << ts = TestSuite.new(test)
+  query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?subclass ?superclass ?sub_map ?super_map ?ok
+
+  #{from_named_clauses_by_group['named']}
+
+  #{from_clauses_by_group['named']}
+  #{from_clauses_by_group_by_type['named']['ClassEntailments']}
+  #{from_clauses_by_group['imported']}
+  #{from_clauses_by_group_by_type['imported']['ClassEntailments']}
+
+  where {
+
+    # Direct assertions in imce ontologies.
+
+    graph ?g1 { ?subclass rdfs:subClassOf ?superclass . }
+    graph ?g2 { ?subclass rdfs:subClassOf ?sub_map . }
+
+    # Including entailments.
+
+    ?superclass rdfs:subClassOf ?super_map .
+
+    bind(exists { ?sub_map rdfs:subClassOf ?super_map } as ?ok)
+
+    filter (
+         regex(str(?subclass), "#{IMCE_JPL_NASA_GOV_SPARQL_RE}", "i")
+      && regex(str(?superclass), "#{IMCE_JPL_NASA_GOV_SPARQL_RE}", "i")
+      && !isblank(?superclass)
+      && ?subclass != ?superclass
+      && not exists { ?subclass annotation:noMapping true }
+      && not exists { ?superclass annotation:noMapping true }
+      && regex(str(?sub_map), "#{WWW_OMG_ORG_SPARQL_RE}", "i")
+      && regex(str(?super_map), "#{WWW_OMG_ORG_SPARQL_RE}", "i")
+    )
+  }
+  order by ?subclass ?sub_map ?superclass ?super_map
+}
+  log.debug("#{test} query: #{query}")
+  model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+    subclass = resp.subclass.to_qname
+    sub_map = resp.sub_map.to_qname
+    superclass = resp.superclass.to_qname
+    super_map = resp.super_map.to_qname
+    ok = !resp.super_map.nil?
+    name = "#{subclass} [#{sub_map}] subclass of #{superclass} [#{super_map}]"
+    ts << tc = TestCase.new(name)
+    tc << Failure.new('inconsistent embedding.') unless ok
+    log.debug("#{name}: #{ok}")
+  end
+end
+
+# Every embedded property has a single domain and range.
+
+test = 'every embedded property has a single domain and range'
+log.info("test: #{test}")
+rules = {
+  :at_least_one_domain => 'missing domain',
+  :at_most_one_domain => 'multiple domains',
+  :at_least_one_range => 'missing range',
+  :at_most_one_range => 'multiple ranges',
+}
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?property ?at_least_one_domain ?at_most_one_domain ?at_least_one_range ?at_most_one_range
+
+  #{from_clauses_by_group['named']}
+
+  where {
+    
+    { ?property rdf:type owl:ObjectProperty } union { ?property rdf:type owl:DatatypeProperty }
+
+    optional {
+      ?property rdfs:domain ?domain1 .
+      optional {
+        ?property rdfs:domain ?domain2 .
+        filter (?domain1 != ?domain2)
+      }
+    }
+
+    optional {
+      ?property rdfs:range ?range1 .
+      optional {
+        ?property rdfs:range ?range2 .
+        filter (?range1 != ?range2)
+      }
+    }
+
+    bind(bound(?domain1) as ?at_least_one_domain)
+    bind(!bound(?domain2) as ?at_most_one_domain)
+    bind(bound(?range1) as ?at_least_one_range)
+    bind(!bound(?range2) as ?at_most_one_range)
+
+    filter (
+      not exists { ?property annotation:noMapping true }
+    )
+  }
+  order by ?property
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  property = resp.property.to_qname
+  name = property
+  ts << tc = TestCase.new(name)
+  msg = rules.inject([]) do |memo, kv|
+    method, msg = *kv
+    memo << msg + '.' unless resp.send(method).true?
+    memo
+  end.join(' ')
+  unless msg.empty?
+    tc << Failure.new(msg)
+  end
+  log.debug("#{name}: #{msg.empty? || msg}")
+end
+
+# Every disjoint axiom in ontology O names at least one class in O or O-backbone.
+
+test = 'every disjoint axiom in ontology O names at least one class in O or O-backbone'
+log.info("test: #{test}")
+tss << ts = TestSuite.new(test)
+Disjoint = Struct.new(:klass1, :klass2, :graph, :ok)
+disjoints = []
+some_ok = {}
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?graph ?klass1 ?klass2 ?ok
+
+  #{from_named_clauses_by_group['named']}
+
+  where {
+    graph ?graph { ?klass1 owl:disjointWith ?klass2 . }
+    bind(
+         strstarts(str(?klass1), str(?graph))
+      || strstarts(str(?klass1), concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://")))
+      || strstarts(str(?klass2), str(?graph))
+      || strstarts(str(?klass2), concat("http://imce.jpl.nasa.gov/backbone/", strafter(str(?graph), "http://")))
+      as ?ok
+    )
+  }
+  order by ?graph ?klass1 ?klass2
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  disjoints << d = Disjoint.new
+  d.klass1 = resp.klass1.to_qname
+  d.klass2 = resp.klass2.to_qname
+  d.graph = resp.graph
+  d.ok = resp.ok.true?
+  some_ok[[d.klass1, d.klass2]] = d.graph if d.ok
+end
+disjoints.each do |d|
+  name = "#{d.graph} declares #{d.klass1}, #{d.klass2} disjoint"
+  ts << tc = TestCase.new(name)
+  unless d.ok
+    tc << f = Failure.new
+    if graph = (some_ok[[d.klass1, d.klass2]] || some_ok[[d.klass2, d.klass1]])
+      f << Text.new("properly declared in #{graph}")
+    end
+  end
+  log.debug("#{name} ok: #{d.ok}")
+end
+  
+# Every subclass of O:ReifiedObjectProperty is the domain of a source and target property.
+
+test = 'every subclass of O:ReifiedObjectProperty is the domain of a source and target property'
+log.info("test: #{test}")
+rules = {
+  :src_prop_ok => 'no source property',
+  :trg_prop_ok => 'no target property',
+}
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?klass ?src_prop_ok ?trg_prop_ok
+
+  #{from_clauses_by_group['named']}
+  #{from_named_clauses_by_group['named']}
+  #{from_clauses_by_group_by_type['named']['ClassEntailments']}
+  #{from_clauses_by_group_by_type['named']['PropertyEntailments']}
+
+  where {
+    graph ?graph { ?klass rdfs:subClassOf ?rop . }
+
+    optional {
+      ?src_prop rdfs:subPropertyOf ?rop_src .
+      ?src_prop rdfs:domain ?klass .
+      filter (regex(str(?rop_src), "#topReifiedObjectPropertySource$"))
+    }
+
+    optional {
+      ?trg_prop rdfs:subPropertyOf ?rop_trg .
+      ?trg_prop rdfs:domain ?klass .
+      filter (regex(str(?rop_trg), "#topReifiedObjectPropertyTarget$"))
+    }
+
+    bind(bound(?src_prop) as ?src_prop_ok)
+    bind(bound(?trg_prop) as ?trg_prop_ok)
+
+    filter (
+      #{ontologies_by_group['named'].equal_any('?graph')}
+      && ?klass != owl:Nothing
+      && regex(str(?rop), "#ReifiedObjectProperty$")
+      && !regex(str(?klass), "#ReifiedObjectProperty$")
+    )
+
+  }
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  klass = resp.klass.to_qname
+  name = klass
+  ts << tc = TestCase.new(name)
+  msg = rules.inject([]) do |memo, kv|
+    method, msg = *kv
+    memo << msg + '.' unless resp.send(method).true?
+    memo
+  end.join(' ')
+  unless msg.empty?
+    tc << Failure.new(msg)
+  end
+  log.debug("#{name}: #{msg.empty? || msg}")
+end
+  
+# Every subproperty of O-backbone:topReifiedObjectPropertySource is part of a property chain.
+
+test = 'every subproperty of O:topReifiedObjectPropertySource is part of a property chain'
+log.info("test: #{test}")
+rules = {
+  :chain_ok => 'no property chain',
+}
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?src_prop ?chain_ok
+
+  #{from_clauses_by_group['named']}
+  #{from_named_clauses_by_group['named']}
+  #{from_clauses_by_group_by_type['named']['PropertyEntailments']}
+
+  where {
+
+    graph ?graph { ?src_prop rdfs:subPropertyOf ?rop_src }
+
+    optional {
+      ?prop owl:propertyChainAxiom [
+        rdf:first [
+          owl:inverseOf ?src_prop ;
+        ] ;
+      ] .
+    }
+
+    bind(bound(?prop) as ?chain_ok)
+
+    filter (
+         #{ontologies_by_group['named'].equal_any('?graph')}
+      && ?src_prop != owl:bottomObjectProperty
+      && ?rop_src != owl2-mof2:topReifiedObjectPropertySource
+      && regex(str(?rop_src), "#topReifiedObjectPropertySource$")
+      && !regex(str(?src_prop), "#topReifiedObjectPropertySource$")
+    )
+
+  }
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  src_prop = resp.src_prop.to_qname
+  name = src_prop
+  ts << tc = TestCase.new(name)
+  msg = rules.inject([]) do |memo, kv|
+    method, msg = *kv
+    memo << msg + '.' unless resp.send(method).true?
+    memo
+  end.join(' ')
+  unless msg.empty?
+    tc << Failure.new(msg)
+  end
+  log.debug("#{name}: #{msg.empty? || msg}")
+end
+  
+# Every subproperty of O:topReifiedObjectPropertyTarget is part of a property chain.
+
+test = 'every subproperty of O:topReifiedObjectPropertyTarget is part of a property chain'
+log.info("test: #{test}")
+rules = {
+  :chain_ok => 'no property chain',
+}
+tss << ts = TestSuite.new(test)
+query = %Q{
+
+  #{namespace_defs}
+
+  select distinct ?trg_prop ?chain_ok
+
+  #{from_clauses_by_group['named']}
+  #{from_named_clauses_by_group['named']}
+  #{from_clauses_by_group_by_type['named']['PropertyEntailments']}
+
+  where {
+
+    graph ?graph { ?trg_prop rdfs:subPropertyOf ?rop_trg }
+
+    optional {
+      ?prop owl:propertyChainAxiom [
+        rdf:rest [
+          rdf:first ?trg_prop ;
+        ] ;
+      ] .
+    }
+
+    bind(bound(?prop) as ?chain_ok)
+
+    filter (
+         #{ontologies_by_group['named'].equal_any('?graph')}
+      && ?trg_prop != owl:bottomObjectProperty
+      && ?rop_trg != owl2-mof2:topReifiedObjectPropertyTarget
+      && regex(str(?rop_trg), "#topReifiedObjectPropertyTarget$")
+      && !regex(str(?trg_prop), "#topReifiedObjectPropertyTarget$")
+    )
+
+  }
+}
+log.debug("#{test} query: #{query}")
+model.query({ 'query' => query, 'infer' => 'false' }) do |resp|
+  trg_prop = resp.trg_prop.to_qname
+  name = trg_prop
+  ts << tc = TestCase.new(name)
+  msg = rules.inject([]) do |memo, kv|
+    method, msg = *kv
+    memo << msg + '.' unless resp.send(method).true?
+    memo
+  end.join(' ')
+  unless msg.empty?
+    tc << Failure.new(msg)
+  end
+  log.debug("#{name}: #{msg.empty? || msg}")
+end
+  
+# Write output.
+
+log.info('write output')
+doc.write(STDOUT, 2)
+
+# End session.
+
+log.info('end')
+session.finish

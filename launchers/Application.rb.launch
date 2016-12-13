@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<launchConfiguration type="org.eclipse.dltk.ruby.testing.launchConfig">
+<stringAttribute key="mainScript" value="lib/Application/Application.rb"/>
+<stringAttribute key="nature" value="org.eclipse.dltk.ruby.core.nature"/>
+<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
+<listEntry value="/gov.nasa.jpl.imce.ontologies"/>
+</listAttribute>
+<listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_TYPES">
+<listEntry value="4"/>
+</listAttribute>
+<stringAttribute key="org.eclipse.dltk.launching.INTERPRETER_CONTAINER" value="org.eclipse.dltk.launching.INTERPRETER_CONTAINER/org.eclipse.dltk.ruby.internal.launching.JRubyInstallType/rvm jruby-1.7.4"/>
+<stringAttribute key="org.eclipse.dltk.testing.CONTAINER" value=""/>
+<stringAttribute key="org.eclipse.dltk.testing.engineId" value="org.eclipse.dltk.ruby.testing.testunit"/>
+<stringAttribute key="project" value="gov.nasa.jpl.imce.ontologies"/>
+<stringAttribute key="workingDir" value="${resource_loc}/../../../"/>
+</launchConfiguration>

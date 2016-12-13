@@ -1,0 +1,179 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'logger'
+require 'set'
+
+HTTP = /http:\/\//
+STEMS = %w{
+  Thing Entity ReifiedObjectProperty StructuredDatatype
+  topObjectProperty topReifiedObjectPropertySource topReifiedObjectPropertyTarget
+  topDataProperty
+}
+W3 = /www\.w3\.org/
+
+entities = {}
+new_entities = Set.new
+prefixes = {}
+new_prefixes = Set.new
+
+# Process arguments.
+
+def usage
+  warn 'refactor-backbone input-file'
+end
+
+log_level = Logger::FATAL
+
+GetoptLong.new(
+[ '--help',      '-h',       GetoptLong::NO_ARGUMENT ],
+[ '--debug',     '-d',       GetoptLong::NO_ARGUMENT ],
+[ '--info',      '-i',       GetoptLong::NO_ARGUMENT ],
+[ '--warn',      '-w',       GetoptLong::NO_ARGUMENT ]
+).each do |opt, arg|
+case opt
+when "--help"
+  usage
+  exit 0
+when "--debug"
+  log_level = Logger::DEBUG
+when "--info"
+  log_level = Logger::INFO
+when "--warn"
+  log_level = Logger::WARN
+else
+  usage
+  exit 1
+end
+end
+
+unless ARGV.length == 1
+  usage
+  exit 1
+end
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Set up matching patterns.
+
+entity_prefix_patterns = STEMS.map do |stem|
+  /&([^;]+);(#{stem})/
+end
+
+qname_prefix_patterns = STEMS.map do |stem|
+  /(\w[^:]+):(#{stem})/
+end
+
+iri_patterns = STEMS.map do |stem|
+  /#{HTTP}([^#]+)#(#{stem})/
+end
+
+ARGF.each do |line|
+  
+  # remember entity declarations
+  
+  if m = line.match(/<!ENTITY\s+(\S+)\s+"([^"]+)"\s+>/)
+    entities[m[1]] = m[2]
+    log.debug("entity #{m[1]} #{m[2]}")
+  end
+  
+  # remember xml prefix declarations
+  
+  if m = line.match(/xmlns:([^=]+)="([^"]+)"/)
+    prefixes[m[1]] = m[2]
+    log.debug("prefix #{m[1]} #{m[2]}")
+  end
+  
+  entity_prefix_patterns.each do |pat|
+    if m = line.match(pat)
+      next if m[1] == 'gt'
+      log.debug("match #{m[0]}")
+      new_entity = "#{m[1]}-backbone"
+      log.debug("new entity #{new_entity}")
+      line = line.gsub(pat, "&#{new_entity};#{m[2]}")
+      unless entities.include?(new_entity)
+        new_entities << new_entity
+      end
+      unless prefixes.include?(new_entity)
+        new_prefixes << new_entity
+      end
+    end
+  end
+  
+  qname_prefix_patterns.each do |pat|
+    if m = line.match(pat)
+      log.debug("match #{m[0]}")
+      new_prefix = "#{m[1]}-backbone"
+      log.debug("new prefix #{new_prefix}")
+      line = line.gsub(pat, "#{new_prefix}:#{m[2]}")
+      unless entities.include?(new_prefix)
+        new_entities << new_prefix
+      end
+      unless prefixes.include?(new_prefix)
+        new_prefixes << new_prefix
+      end
+    end
+  end
+
+  iri_patterns.each do |pat|
+    if m = line.match(pat)
+      next if m[0].match(W3)
+      log.debug("match #{m[0]}")
+      new_prefix = File.basename(m[1]) + '-backbone'
+      log.debug("new prefix #{new_prefix}")
+      line = line.gsub(pat, 'http://imce.jpl.nasa.gov/backbone/\1#\2')
+      unless entities.include?(new_prefix)
+        new_entities << new_prefix
+      end
+      unless prefixes.include?(new_prefix)
+        new_prefixes << new_prefix
+      end
+     end
+  end
+
+  puts line
+  
+end
+
+log.debug(entities.inspect)
+log.debug(prefixes.inspect)
+
+new_entities.each do |e|
+  stem = e.sub(/-backbone/, '')
+  log.debug("stem #{stem}")
+  if v = entities[stem]
+    new_v = v.sub(/\A(http:\/\/)(.*)\z/, '\1imce.jpl.nasa.gov/backbone/\2')
+    log.warn("add <!ENTITY #{e} \"#{new_v}\" >")
+  else
+    log.debug("no entity for #{e}")
+  end
+end
+
+new_prefixes.each do |p|
+  stem = p.sub(/-backbone/, '')
+  log.debug("stem #{stem}")
+  if v = prefixes[stem]
+    new_v = v.sub(/\A(http:\/\/)(.*)\z/, '\1imce.jpl.nasa.gov/backbone/\2')
+    log.warn("add xmlns:#{p}=\"#{new_v}\"")
+  else
+    log.warn("no prefix for #{p}")
+  end
+end

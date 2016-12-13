@@ -1,0 +1,627 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'OWLAPIApplication'
+require 'rexml/document'
+
+java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
+java_import 'org.coode.xml.XMLWriterPreferences'
+
+APPLICATION_NAME = 'repair-ontology'
+
+class RepairOntologyApplication < OWLAPIApplication
+  
+  LEADING_URI = 'http://'
+  LEADING_URI_RE = Regexp.new('\A' + Regexp.escape(LEADING_URI))
+  BACKBONE_PREFIX = 'http://imce.jpl.nasa.gov/backbone/'
+
+  REPAIR = {
+    'add' => {
+      'every ontology declares an abstract unmapped top class' => :add_top_class,
+      'every ontology declares an abstract unmapped top object property' => :add_top_object_property,
+      'every ontology declares an abstract unmapped top datatype property' => :add_top_datatype_property,
+    },
+    'reify' => {
+      'every object property is completely reified' => :reify_object_property,
+      'every structured data property is completely reified' => :reify_structured_data_property,
+      'no non-derived object property is reified by a property chain' => :replace_property_chain,
+    },
+    'misplaced-disjoint' => {
+      'every disjoint axiom in ontology O names at least one class in O or O-backbone' => :remove_misplaced_disjoint
+    },
+    'missing-disjoint' => {
+      'every pair of classes without a common subclass is declared disjoint' => :repair_missing_disjoint
+    },
+    'add-label' => {
+      'every entity has a label' => :add_label
+    },
+    'redundant-axiom' => {
+      'every subclass axiom is essential' => :remove_redundant_subclass_axiom,
+      'every subproperty axiom is essential' => :remove_redundant_subproperty_axiom,
+    }
+  }
+
+  # Define structs.
+  
+  Task = Struct.new(:method, :element, :text)
+  
+  def run
+    
+    super
+    
+    # Define variables.
+    
+    task = Hash.new { |h, k| h[k] = [] }
+
+    # Check option values.
+    
+    unless @options.location_mapping
+      log(FATAL, 'no location mapping specified')
+      return 1
+    end
+    if argv.empty?
+      log(FATAL, "no unit test files specified")
+      return 1
+    end
+        
+    # Parse validation report.
+    
+    log(INFO, 'parse validation report')
+    report = REXML::Document.new(ARGF)
+    
+    # Accumulate repair tasks by ontology.
+
+    %w{add reify misplaced-disjoint missing-disjoint add-label redundant-axiom}.each do |type|
+      log(DEBUG, "repair type #{type}")
+      REPAIR[type].each do |testsuite, method|
+        testsuite = testsuite.to_s
+        xpath = "testsuites/testsuite[@name='#{testsuite}']"
+        log(DEBUG, "search for #{xpath}")
+        method = REPAIR[type][testsuite]
+        report.each_element(xpath) do |ts|
+          log(INFO, "testsuite: #{testsuite}")
+          ts.each_element('testcase') do |tc|
+            entity = tc.attribute('name').to_s
+            tc.each_element('failure') do |f|
+              text = f.text.gsub(/\s+/m, ' ')
+              case type
+              when 'add'
+                ontology = entity
+                element = nil
+                task[ontology] << Task.new(method, element, text)
+              when 'reify'
+                prefix, element = entity.split(/:/)
+                ontology = @namespace_by_prefix[prefix].slice(0..-2)
+                task[ontology] << Task.new(method, element, text)
+              when 'misplaced-disjoint'
+                if m = entity.match(/(.*) declares (.*), (.*) disjoint/)
+                  ontology = m[1]
+                  element = m[2..3]
+                  task[ontology] << Task.new(method, element, text)
+                else
+                  raise "unmatched entity #{entity}"
+                end
+              when 'missing-disjoint'
+                if m = entity.match(/(.+)\s+(.+)/)
+                  element = m[1, 2]
+                  if m = text.match(/(missing|redundant)\s+disjointWith\s+axiom\s+in\s+(\S+)/m)
+                    element << m[1]
+                    ontology = m[2]
+                    task[ontology] << Task.new(method, element, text)
+                  else
+                    raise "unmatched failure text #{text}"
+                  end
+                end
+              when 'add-label'          
+                if m = text.match(/ontology\s+(\S+)\s+entity\s+(\S+)\s+lacks\s+label\s+'([^']+)'/)
+                  ontology = m[1]
+                  element = m[2]
+                  text = m[3]
+                  task[ontology] << Task.new(method, element, text)
+                end
+              when 'redundant-axiom'
+                if m = entity.match(/(.*) sub(.*) of (.*)/)
+                  element = [m[1], m[3]]
+                  method = (m[2] == 'class') ? :remove_redundant_subclass_axiom : :remove_redundant_subproperty_axiom
+                  olist = text.match(/Asserted in (.*)\./)[1].split(/, /)
+                  olist.each do |ontology|
+                    task[ontology] << Task.new(method, element, nil)
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+
+    # Create ontology manager.
+    
+    log(DEBUG, 'create ontology manager')
+    @manager = OWLManager.create_owl_ontology_manager
+    @manager.setSilentMissingImportsHandling(true)
+    log(DEBUG, 'add location mappers')
+    location_mappers.each do |mapper|
+      @manager.add_iri_mapper(mapper)
+    end
+   
+    # Create data factory.
+    
+    @factory = OWLDataFactoryImpl.new
+    
+    # Set XML serialization preferences.
+    
+    xml_prefs = XMLWriterPreferences.get_instance
+    xml_prefs.set_use_namespace_entities(true)
+    
+    # Iterate over ontologies.
+    
+    task.each do |ontology, tl|
+      log(INFO, "ontology: #{ontology}")
+      ontology = IRI.create(ontology)
+    
+      # Load selected ontology.
+    
+      log(DEBUG, "load #{ontology}")
+      model = @manager.load_ontology(ontology)
+      format = @manager.get_ontology_format(model)
+      format.get_prefix_names.each do |p|
+        log(DEBUG, "found prefix #{p}")
+      end
+      
+      # Execute tasks for this ontology.
+    
+      tl.each do |t|
+        log(DEBUG, "send(#{t.method.to_s}, #{model.object_id}, #{ontology.to_s}, #{t.element.to_s},  #{t.text.to_s}")
+        send(t.method, model, ontology, t.element, t.text)
+      end
+    
+      # Construct format specification for RDF/XML.
+      
+      rdfxml_format = RDFXMLOntologyFormat.new
+      rdfxml_format.copy_prefixes_from(format.as_prefix_owl_ontology_format)
+      
+      # Write modified ontology in OWL/XML.
+    
+      log(DEBUG, "save ontology #{ontology}")
+      @manager.save_ontology(model, rdfxml_format)
+    
+    end
+
+    # Exit.
+    
+    return 0
+    
+  end
+  
+  def ontology_title(model)
+    title_iri = IRI.create('http://purl.org/dc/elements/1.1/title')
+    title_prop = @factory.getOWLAnnotationProperty(title_iri)
+    annotations = model.get_annotations.select do |ann|
+      ann.get_property.equals(title_prop)
+      log(DEBUG, "annotation #{ann.to_s}")
+    end
+    title = annotations.first.get_value.get_literal unless annotations.empty?
+    log(DEBUG, "title: #{title}")
+    raise "no title for ontology #{model.to_s}" unless title
+    title
+  end
+  
+  def add_top_class(model, ontology, unused, text)
+    
+    log(DEBUG, "add top class for #{ontology.to_s}")
+    backbone_ontology = BACKBONE_PREFIX + ontology.to_s.sub(LEADING_URI, '')
+    thing_uri = IRI.create("#{backbone_ontology}#Thing")
+    thing_entity = @factory.getOWLClass(thing_uri)
+    true_literal = @factory.getOWLLiteral(true)
+    axioms = []
+    
+    defects = text.gsub(/\s+/m, ' ').split('.').map { |d| d.strip }.reject { |d| d.empty? }
+    defects.each do |defect|
+      log(INFO, defect)
+      case defect
+      when /\Ano ([[:print:]]*)\z/
+        klass = $1
+        klass_uri = IRI.create("#{backbone_ontology}##{klass}")
+        klass_entity = @factory.getOWLClass(klass_uri)
+        axioms << @factory.getOWLDeclarationAxiom(klass_entity)
+        if klass == 'Thing' && title = ontology_title(model)
+          desc = @factory.getOWLLiteral("<classname>Thing</classname>" +
+          " is a common superclass" +
+          " of all classes defined in the" +
+          " #{title}.")
+          dc_desc_iri = IRI.create(@namespace_by_prefix['dc'] + 'description')
+          prop = @factory.getOWLAnnotationProperty(dc_desc_iri)
+          axioms << @factory.getOWLAnnotationAssertionAxiom(prop, klass_uri, desc)
+        end
+        log(INFO, "add #{klass_uri}")
+
+      when /\A([[:print:]]*) missing annotation:([[:print:]]*)\z/
+
+        klass = $1
+        klass_uri = IRI.create("#{backbone_ontology}##{klass}")
+        annotation = $2
+        prop_iri = IRI.create("#{@namespace_by_prefix['annotation']}#{annotation}")
+        prop = @factory.getOWLAnnotationProperty(prop_iri)
+        axioms << @factory.getOWLAnnotationAssertionAxiom(prop, klass_uri, true_literal)
+        log(INFO, "add #{annotation} for #{klass_uri}")
+
+      when /\A([[:print:]]*) not subclass of Thing\z/
+
+        klass = $1
+        klass_uri = IRI.create("#{backbone_ontology}##{klass}")
+        klass_entity = @factory.getOWLClass(klass_uri)
+        axioms << @factory.getOWLSubClassOfAxiom(klass_entity, thing_entity)
+        log(INFO, "add #{klass_uri} subclass of #{thing_uri}")
+
+      end
+    end
+    
+    axioms.each do |axiom|
+      @manager.add_axiom(model, axiom)
+    end
+
+  end
+
+  def add_top_object_property(model, ontology, unused, text)
+    
+    log(DEBUG, "add top object property for #{ontology.to_s}")
+    backbone_ontology = BACKBONE_PREFIX + ontology.to_s.sub(LEADING_URI, '')
+    top_iri = IRI.create("#{backbone_ontology}#topObjectProperty")
+    top_entity = @factory.getOWLObjectProperty(top_iri)
+    true_literal = @factory.getOWLLiteral(true)
+    axioms = []
+      
+    defects = text.gsub(/\s+/m, ' ').split('.').map { |d| d.strip }.reject { |d| d.empty? }
+    defects.each do |defect|
+      log(INFO, defect)
+      case defect
+      when /\Ano ([[:print:]]*)\z/
+        
+        property = $1
+        property_uri = IRI.create("#{backbone_ontology}##{property}")
+        property_entity = @factory.getOWLObjectProperty(property_uri)
+        axioms << @factory.getOWLDeclarationAxiom(property_entity)
+        log(INFO, "add #{property}")
+        if property == 'topObjectProperty' && title = ontology_title(model)
+          desc = @factory.getOWLLiteral("<property>topObjectProperty</property>" +
+            " is a common superproperty of" +
+            " all object properties" +
+            " defined in the #{title}.")
+          dc_desc_iri = IRI.create(@namespace_by_prefix['dc'] + 'description')
+          prop = @factory.getOWLAnnotationProperty(dc_desc_iri)
+          axioms << @factory.getOWLAnnotationAssertionAxiom(prop, property_uri, desc)
+        end
+        
+      when /\A([[:print:]]*) missing annotation:([[:print:]]*)\z/
+        
+        property = $1
+        property_uri = IRI.create("#{backbone_ontology}##{property}")
+        annotation = $2
+        prop_iri = IRI.create("#{@namespace_by_prefix['annotation']}#{annotation}")
+        prop = @factory.getOWLAnnotationProperty(prop_iri)
+        axioms << @factory.getOWLAnnotationAssertionAxiom(prop, property_uri, true_literal)
+        log(INFO, "add #{annotation} for #{property}")
+        
+      when /\A([[:print:]]*) not subproperty of ([[:print:]]*)\z/
+        
+        property = $1
+        property_uri = IRI.create("#{backbone_ontology}##{property}")
+        property_entity = @factory.getOWLObjectProperty(property_uri)
+        super_property = $2
+        super_property_uri = IRI.create("#{backbone_ontology}##{super_property}")
+        super_property_entity = @factory.getOWLObjectProperty(super_property_uri)
+        axioms << @factory.getOWLSubObjectPropertyOfAxiom(property_entity, super_property_entity)
+        log(INFO, "add #{property} subproperty of #{super_property}")
+        
+      end
+    end
+    
+    axioms.each do |axiom|
+      @manager.add_axiom(model, axiom)
+    end
+    
+  end
+  
+  def add_top_datatype_property(model, ontology, unused, text)
+    
+    log(DEBUG, "add top datatype property for #{ontology.to_s}")
+    backbone_ontology = BACKBONE_PREFIX + ontology.to_s.sub(LEADING_URI, '')
+    top_iri = IRI.create("#{backbone_ontology}#topDataProperty")
+    top_entity = @factory.getOWLDataProperty(top_iri)
+    true_literal = @factory.getOWLLiteral(true)
+    axioms = []
+      
+    defects = text.gsub(/\s+/m, ' ').split('.').map { |d| d.strip }.reject { |d| d.empty? }
+    defects.each do |defect|
+      log(INFO, defect)
+      case defect
+      when /\Ano ([[:print:]]*)\z/
+        
+        property = $1
+        property_uri = IRI.create("#{backbone_ontology}##{property}")
+        property_entity = @factory.getOWLDataProperty(property_uri)
+        axioms << @factory.getOWLDeclarationAxiom(property_entity)
+        log(INFO, "add #{property}")
+        if property == 'topDataProperty' && title = ontology_title(model)
+          desc = @factory.getOWLLiteral("<property>topDataProperty</property>" +
+            " is a common superproperty of" +
+            " all datatype properties" +
+            " defined in the #{title}.")
+          dc_desc_iri = IRI.create(@namespace_by_prefix['dc'] + 'description')
+          prop = @factory.getOWLAnnotationProperty(dc_desc_iri)
+          axioms << @factory.getOWLAnnotationAssertionAxiom(prop, property_uri, desc)
+        end
+        
+      when /\A([[:print:]]*) missing annotation:([[:print:]]*)\z/
+        
+        property = $1
+        property_uri = IRI.create("#{backbone_ontology}##{property}")
+        annotation = $2
+        prop_iri = IRI.create("#{@namespace_by_prefix['annotation']}#{annotation}")
+        prop = @factory.getOWLAnnotationProperty(prop_iri)
+        axioms << @factory.getOWLAnnotationAssertionAxiom(prop, property_uri, true_literal)
+        log(INFO, "add #{annotation} for #{property}")
+        
+      when /\A([[:print:]]*) not subproperty of ([[:print:]]*)\z/
+        
+        property = $1
+        property_uri = IRI.create("#{backbone_ontology}##{property}")
+        property_entity = @factory.getOWLDataProperty(property_uri)
+        super_property = $2
+        super_property_uri = IRI.create("#{backbone_ontology}##{super_property}")
+        super_property_entity = @factory.getOWLDataProperty(super_property_uri)
+        axioms << @factory.getOWLSubDataPropertyOfAxiom(property_entity, super_property_entity)
+        log(INFO, "add #{property} subproperty of #{super_property}")
+        
+      end
+    end
+    
+    axioms.each do |axiom|
+      @manager.add_axiom(model, axiom)
+    end
+    
+  end
+
+  def reification_rule(property, source, target)
+    
+    # Create rule variables.
+  
+    swrl_var = {}  
+    %w{r s t}.each do |var_name|
+      var_iri = IRI.create("urn:swrl##{var_name}")
+      swrl_var[var_name] = @factory.getSWRLVariable(var_iri)
+    end
+    
+    # Create rule head.
+    
+    head = java.util.HashSet.new
+    head << @factory.getSWRLObjectPropertyAtom(property, swrl_var['s'], swrl_var['t'])
+      
+    # Create rule body.
+      
+    body = java.util.HashSet.new
+    body << @factory.getSWRLObjectPropertyAtom(source, swrl_var['r'], swrl_var['s'])
+    body << @factory.getSWRLObjectPropertyAtom(target, swrl_var['r'], swrl_var['t'])
+    
+    # Create rule
+      
+    @factory.getSWRLRule(body, head)
+      
+  end
+  
+  def reify_property(type, model, ontology, property, text)
+    
+    log(DEBUG, "reify property #{property}")
+    backbone_ontology = BACKBONE_PREFIX + ontology.to_s.sub(LEADING_URI, '')
+    property_uri = IRI.create("#{ontology}##{property}")
+    property_entity = @factory.getOWLObjectProperty(property_uri)
+    klass = property[0..0].upcase + property[1..-1]
+    klass_uri = IRI.create("#{ontology}##{klass}")
+    rop_uri = IRI.create("#{backbone_ontology}#Reified#{type}Property")
+    rop_entity = @factory.getOWLClass(rop_uri)
+    src_prop_uri = IRI.create("#{ontology}#has#{klass}Source")
+    src_prop_entity = @factory.getOWLObjectProperty(src_prop_uri)
+    trg_prop_uri = IRI.create("#{ontology}#has#{klass}Target")
+    trg_prop_entity = @factory.getOWLObjectProperty(trg_prop_uri)
+    top_sprop_uri = IRI.create("#{backbone_ontology}#topReified#{type}PropertySource")
+    top_sprop_entity = @factory.getOWLObjectProperty(top_sprop_uri)
+    top_tprop_uri = IRI.create("#{backbone_ontology}#topReified#{type}PropertyTarget")
+    top_tprop_entity = @factory.getOWLObjectProperty(top_tprop_uri)
+
+    domain_axioms = model.getObjectPropertyDomainAxioms(property_entity)
+    unless domain_axioms.empty?
+      domain = domain_axioms.first.getDomain
+      log(DEBUG, "domain: #{domain.to_s}")
+    else
+      domain = nil
+    end
+    
+    range_axioms = model.getObjectPropertyRangeAxioms(property_entity)
+    unless range_axioms.empty?
+      range = range_axioms.first.getRange
+      log(DEBUG, "range: #{range.to_s}")
+    else
+      range = nil
+    end
+    
+    axioms = []
+      
+    if derived = text.match(/derived from (([^#]+)#(.+))\.(\s|\z)/)
+      
+      inv_ontology = derived[2]
+      inv_property = derived[3]
+      inv_property_uri = IRI.create(derived[1])
+      klass = inv_property[0..0].upcase + inv_property[1..-1]
+      klass_uri = IRI.create("#{inv_ontology}##{klass}")
+      
+      inv_src_prop_uri = IRI.create("#{inv_ontology}#has#{klass}Source")
+      inv_src_prop_entity = @factory.getOWLObjectProperty(inv_src_prop_uri)
+      inv_trg_prop_uri = IRI.create("#{inv_ontology}#has#{klass}Target")
+      inv_trg_prop_entity = @factory.getOWLObjectProperty(inv_trg_prop_uri)
+      
+    else 
+
+      klass_entity = @factory.getOWLClass(klass_uri)
+
+      if text =~ /no reified (object|structured data) property class/
+  
+        # Create reification class.
+  
+        axioms << @factory.getOWLDeclarationAxiom(klass_entity)
+        axioms << @factory.getOWLSubClassOfAxiom(klass_entity, rop_entity)
+  
+      end
+  
+      if text =~ /no source property/
+  
+        # Create source property.
+  
+        axioms << @factory.getOWLDeclarationAxiom(src_prop_entity)
+        axioms << @factory.getOWLFunctionalObjectPropertyAxiom(src_prop_entity)
+        axioms << @factory.getOWLSubObjectPropertyOfAxiom(src_prop_entity, top_sprop_entity)
+        axioms << @factory.getOWLObjectPropertyDomainAxiom(src_prop_entity, klass_entity)
+        axioms << @factory.getOWLObjectPropertyRangeAxiom(src_prop_entity, domain) if domain
+  
+      end
+  
+      if text =~ /no target property/
+  
+        # Create target property.
+  
+        axioms << @factory.getOWLDeclarationAxiom(trg_prop_entity)
+        axioms << @factory.getOWLFunctionalObjectPropertyAxiom(trg_prop_entity)
+        axioms << @factory.getOWLSubObjectPropertyOfAxiom(trg_prop_entity, top_tprop_entity)
+        axioms << @factory.getOWLObjectPropertyDomainAxiom(trg_prop_entity, klass_entity)
+        axioms << @factory.getOWLObjectPropertyRangeAxiom(trg_prop_entity, range) if range
+  
+      end
+      
+    end
+
+    if text =~ /no property reification rule/
+      
+      axioms << reification_rule(property_entity, src_prop_entity, trg_prop_entity)
+      
+    end
+    
+    # Add all axioms.
+    
+    axioms.each do |axiom|
+      @manager.add_axiom(model, axiom)
+    end
+
+  end
+  
+  def reify_object_property(model, ontology, property, text)
+    reify_property('Object', model, ontology, property, text)
+  end
+  
+  def reify_structured_data_property(model, ontology, property, text)
+    reify_property('StructuredData', model, ontology, property, text)
+  end
+  
+  def replace_property_chain(model, ontology, property, text)
+    
+    log(DEBUG, "replace property chain for #{property}")
+    format = @manager.get_ontology_format(model)
+    property_entity = @factory.getOWLObjectProperty(IRI.create("#{ontology}##{property}"))
+    
+    log(DEBUG, "text: #{text}")
+    src, trg = *text.match(/\A\s*source\s+(.+)\.\s+target\s+(.+)\.\s*\z/)[1..2]
+    
+    src_entity = @factory.getOWLObjectProperty(IRI.create(format.getIRI(src)))
+    trg_entity = @factory.getOWLObjectProperty(IRI.create(format.getIRI(trg)))
+
+    @manager.add_axiom(model, reification_rule(property_entity, src_entity, trg_entity))
+      
+  end
+  
+  def remove_misplaced_disjoint(model, ontology, entity, text)
+    
+    log(INFO, "remove [#{entity.join(',')}] disjoint axiom")
+    class_list = entity.inject(java.util.HashSet.new) do |s, e|
+      prefix, stem = e.split(/:/)
+      s.add(@factory.getOWLClass(IRI.create(@namespace_by_prefix[prefix] + stem)))
+      s
+    end
+    axiom = @factory.getOWLDisjointClassesAxiom(class_list)
+    @manager.remove_axiom(model, axiom)
+    
+  end
+  
+  def repair_missing_disjoint(model, ontology, entity, text)
+    
+    c1_uri, c2_uri = entity[0..1].map do |e|
+      prefix, stem = e.split(/:/)
+      @namespace_by_prefix[prefix] + stem
+    end
+    which = entity[2]
+    class_list = [c1_uri, c2_uri].inject(java.util.HashSet.new) do |w, u|
+      w.add(@factory.getOWLClass(IRI.create(u)))
+      w
+    end
+    axiom = @factory.getOWLDisjointClassesAxiom(class_list)
+    case which
+    when 'missing'
+      @manager.add_axiom(model, axiom)
+      log(INFO, "#{c1_uri} disjointWith #{c2_uri} declaration added to #{ontology}")
+    when 'redundant'
+      @manager.remove_axiom(model, axiom)
+      log(INFO, "#{c1_uri} disjointWith #{c2_uri} declaration removed from #{ontology}")
+    end
+    
+  end
+
+  def add_label(model, ontology, entity, text)
+    
+    log(INFO, "add label for #{entity}")
+    entity_iri = IRI.create(entity)
+    raise "no entity for #{entity_uri}" unless entity
+    label = text.gsub(/\A.* lacks label '([^']*)'/, '\1')
+    label_literal = @factory.getOWLLiteral(label)
+    rdfs_label_iri = IRI.create(@namespace_by_prefix['rdfs'] + 'label')
+    rdfs_label = @factory.getOWLAnnotationProperty(rdfs_label_iri)
+    axiom = @factory.getOWLAnnotationAssertionAxiom(rdfs_label, entity_iri, label_literal)
+    @manager.add_axiom(model, axiom)
+    
+  end
+    
+  def remove_redundant_sub_axiom(model, ontology, entity, relation)
+    iris = entity.map { |e| IRI.create(e) }
+    case relation
+    when :subClassOf
+      sub, sup = iris.map { |i| @factory.getOWLClass(i) }
+      axiom = @factory.getOWLSubClassOfAxiom(sub, sup)
+    when :subPropertyOf
+      sub, sup = iris.map { |i| @factory.getOWLObjectProperty(i) }
+      axiom = @factory.getOWLSubObjectPropertyOfAxiom(sub, sup)
+    end
+    @manager.remove_axiom(model, axiom)
+    log(INFO, "#{iris[0]} #{relation.to_s} #{iris[1]} declaration removed from #{ontology}")
+  end
+  
+  def remove_redundant_subclass_axiom(model, ontology, entity, text)
+    remove_redundant_sub_axiom(model, ontology, entity, :subClassOf)
+  end
+  
+  def remove_redundant_subproperty_axiom(model, ontology, entity, text)
+    remove_redundant_sub_axiom(model, ontology, entity, :subPropertyOf)
+  end
+  
+end
+
+exit(RepairOntologyApplication.new(APPLICATION_NAME).start)

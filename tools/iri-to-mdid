@@ -1,0 +1,135 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL: https://sscae-cm.jpl.nasa.gov/svn/ontologies/trunk/gov.nasa.jpl.imce.ontologies/tools/validate-owl $
+#
+#    $LastChangedRevision: 3623 $
+#    $LastChangedDate: 2014-03-25 20:04:39 -0700 (Tue, 25 Mar 2014) $
+#
+#    $LastChangedBy: sjenkins $
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'csv'
+require 'json'
+require 'OMFMetadataApplication'
+require 'pellet'
+
+APPLICATION_NAME = 'iri-to-mdid'
+
+TBOX = 'http://imce.jpl.nasa.gov/foundation/omf/tbox#'
+HAS_IRI = TBOX + 'hasIRI'
+HAS_UUID = TBOX + 'hasUUID'
+HAS_MD_URL = TBOX + 'hasOTIToolSpecificURL'
+HAS_MD_ID = TBOX + 'hasOTIToolSpecificID'
+MODEL_ENTITY = TBOX + 'ModelEntity'
+
+class IriToMdid < OMFMetadataApplication
+
+  java_import 'org.semanticweb.owlapi.apibinding.OWLManager'
+  java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
+  java_import 'com.clarkparsia.pellet.owlapiv3.PelletReasonerFactory'
+  
+  def run
+
+    @options.metadata = nil
+    option_parser.on('--metadata METADATA', "exported OMF metadata file") do |v|
+      @options.metadata = v
+    end
+    @options.provenance = nil
+    option_parser.on('--provenance PROVENANCE', "provenance file") do |v|
+      @options.provenance = v
+    end
+    
+    super
+    
+    # Create ontology manager.
+    
+    logger.log(Logger::DEBUG, 'create ontology manager')
+    manager = OWLManager.createOWLOntologyManager
+    raise "couldn't create owl ontology manager" unless manager
+
+    # Load metadata ontology.
+    
+    logger.log(INFO, "load metadata ontology from #{@options.metadata}")
+    metadata_file = File.new(@options.metadata).to_inputstream
+    metadata = manager.loadOntologyFromOntologyDocument(metadata_file)
+    raise "couldn't load metadata" unless metadata
+    
+    # Load provenance data.
+    
+    logger.log(INFO, "load provenance data from #{@options.provenance}")
+    prov_file = File.open(@options.provenance)
+    raise "no provenance file #{@options.provenance}" unless prov_file
+    provenance = prov_file.inject([]) do |memo, row|
+      memo << JSON.restore(row)
+      memo
+    end
+    raise "couldn't load provenance" unless provenance
+    
+    # Get data factory.
+    
+    logger.log(Logger::INFO, 'get OWL data factory')
+    factory = manager.getOWLDataFactory
+    
+    # Create classes and properties for OMF metadata.
+    
+    logger.log(Logger::INFO, 'create metadata properties')
+    entity = factory.getOWLClass(IRI.create(MODEL_ENTITY))
+    has_iri = factory.getOWLDataProperty(IRI.create(HAS_IRI))
+    has_uuid = factory.getOWLDataProperty(IRI.create(HAS_UUID))
+      
+    # Build metadata hash.
+    
+    logger.log(Logger::INFO, 'collect provenance data')
+    md_hash = build_provenance_hash(metadata, provenance, has_iri, has_uuid)
+    md_hash.each do |k, v|
+      logger.log(Logger::DEBUG, "#{k.inspect} => #{v.inspect}")
+    end
+    
+    # Iterate over input IRIs.
+    
+    logger.log(Logger::INFO, 'process unsatisfiable classes')
+    csv_in = CSV.new(ARGF)
+    headers = csv_in.gets
+    klass_sub = headers.find_index('class')
+    raise "no 'class' column found in input" unless klass_sub
+    csv_out = CSV.new(STDOUT)
+    csv_out << headers + %w{ md_url md_id }
+    csv_in.each do |row|
+      iri = row[klass_sub]
+      logger.log(Logger::DEBUG, iri)
+      h = md_hash[iri] || %w{ missing missing }
+      csv_out << row + h
+    end
+    
+    # Return.
+    
+    return 0
+	    
+  end
+  
+  def build_provenance_hash(metadata, provenance, has_iri, has_uuid)
+    prov_map = provenance.inject({}) do |m, p|
+      m[p['omfUUID']] = [p['otiURL'], p['otiID']]
+      m
+    end
+    metadata.getIndividualsInSignature.inject({}) do |h, i|
+      if (irip = i.getDataPropertyValues(has_iri, metadata).first)
+        iri = irip.getLiteral
+        if (uuidp = i.getDataPropertyValues(has_uuid, metadata).first)
+        uuid = uuidp.getLiteral
+        h[iri] = prov_map[uuid]
+        end
+      end
+      h
+    end
+  end
+  
+ end
+
+exit(IriToMdid.new(APPLICATION_NAME).start)

@@ -1,0 +1,57 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'JenaApplication'
+
+APPLICATION_NAME = 'load-prefixes-jena'
+
+class LoadPrefixesApplication < JenaApplication
+  
+  def run
+    
+    # Add options.
+    
+    super
+    
+    # Ensure prefixes were loaded.
+    
+    raise 'no prefix file specified' unless @options.prefix_file
+    
+    # Get default model.
+    
+    log(INFO, 'get default model')
+    model = @data_service.get_model
+    raise 'no default model' unless model
+    
+    # Load prefixes.
+    
+    log(INFO, 'load prefixes')
+    model.set_ns_prefixes(@namespace_by_prefix)
+    
+    # Save default model.
+    
+    log(INFO, 'save default model')
+    @data_service.put_model(model)
+    
+    # Exit.
+    
+    return 0
+    
+  end
+  
+end
+
+exit(LoadPrefixesApplication.new(APPLICATION_NAME).start)

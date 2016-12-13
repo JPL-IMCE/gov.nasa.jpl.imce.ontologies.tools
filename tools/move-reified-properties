@@ -1,0 +1,370 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'getoptlong'
+require 'guid'
+require 'logger'
+require 'rexml/document'
+require 'jpl/rdf/sesame'
+
+# Define constants.
+
+# Define structs.
+
+# Define variables.
+
+embedding_ontology = {}
+ontology_file = {}
+temp_context = {}
+entities = []
+
+add = Hash.new { |h, k| h[k] = Set.new }
+delete = Hash.new { |h, k| h[k] = Set.new }
+
+# Define utility functions.
+
+class RDF::Uri
+  def to_embedding
+    RDF::Uri.new(to_s.sub(/(-embedding)?#/, '-embedding#') + rest)
+  end
+  def to_cmof
+    RDF::Uri.new(to_s.sub(/-embedding#/, '#'))
+  end
+end
+
+class RDF::Bnode
+  def to_embedding
+    self
+  end
+  def to_cmof
+    self
+  end
+end
+
+class RDF::Literal
+  def to_embedding
+    self
+  end
+  def to_cmof
+    self
+  end
+end
+
+class String
+end
+
+#  Define modules.
+
+# Process arguments.
+
+def usage
+  warn 'move-reified-properties --host host --port port --path path --repo repo [ -- catalog catalog ]'
+end
+
+log_level = Logger::FATAL
+host = 'localhost'
+port = '8080'
+path = 'openrdf-sesame'
+repo = 'imce-ontologies-dev'
+catalog = 'imce.jpl.nasa.gov/base/catalog-v001.xml'
+
+GetoptLong.new(
+[ '--help',    '-h',       GetoptLong::NO_ARGUMENT ],
+[ '--debug',   '-d',       GetoptLong::NO_ARGUMENT ],
+[ '--info',    '-i',       GetoptLong::NO_ARGUMENT ],
+[ '--warn',    '-w',       GetoptLong::NO_ARGUMENT ],
+[ '--repo',    '-r',       GetoptLong::REQUIRED_ARGUMENT ],
+[ '--host',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--port',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--path',                GetoptLong::REQUIRED_ARGUMENT ],
+[ '--catalog',             GetoptLong::REQUIRED_ARGUMENT ]
+).each do |opt, arg|
+  case opt
+  when "--help"
+    usage
+    exit 0
+  when "--debug"
+    log_level = Logger::DEBUG
+  when "--info"
+    log_level = Logger::INFO
+  when "--warn"
+    log_level = Logger::WARN
+  when "--host"
+    host = arg
+  when "--port"
+    port = arg
+  when "--path"
+    path = arg
+  when "--repo"
+    repo = arg
+  when "--catalog"
+    catalog = arg
+  else
+    warn "unknown option: #{opt}"
+    usage
+    exit 1
+  end
+end
+
+unless host && port && path && repo && catalog
+  usage
+  exit 1
+end
+
+# Open log.
+
+log = Logger.new(STDERR)
+log.datetime_format = '%Y-%m-%d %H:%M:%S '
+log.level = log_level
+
+# Connect to Sesame server.
+
+log.info('begin session')
+session = RDF::Sesame::Session.new(host, port, path, log)
+raise 'no session' unless session
+log.info('create model')
+model = session.model(repo)
+raise 'no model' unless model
+
+# Get repository namespace defintions.
+
+nsm = {}
+namespace_by_prefix = {}
+model.namespaces.map do |defn|
+  prf = defn.prefix.to_s
+  ns = defn.namespace.to_s
+  nsm[prf] = RDF::NamespaceMap.new(ns)
+  namespace_by_prefix[prf] = ns
+end
+RDF::Uri.ns_by_prf = namespace_by_prefix
+
+# Delete temporary contexts on exit.
+
+at_exit do
+  temp_context.values.each do |c|
+    log.debug("delete context #{c}")
+    model.delete_statements({'context' => c})
+  end
+end
+
+# Parse ontology catalog.
+
+catalog_dir = File.dirname(catalog)
+REXML::Document.new(File.new(catalog)).each_element('/catalog/uri') do |e|
+  uri = e.attributes['name']
+  file = "#{catalog_dir}/#{e.attributes['uri']}"
+  ontology_file[uri] = file
+  log.debug("ontology_file['#{uri}'] = #{ontology_file[uri]}")
+end
+
+ontology_file.keys.each do |u|
+  next unless u =~ /\Ahttp:\/\/imce\.jpl\.nasa\.gov/
+  unless u=~ /-embedding\z/
+    embedding = u + '-embedding'
+    if ontology_file.keys.include?(embedding)
+      embedding_ontology[u] = embedding
+      log.debug("embedding_ontology['#{u}'] = #{embedding_ontology[u]}")
+      1
+    end
+  end
+end
+
+# Load temporary contexts.
+
+embedding_ontology.each do |cmof, embedding|
+  [cmof, embedding].each do |u|
+    temp_context[u] = RDF::Uri.new(u + Guid.new().to_s).to_uriref
+    File.open(ontology_file[u]) do |f|
+      log.debug("load from #{ontology_file[u]}")
+      model.import(f, {'context' => temp_context[u]})
+    end
+  end
+end
+
+# Find property chain reification axioms.
+
+embedding_ontology.each do |cmof, embedding|
+
+  # Find reified object property classes.
+
+  query = %Q{
+
+    prefix annotation:#{nsm['annotation'][''].to_uriref}
+    prefix rdf:#{nsm['rdf'][''].to_uriref}
+    prefix rdfs:#{nsm['rdfs'][''].to_uriref}
+    prefix owl:#{nsm['owl'][''].to_uriref}
+  
+    select ?property ?chain ?link1 ?link2 ?src_prop ?trg_prop ?klass ?isDerived
+  
+    from named #{temp_context[cmof]}
+    from named #{temp_context[embedding]}
+  
+    where {
+      graph #{temp_context[embedding]} {
+        ?property owl:propertyChainAxiom ?chain .
+        ?chain rdf:first ?link1 .
+        ?link1 owl:inverseOf ?src_prop .
+        ?chain rdf:rest ?link2 .
+        ?link2 rdf:first ?trg_prop .
+        ?src_prop rdfs:domain ?klass .
+        ?trg_prop rdfs:domain ?klass .
+      }
+  
+      bind(exists { graph #{temp_context[cmof]} { ?property annotation:isDerived true } } as ?isDerived)
+    }
+  }
+  log.debug("query: #{query}")
+  model.query({'query' => query, 'infer' => 'false'}) do |resp|
+    property = resp.property
+    domain = resp.domain
+    range = resp.range
+    chain = resp.chain
+    link1 = resp.link1
+    link2 = resp.link2
+    entities << src_prop = resp.src_prop
+    entities << trg_prop = resp.trg_prop
+    entities << klass = resp.klass
+    isDerived = resp.isDerived.true?
+
+    new_chain = RDF::Bnode.new('b' + Guid.new.to_s.gsub(/-/, ''))
+    new_link1 = RDF::Bnode.new('b' + Guid.new.to_s.gsub(/-/, ''))
+    new_link2 = RDF::Bnode.new('b' + Guid.new.to_s.gsub(/-/, ''))
+    
+    delete[temp_context[embedding]] += [
+      RDF::Statement.new(property, nsm['owl']['propertyChainAxiom'], chain),
+      RDF::Statement.new(chain, nsm['rdf']['first'], link1),
+      RDF::Statement.new(link1, nsm['owl']['inverseOf'], src_prop),
+      RDF::Statement.new(chain, nsm['rdf']['rest'], link2),
+      RDF::Statement.new(link2, nsm['rdf']['first'], trg_prop),
+      RDF::Statement.new(link2, nsm['rdf']['rest'], nsm['rdf']['nil']),
+      RDF::Statement.new(src_prop, nsm['rdfs']['domain'], klass),
+      RDF::Statement.new(trg_prop, nsm['rdfs']['domain'], klass),
+
+    ]
+    add[temp_context[cmof]] += [
+      RDF::Statement.new(property, nsm['owl']['propertyChainAxiom'], new_chain),
+      RDF::Statement.new(new_chain, nsm['rdf']['first'], new_link1),
+      RDF::Statement.new(new_link1, nsm['owl']['inverseOf'], src_prop.to_cmof),
+      RDF::Statement.new(new_chain, nsm['rdf']['rest'], new_link2),
+      RDF::Statement.new(new_link2, nsm['rdf']['first'], trg_prop.to_cmof),
+      RDF::Statement.new(new_link2, nsm['rdf']['rest'], nsm['rdf']['nil'])
+      ]
+      unless isDerived
+        add[temp_context[cmof]] += [
+          RDF::Statement.new(klass.to_cmof, nsm['rdfs']['subClassOf'], RDF::Uri.new("#{cmof}#ReifiedObjectProperty")),
+          RDF::Statement.new(src_prop.to_cmof, nsm['rdfs']['subPropertyOf'], RDF::Uri.new("#{cmof}#topReifiedObjectPropertySource")),
+          RDF::Statement.new(trg_prop.to_cmof, nsm['rdfs']['subPropertyOf'], RDF::Uri.new("#{cmof}#topReifiedObjectPropertyTarget")),
+        ]
+      end
+  end
+
+  # Move non-embedding axioms about embedding entities.
+  
+  entities.each do |entity|
+    model.statements({'subj' => entity.to_uriref, 'context' => temp_context[embedding]}).each do |statement|
+      delete[temp_context[embedding]] << statement
+      log.debug("append delete #{embedding} #{statement}")
+      next if %w{Thing topObjectProperty}.any? { |stem| statement.object.to_s == "#{embedding}##{stem}" }
+      if statement.object =~ /www\.omg\.org/ or statement.object =~ /owl2-mof2-embedding/
+        context = embedding
+        object = statement.object
+      else
+        context = cmof
+        object = statement.object.to_cmof
+      end
+      add[temp_context[context]] << RDF::Statement.new(statement.subject.to_cmof, statement.predicate, object)
+      log.debug("append add #{embedding} #{RDF::Statement.new(statement.subject.to_cmof, statement.predicate, object)}")
+    end
+    model.statements({'obj' => entity.to_uriref, 'context' => temp_context[embedding]}).each do |statement|
+      delete[temp_context[embedding]] << statement
+      add[temp_context[cmof]] << RDF::Statement.new(statement.subject.to_cmof, statement.predicate, statement.object.to_cmof)
+    end
+  end
+
+  # Create top classes and properties if necessary.
+  
+  [cmof, embedding]. each do |o|
+    thing = RDF::Uri.new("#{o}#Thing")
+    rop = RDF::Uri.new("#{o}#ReifiedObjectProperty")
+    top = RDF::Uri.new("#{o}#topObjectProperty")
+    hrops = RDF::Uri.new("#{o}#topReifiedObjectPropertySource")
+    hropt = RDF::Uri.new("#{o}#topReifiedObjectPropertyTarget")
+    isAbstract = nsm['annotation']['isAbstract']
+    noMapping = nsm['annotation']['noMapping']
+    rdf_type = nsm['rdf']['type']
+    true_literal = RDF::Literal.new('true', nsm['xsd']['boolean'])
+    statements = [
+      RDF::Statement.new(rop, rdf_type, nsm['owl']['Class']),
+      RDF::Statement.new(rop, nsm['rdfs']['subClassOf'], thing),
+      RDF::Statement.new(rop, isAbstract, true_literal),
+      RDF::Statement.new(rop, noMapping, true_literal),
+      RDF::Statement.new(hrops, rdf_type, nsm['owl']['ObjectProperty']),
+      RDF::Statement.new(hrops, rdf_type, nsm['owl']['FunctionalProperty']),
+      RDF::Statement.new(hrops, rdf_type, nsm['owl']['InverseFunctionalProperty']),
+      RDF::Statement.new(hrops, nsm['rdfs']['subPropertyOf'], top),
+      RDF::Statement.new(hrops, isAbstract, true_literal),
+      RDF::Statement.new(hrops, noMapping, true_literal),
+      RDF::Statement.new(hropt, rdf_type, nsm['owl']['ObjectProperty']),
+      RDF::Statement.new(hropt, rdf_type, nsm['owl']['FunctionalProperty']),
+      RDF::Statement.new(hropt, rdf_type, nsm['owl']['InverseFunctionalProperty']),
+      RDF::Statement.new(hropt, nsm['rdfs']['subPropertyOf'], top),
+      RDF::Statement.new(hropt, isAbstract, true_literal),
+      RDF::Statement.new(hropt, noMapping, true_literal),
+    ]
+    delete[temp_context[o]] += statements
+    add[temp_context[o]] += statements
+  end
+  
+end
+  
+# Delete axioms.
+
+delete.each do |context, statements|
+  statements.each do |statement|
+    params = statement.to_param_hash
+    params['context'] = context
+    log.debug("delete #{statement.to_s} from #{context}")
+    model.delete_statements(params)
+  end
+end
+
+# Add axioms.
+
+add.each do |context, statements|
+  statements.each do |statement|
+    log.debug("add #{statement.to_s} to #{context}")
+  end
+  model.add_statements(statements, {'context' => context})
+end
+
+# Write ontology files.
+
+embedding_ontology.each do |cmof, embedding|
+  [cmof, embedding].each do |u|
+    filename = ontology_file[u]
+    File.open(filename, 'w') do |f|
+      log.debug("write #{filename}")
+      model.export({'context' => temp_context[u]}) do |s|
+        f.write(s)
+      end
+    end
+  end
+end
+
+# End session.
+
+log.info('end')
+session.finish

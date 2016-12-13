@@ -1,0 +1,74 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'JenaApplication'
+
+APPLICATION_NAME = 'load-imports-jena'
+
+class LoadImportsApplication < JenaApplication
+  
+  def run
+    
+    # Add options.
+    
+    super
+    
+    # Ensure prefixes were loaded.
+    
+    raise 'no imports graph file specified' unless @options.imports_file
+    
+    # Get default model.
+    
+    log(INFO, 'get default model')
+    model = @data_service.get_model
+    raise 'no default model' unless model
+    
+    # Load prefixes.
+    
+    log(INFO, 'load imports')
+    owl_imports = model.create_property(model.expand_prefix('owl:imports'))
+    rdf_type = model.create_property(model.expand_prefix('rdf:type'))
+    owl_ontology = model.create_resource(model.expand_prefix('owl:Ontology'))
+    @imports_by_ontology.each do |o, il|
+      o_r = model.create_resource(o)
+      log(DEBUG, "add #{o} rdf:type owl:Ontology")
+      s = model.create_statement(o_r, rdf_type, owl_ontology)
+      model.add(s)
+      il.each do |i|
+        i_r = model.create_resource(i)
+        s = model.create_statement(i_r, rdf_type, owl_ontology)
+        log(DEBUG, "add #{i} rdf:type owl:Ontology")
+        model.add(s)
+        s = model.create_statement(o_r, owl_imports, i_r)
+        log(DEBUG, "add #{o} owl:imports #{i}")
+        model.add(s)
+      end
+    end
+    
+    # Save default model.
+    
+    log(INFO, 'save default model')
+    @data_service.put_model(model)
+    
+    # Exit.
+    
+    return 0
+    
+  end
+  
+end
+
+exit(LoadImportsApplication.new(APPLICATION_NAME).start)

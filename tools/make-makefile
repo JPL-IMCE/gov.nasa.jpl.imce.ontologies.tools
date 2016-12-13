@@ -1,0 +1,46 @@
+#!/usr/bin/env ruby
+
+#--
+#
+#    $HeadURL$
+#
+#    $LastChangedRevision$
+#    $LastChangedDate$
+#
+#    $LastChangedBy$
+#
+#    Copyright (c) 2008-2014 California Institute of Technology.
+#    All rights reserved.
+#
+#++
+
+require 'Application'
+require 'erb'
+
+APPLICATION_NAME = 'make-makefile'
+
+class MakeMakefileApplication < Application
+  
+  require 'OntologyBundles'
+  require 'Makefile'
+  
+  include OntologyBundles
+  include Makefile
+  
+  def run
+    
+    super
+    
+    # Read template and replace.
+    
+    erb = ERB.new(ARGF.read)
+    puts erb.result(binding)
+    
+    # Exit.
+    
+    return 0
+    
+  end
+end
+
+exit(MakeMakefileApplication.new(APPLICATION_NAME).start)
