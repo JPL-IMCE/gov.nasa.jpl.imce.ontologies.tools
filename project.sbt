@@ -1,9 +1,9 @@
 
 sbtPlugin := false
 
-name := "gov.nasa.jpl.imce.ontologies"
+name := "gov.nasa.jpl.imce.ontologies.tools"
 
-description := "JPL's Ontological Modeling Framework vocabularies for Integrated Model-Centric Engineering (IMCE)"
+description := "Tools for JPL's Ontological Modeling Framework vocabularies for Integrated Model-Centric Engineering (IMCE)"
 
 moduleName := name.value
 
@@ -15,10 +15,10 @@ homepage := Some(url(s"https://github.jpl.nasa.gov/imce/${moduleName.value}"))
 
 organizationHomepage := Some(url("https://github.jpl.nasa.gov/imce"))
 
-git.remoteRepo := "git@github.jpl.nasa.gov/imce/gov.nasa.jpl.imce.ontologies.git"
+git.remoteRepo := "git@github.jpl.nasa.gov/imce/gov.nasa.jpl.imce.ontologies.tools.git"
 
 scmInfo := Some(ScmInfo(
-  browseUrl = url(s"https://github.jpl.nasa.gov/imce/gov.nasa.jpl.imce.ontologies"),
+  browseUrl = url(s"https://github.jpl.nasa.gov/imce/gov.nasa.jpl.imce.ontologies.tools"),
   connection = "scm:"+git.remoteRepo.value))
 
 developers := List(
@@ -31,15 +31,5 @@ developers := List(
     id="rouquett",
     name="Nicolas F. Rouquette",
     email="nicolas.f.rouquette@jpl.nasa.gov",
-    url=url("https://gateway.jpl.nasa.gov/personal/rouquett/default.aspx")),
-  Developer(
-    id="castet",
-    name="Jean-Francois Castet",
-    email="jean-francois.castet@jpl.nasa.gov",
-    url=url("https://gateway.jpl.nasa.gov/personal/castet/default.aspx")),
-  Developer(
-    id="dwagner",
-    name="David A. Wagner",
-    email="david.a.wagner@jpl.nasa.gov",
-    url=url("https://gateway.jpl.nasa.gov/personal/dwagner/default.aspx")))
+    url=url("https://gateway.jpl.nasa.gov/personal/rouquett/default.aspx")))
 

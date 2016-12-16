@@ -26,5 +26,6 @@ gov.nasa.jpl.imce.ontologies/ontologies/analyze-embedding.svg
 gov.nasa.jpl.imce.ontologies/ontologies/analyze-embedding.svg
 gov.nasa.jpl.imce.ontologies/documents/tests/validate.xml
 *.log
+.idea
 target
 local.*

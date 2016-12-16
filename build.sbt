@@ -10,7 +10,7 @@ useGpg := true
 
 lazy val artifactZipFile = taskKey[File]("Location of the zip artifact file")
 
-lazy val root = Project("gov-nasa-jpl-imce-ontologies", file("."))
+lazy val root = Project("gov-nasa-jpl-imce-ontologies-tools", file("."))
   .enablePlugins(IMCEGitPlugin)
   .enablePlugins(IMCEReleasePlugin)
   .settings(IMCEReleasePlugin.packageReleaseProcessSettings: _*)
@@ -33,29 +33,16 @@ lazy val root = Project("gov-nasa-jpl-imce-ontologies", file("."))
 
     artifactZipFile := {
       import com.typesafe.sbt.packager.universal._
-      val artifactsDir=baseDirectory.value / "gov.nasa.jpl.imce.ontologies" / "ontologies" / "artifacts"
-      val targetDir = baseDirectory.value / "target"
-      val ontologiesDir= targetDir / "ontologies"
 
-      val bPath = artifactsDir / "bundles"
-      val bFiles = (PathFinder(bPath).*** --- bPath) pair Path.rebase(bPath, ontologiesDir)
-      IO.copy(bFiles, overwrite=true, preserveLastModified=true)
-      
-      val dPath = artifactsDir / "digests"
-      val dFiles = (PathFinder(dPath).*** --- dPath) pair Path.rebase(dPath, ontologiesDir)
-      IO.copy(dFiles, overwrite=true, preserveLastModified=true)
+      val top=baseDirectory.value
+      val subDirs = Seq("data", "documents", "exports", "launchers", "lib", "tools")
+      val fileMappings: Seq[(File, String)] =
+        subDirs.foldLeft(Seq.empty[(File,String)]) { (acc, dir) =>
+          val inc: Seq[(File,String)] = (top / dir ***).pair(relativeTo(top)).sortBy(_._2)
+          acc ++ inc
+        }
 
-      val ePath = artifactsDir / "entailments"
-      val eFiles = (PathFinder(ePath).*** --- ePath) pair Path.rebase(ePath, ontologiesDir)
-      IO.copy(eFiles, overwrite=true, preserveLastModified=true)
-
-      val oPath = artifactsDir / "ontologies"
-      val oFiles = (PathFinder(oPath).*** --- oPath) pair Path.rebase(oPath, ontologiesDir)
-      IO.copy(oFiles, overwrite=true, preserveLastModified=true)
-
-      val fileMappings = ontologiesDir.*** pair relativeTo(targetDir)
-      val zipFile: File = baseDirectory.value / "target" / s"imce-omf_ontologies-${version.value}.zip"
-
+      val zipFile: File = baseDirectory.value / "target" / s"imce.ontologies.tools-${version.value}.zip"
       ZipHelper.zipNative(fileMappings, zipFile)
 
       zipFile
@@ -63,19 +50,7 @@ lazy val root = Project("gov-nasa-jpl-imce-ontologies", file("."))
 
     addArtifact(Artifact("imce-omf_ontologies", "zip", "zip", Some("resource"), Seq(), None, Map()), artifactZipFile),
 
-    makePom <<= makePom dependsOn artifactZipFile,
-
-    // Disable (I suspect this causes a 409 Conflict with Artifactory)
-    /*
-    pomPostProcess <<= (pomPostProcess, baseDirectory) {
-      (previousPostProcess, base) => { (node: XNode) =>
-        val processedNode: XNode = previousPostProcess(node)
-        val mdUpdateDir = UpdateProperties(base)
-        val resultNode: XNode = new RuleTransformer(mdUpdateDir)(processedNode)
-        resultNode
-      }
-    },
-    */
+    makePom := { artifactZipFile; makePom.value },
 
     sourceGenerators in Compile := Seq(),
 
