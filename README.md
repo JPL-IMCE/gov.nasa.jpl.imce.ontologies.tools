@@ -6,6 +6,9 @@ Maven: [ ![Download](https://api.bintray.com/packages/jpl-imce/gov.nasa.jpl.imce
 
 ## Publishing a new version
 
+The publishing workflow executes only for tagged version commits 
+from the [github repo](https://github.com/JPL-IMCE/gov.nasa.jpl.imce.ontologies.tools).
+
 ### Packaging & Uploading
 
 ```shell
