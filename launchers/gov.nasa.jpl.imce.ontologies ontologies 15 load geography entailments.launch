@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<launchConfiguration type="org.eclipse.ui.externaltools.ProgramLaunchConfigurationType">
-<mapAttribute key="org.eclipse.debug.core.environmentVariables">
-<mapEntry key="RUBYLIB" value="../lib/Application:../lib/Audit:../lib/IMCE:../lib/Jena:../lib/Makefile:../lib/OWLAPI:../lib/OntologyBundles:../lib/Pellet:../lib/ruby-jena:../lib/ruby-owlapi:../lib/ruby-pellet"/>
-</mapAttribute>
-<stringAttribute key="org.eclipse.ui.externaltools.ATTR_LOCATION" value="${JRUBY}"/>
-<stringAttribute key="org.eclipse.ui.externaltools.ATTR_TOOL_ARGUMENTS" value="${FUSEKI_DIR}/s-put http://localhost:${JENA_GEOGRAPHY_PORT}/${JENA_GEOGRAPHY_DATASET}/data http://www.mooney.net/geo/entailments ./geography-entailments.owl"/>
-<stringAttribute key="org.eclipse.ui.externaltools.ATTR_WORKING_DIRECTORY" value="${workspace_loc:/gov.nasa.jpl.imce.ontologies/data/Audit/demo}"/>
-</launchConfiguration>
