@@ -164,7 +164,7 @@ module OMFMetadata
     
     def mutable?
       prop = @metadata.create_data_property('tbox:kind')
-      @metadata.data_property_value(@individual, prop) == 'mutable'
+      @metadata.data_property_value(@individual, prop) =~ /\Amutable/
     end
     
     def kind_provenance
