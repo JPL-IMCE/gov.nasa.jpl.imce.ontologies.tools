@@ -88,7 +88,7 @@ class IriToMdid < OMFMetadataApplication
     logger.log(Logger::INFO, 'collect provenance data')
     md_hash = build_provenance_hash(metadata, provenance, has_iri, has_uuid)
     md_hash.each do |k, v|
-      logger.log(Logger::DEBUG, "#{k.inspect} => #{v.inspect}")
+      logger.log(Logger::DEBUG, "md_hash #{k.inspect} => #{v.inspect}")
     end
     
     # Iterate over input IRIs.
@@ -102,7 +102,7 @@ class IriToMdid < OMFMetadataApplication
     csv_out << headers + %w{ md_url md_id }
     csv_in.each do |row|
       iri = row[klass_sub]
-      logger.log(Logger::DEBUG, iri)
+      logger.log(Logger::DEBUG, "csv out #{iri.inspect}")
       h = md_hash[iri] || %w{ missing missing }
       csv_out << row + h
     end
@@ -115,15 +115,18 @@ class IriToMdid < OMFMetadataApplication
   
   def build_provenance_hash(metadata, provenance, has_iri, has_uuid)
     prov_map = provenance.inject({}) do |m, p|
-      m[p['omfUUID']] = [p['otiURL'], p['otiID']]
+      k = p['omlUUID']
+      m[k] = [p['otiURL'], p['otiID']]
+      logger.log(Logger::DEBUG, "prov_map #{k.inspect} => #{m[k].inspect}")
       m
     end
     metadata.getIndividualsInSignature.inject({}) do |h, i|
       if (irip = i.getDataPropertyValues(has_iri, metadata).first)
         iri = irip.getLiteral
         if (uuidp = i.getDataPropertyValues(has_uuid, metadata).first)
-        uuid = uuidp.getLiteral
-        h[iri] = prov_map[uuid]
+          uuid = uuidp.getLiteral
+          h[iri] = prov_map[uuid]
+          logger.log(Logger::DEBUG, "prov_hash #{iri.inspect} => (prov_map[#{uuid.inspect}] = #{h[iri].inspect})")
         end
       end
       h
