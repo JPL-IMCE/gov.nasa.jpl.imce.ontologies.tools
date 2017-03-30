@@ -29,3 +29,4 @@ gov.nasa.jpl.imce.ontologies/documents/tests/validate.xml
 .idea
 target
 local.*
+**/*~

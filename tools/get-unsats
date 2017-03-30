@@ -39,18 +39,28 @@ class GetUnsats < Application
     option_parser.on('--get-props', 'get implicated properties') do
       @options.get_sups = false
       @options.get_props = true
+      @options.get_prop_sources = false
       @options.get_prop_targets = false
     end
     @options.get_sups = false
     option_parser.on('--get-sups', 'get implicated superclasses') do
       @options.get_sups = true
       @options.get_props = false
+      @options.get_prop_sources = false
+      @options.get_prop_targets = false
+    end
+    @options.get_prop_sources = false
+    option_parser.on('--get-prop-sources', 'get implicated properties and sources') do
+      @options.get_sups = false
+      @options.get_props = false
+      @options.get_prop_sources = true
       @options.get_prop_targets = false
     end
     @options.get_prop_targets = false
     option_parser.on('--get-prop-targets', 'get implicated properties and targets') do
       @options.get_sups = false
       @options.get_props = false
+      @options.get_prop_sources = false
       @options.get_prop_targets = true
     end
     
@@ -76,6 +86,8 @@ class GetUnsats < Application
       header << 'prop'
     elsif @options.get_sups
       header << 'sup'
+    elsif @options.get_prop_sources
+      header += %w{ source prop }
     elsif @options.get_prop_targets
       header += %w{ prop target }
     end
@@ -96,12 +108,14 @@ class GetUnsats < Application
           get_sups_from_explanation(manager, factory, klass, explanation)
         elsif @options.get_props
           get_props_from_explanation(manager, factory, klass, explanation)
+        elsif @options.get_prop_sources
+          get_prop_sources_from_explanation(manager, factory, klass, explanation)
         elsif @options.get_prop_targets
           get_prop_targets_from_explanation(manager, factory, klass, explanation)
         else
           []
         end
-      if @options.get_sups || @options.get_props || @options.get_prop_targets
+      if @options.get_sups || @options.get_props || @options.get_prop_sources || @options.get_prop_targets
         extra.each do |e|
           csv << (data.dup + e)
         end
@@ -136,6 +150,43 @@ class GetUnsats < Application
 
   end
   
+  def get_prop_sources_from_explanation(manager, factory, klass, explanation)
+    
+    # Create ontology model for results.
+    
+    source = StringDocumentSource.new(explanation)
+    model = manager.loadOntologyFromOntologyDocument(source)
+    
+    # Create class expression for unsatisfiable class.
+    
+    class_expr = factory.getOWLClass(IRI.create(klass))
+    
+    # Find implicated properties and sources.
+    
+    domain_classes = model.getSubClassAxiomsForSubClass(class_expr).map do |a|
+      a.getSuperClass
+    end.reject do |c|
+      c.isAnonymous
+    end.uniq
+    properties = model.getSubClassAxiomsForSubClass(class_expr).map do |a|
+      a.getSuperClass
+    end.select do |c|
+      c.isAnonymous &&
+      c.isObjectRestriction
+    end.map do |r|
+      r.getProperty
+    end.uniq.reject do |p|
+      model.getObjectPropertyDomainAxioms(p).isEmpty
+    end
+    domain_classes.inject([]) do |m, c|
+      properties.each do |p|
+        m << [c.getIRI.toString, p.getIRI.toString]
+      end
+      m
+    end
+
+  end
+
   def get_prop_targets_from_explanation(manager, factory, klass, explanation)
     
     # Create ontology model for results.
