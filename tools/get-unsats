@@ -33,35 +33,44 @@ class GetUnsats < Application
 
   java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
 
+  ALL_OPTS = [:get_props, :get_sups, :get_prop_sources, :get_prop_targets, :get_func_props]
+
+  def clear(symbols)
+    symbols.each do |s|
+      @options.send((s.to_s + '=').to_sym, false)
+    end
+  end
+
   def run
   
     @options.get_props = false
     option_parser.on('--get-props', 'get implicated properties') do
-      @options.get_sups = false
+      clear(ALL_OPTS - [:get_props])
       @options.get_props = true
-      @options.get_prop_sources = false
-      @options.get_prop_targets = false
     end
+    
     @options.get_sups = false
     option_parser.on('--get-sups', 'get implicated superclasses') do
+      clear(ALL_OPTS - [:get_sups])
       @options.get_sups = true
-      @options.get_props = false
-      @options.get_prop_sources = false
-      @options.get_prop_targets = false
     end
+
     @options.get_prop_sources = false
     option_parser.on('--get-prop-sources', 'get implicated properties and sources') do
-      @options.get_sups = false
-      @options.get_props = false
+      clear(ALL_OPTS - [:get_prop_sources])
       @options.get_prop_sources = true
-      @options.get_prop_targets = false
     end
+
     @options.get_prop_targets = false
     option_parser.on('--get-prop-targets', 'get implicated properties and targets') do
-      @options.get_sups = false
-      @options.get_props = false
-      @options.get_prop_sources = false
+      clear(ALL_OPTS - [:get_prop_targets])
       @options.get_prop_targets = true
+    end
+
+    @options.get_func_props = false
+    option_parser.on('--get-func-props', 'get implicated functional properties') do
+      clear(ALL_OPTS - [:get_func_props])
+      @options.get_func_props = true
     end
     
     super
@@ -82,7 +91,7 @@ class GetUnsats < Application
     logger.log(Logger::INFO, 'initialize CSV output')
     csv = CSV.new(STDOUT)
     header = %w{ class }
-    if @options.get_props
+    if @options.get_props || @options.get_func_props
       header << 'prop'
     elsif @options.get_sups
       header << 'sup'
@@ -101,6 +110,7 @@ class GetUnsats < Application
     top.each_element('testcase') do |e|
       next unless failure = e.get_elements('failure').first
       name = e.attributes['name']
+      logger.log(Logger::DEBUG, "get explanation for #{name}")
       klass = name.split[1].sub(/\A<(.*)>\z/, '\1')
       explanation = failure.texts.join
       data = [klass]
@@ -112,10 +122,12 @@ class GetUnsats < Application
           get_prop_sources_from_explanation(manager, factory, klass, explanation)
         elsif @options.get_prop_targets
           get_prop_targets_from_explanation(manager, factory, klass, explanation)
+        elsif @options.get_func_props
+          get_func_props_from_explanation(manager, factory, klass, explanation)
         else
           []
         end
-      if @options.get_sups || @options.get_props || @options.get_prop_sources || @options.get_prop_targets
+      if @options.get_sups || @options.get_props || @options.get_prop_sources || @options.get_prop_targets || @options.get_func_props
         extra.each do |e|
           csv << (data.dup + e)
         end
@@ -147,6 +159,32 @@ class GetUnsats < Application
       c.isAnonymous &&
       c.isObjectRestriction
     end.map { |r| [ r.getProperty.getIRI.toString ] }.uniq
+
+  end
+
+  def get_func_props_from_explanation(manager, factory, klass, explanation)
+        
+    # Create ontology model for results.
+    
+    source = StringDocumentSource.new(explanation)
+    model = manager.loadOntologyFromOntologyDocument(source)
+    
+    # Create class expression for unsatisfiable class.
+    
+    class_expr = factory.getOWLClass(IRI.create(klass))
+    
+    # Find implicated properties.
+    
+    model.getSubClassAxiomsForSubClass(class_expr).map do |a|
+      a.getSuperClass
+    end.select do |c|
+      c.isAnonymous &&
+      c.isObjectRestriction
+    end.map do |r|
+      r.getProperty
+    end.reject do |p|
+        model.getFunctionalObjectPropertyAxioms(p).isEmpty
+    end.map { |p| [ p.getIRI.toString ] }.uniq
 
   end
   
