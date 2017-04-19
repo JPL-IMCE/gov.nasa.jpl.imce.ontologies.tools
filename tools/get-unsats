@@ -183,7 +183,8 @@ class GetUnsats < Application
     end.map do |r|
       r.getProperty
     end.reject do |p|
-        model.getFunctionalObjectPropertyAxioms(p).isEmpty
+        model.getFunctionalObjectPropertyAxioms(p).isEmpty &&
+          model.getInverseFunctionalObjectPropertyAxioms(p).isEmpty
     end.map { |p| [ p.getIRI.toString ] }.uniq
 
   end
