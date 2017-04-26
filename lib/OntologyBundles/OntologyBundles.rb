@@ -84,7 +84,8 @@ module OntologyBundles
     @@serialization_file = '.ontology-bundles-serialized'
     
     attr_reader :iri, :prefix, :file, :path, :groups, :stem, :type, :imports_iri,
-      :artifact, :imports_artifact, :backbone_iri, :abbrev, :backbone_abbrev
+      :artifact, :imports_artifact, :backbone_iri, :abbrev, :backbone_abbrev,
+      :embedding_abbrev
     attr_accessor :owl2_mof2_group
     
     def initialize(path, stem, prefix = stem, digest_extension = DIGEST_EXTENSION)
@@ -92,6 +93,7 @@ module OntologyBundles
       @stem = stem
       @prefix = prefix
       @abbrev = @prefix + BUNDLE_SUFFIX
+      @embedding_abbrev = @abbrev + EMBEDDING_SUFFIX
       @backbone_abbrev = @abbrev + BACKBONE_SUFFIX
       @iri = "#{IRI_PREFIX}#{@path}/#{@stem}#{BUNDLE_SUFFIX}"
       @backbone_iri = "#{IMCE_BACKBONE_PREFIX}/#{@path}/#{@stem}#{BUNDLE_SUFFIX}"
@@ -128,6 +130,10 @@ module OntologyBundles
     
     def name
       @stem
+    end
+
+    def embedding_name
+      name + EMBEDDING_SUFFIX
     end
     
     def self.names
