@@ -57,8 +57,13 @@ class CloseBundleApplication < OWLAPIApplication
     option_parser.on('--uri URI', 'bundle uri (required)') do |v|
       @options.uri = v
     end
-    option_parser.on('--bundles BUNDLES', "bundles data file") do |v|
-      @options.bundles = v
+    @options.namespace = {}
+    option_parser.on('--namespace PREFIX=>NAMESPACE', "namespace prefix definition (2 required)") do |v|
+      p, n = v.split(/\s*=>\s*/)
+      if (p.empty? || n.empty?)
+        log(FATAL, "invalid namespace definition '#{v}'")
+      end
+      @options.namespace[p] = n
     end
     option_parser.on('--embedding', "embedding bundle") do
       @options.embedding = true
@@ -84,8 +89,8 @@ class CloseBundleApplication < OWLAPIApplication
       log(FATAL, 'no named ontologies')
       return 1
     end
-    unless @options.bundles
-      log(FATAL, 'no bundles data file specified')
+    unless @options.namespace.keys.length == 2
+      log(FATAL, '2 namespace definitions required')
       return 1
     end
     unless @options.backbone_disjoints
@@ -97,12 +102,6 @@ class CloseBundleApplication < OWLAPIApplication
       return 1
     end
     
-  	# Load ontology bundles data.
-  	
-  	log(INFO, 'load ontology bundles data')
-  	bundle_by_name = Marshal.load(File.open(@options.bundles, 'rb'))
-  	log(DEBUG, "ontology bundles #{bundle_by_name.inspect}")
-  
     # Axiom storage.
     
     axioms = java.util.HashSet.new
@@ -169,10 +168,6 @@ class CloseBundleApplication < OWLAPIApplication
       ann = factory.getOWLAnnotation(p, v)
       change = AddOntologyAnnotation.new(ontology, ann)
       manager.applyChange(change)
-    end
-    unless bundle = bundle_by_name[@options.name]
-      log(FATAL, "no bundle data for #{@options.name}")
-      return 1
     end
     
     # Create disjointness axioms.
@@ -311,10 +306,8 @@ class CloseBundleApplication < OWLAPIApplication
     
     # Add prefixes for bundle.
     
-    {
-      bundle.abbrev => bundle.iri + '#',
-      bundle.backbone_abbrev => bundle.backbone_iri + '#'
-    }.each do |p, u|
+    @options.namespace.each do |p, n|
+      u = n + '#'
       log(DEBUG, "set prefix #{p} -> #{u}")
       rdfxml_format.setPrefix(p, u)
     end
