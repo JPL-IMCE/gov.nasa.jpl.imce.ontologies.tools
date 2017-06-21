@@ -41,6 +41,14 @@ module OntologyBundles
   IMCE_BACKBONE_PREFIX = 'http://imce.jpl.nasa.gov/backbone'
   PREFIX_FILE = '.prefixes.yaml'
   LOCATION_MAPPING_FILE = 'location-mapping.yaml'
+  DEFAULT_NAMESPACE_MAP = {
+    'owl' => 'http://www.w3.org/2002/07/owl#',
+    'rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+    'rdfs' => 'http://www.w3.org/2000/01/rdf-schema#',
+    'xsd' => 'http://www.w3.org/2001/XMLSchema#',
+    'swrl' => 'http://www.w3.org/2003/11/swrl#',
+    'dc' => 'http://purl.org/dc/elements/1.1/'
+  }
   
   def self.serialize(list, method = :iri)
     h = list.inject({}) do |memo, obj|
@@ -277,7 +285,7 @@ module OntologyBundles
     end
     
     def self.namespace_map
-      @@list.inject({}) do |m, o|
+      @@list.inject(DEFAULT_NAMESPACE_MAP) do |m, o|
         m[o.abbrev] = o.iri + '#'
         m[o.backbone_abbrev] = o.backbone_iri + '#'
         m
@@ -635,7 +643,7 @@ module OntologyBundles
     end
     
     def self.namespace_map
-      @@list.inject({}) do |m, o|
+      @@list.inject(DEFAULT_NAMESPACE_MAP) do |m, o|
         m[o.prefix] = o.iri + o.sep
         m[o.backbone_prefix] = o.backbone_iri + '#'
         m
