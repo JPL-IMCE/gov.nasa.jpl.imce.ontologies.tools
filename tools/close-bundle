@@ -38,7 +38,9 @@ java_import 'org.semanticweb.owlapi.model.AddImport'
 java_import 'org.jgrapht.experimental.dag.DirectedAcyclicGraph'
 java_import 'org.jgrapht.graph.DefaultEdge'
 java_import 'org.jgrapht.alg.TransitiveClosure'
-  
+java_import 'org.semanticweb.owlapi.model.AxiomType'
+java_import 'org.semanticweb.owlapi.model.ClassExpressionType'
+
 APPLICATION_NAME = 'close-bundle'
 
 ANNOTATIONS = %w{ isAbstract importsBundle bundlesGroup groupsOntology }
@@ -73,6 +75,9 @@ class CloseBundleApplication < OWLAPIApplication
     end
     option_parser.on('--backbone-prefix PREFIX', 'backbone prefix') do |v|
       @options.backbone_prefix = v
+    end
+    option_parser.on('--export', 'close export bundle') do
+      @options.export = true
     end
 
     super
@@ -227,73 +232,115 @@ class CloseBundleApplication < OWLAPIApplication
     
       # Form disjoint sets.
       
-      p_iri = format.getIRI('rdfs:comment')
-      p = factory.getOWLAnnotationProperty(p_iri)
+      if @options.export
+
+        # Create selected disjoints for ranges of functional object properties and domains of inverse
+        # functional object properties.
+
+        # Find functional and inverse functional object properties.
+        
+        functional_ops = []
+        inv_functional_ops = []
+        ontologies.each do |o|
+          functional_ops += o.getAxioms(AxiomType::FUNCTIONAL_OBJECT_PROPERTY).map do |a|
+            a.getProperty
+          end
+          inv_functional_ops += o.getAxioms(AxiomType::INVERSE_FUNCTIONAL_OBJECT_PROPERTY).map do |a|
+            a.getProperty
+          end
+        end
+        log(Logger::INFO, "#{functional_ops.length} functional object properties")
+        log(Logger::INFO, "#{inv_functional_ops.length} inverse functional object properties")
+
+        # Find range restrictions on above object properties.
+
+        functional_rrs = []
+        inv_functional_rrs = []
+        ontologies.each do |o|
+          o.getClassesInSignature(true).select do |c|
+            [ ClassExpressionType::OBJECT_ALL_VALUES_FROM,
+              ClassExpressionType::OBJECT_SOME_VALUES_FROM ].include?(c.getClassExpressionType())
+          end.each do |rr|
+            prop = rr.getProperty()
+            log(DEBUG, "range restriction on #{prop.toString}")
+            functional_rrs << rr if functional_ops.include?(prop)
+            inv_functional_rrs << rr if inv_functional_ops.include?(prop)
+          end
+        end
+        log(Logger::INFO, "#{functional_rrs.length} functional range restrictions")
+        log(Logger::INFO, "#{inv_functional_rrs.length} inverse functional range restrictions")
+
+      else
+
+        # Create minimal disjoints for any pair of classes without an explicit common subclass.
+        
+        p_iri = format.getIRI('rdfs:comment')
+        p = factory.getOWLAnnotationProperty(p_iri)
         subclasses.each do |klass, list|
-        log(DEBUG, "class #{klass}")
-        v = factory.getOWLLiteral("subclasses of #{format.getPrefixIRI(IRI.create(klass))}")
-        ann = factory.getOWLAnnotation(p, v)
-        (ah = java.util.HashSet.new) << ann
-        unless (minimal_list = remove_descendants(list, descendants)).empty?
-          partition = partition_list(minimal_list, descendants)
-          log(DEBUG, "partition: #{partition.inspect}")
-          expression = class_expression(partition, factory)
-          if abstracts.include?(klass)
-            c = factory.getOWLClass(IRI.create(klass.to_s))
-            axioms << factory.getOWLDisjointUnionAxiom(c, expression, ah)
-          elsif expression.length > 1
-            axioms << factory.getOWLDisjointClassesAxiom(expression, ah)
+          log(DEBUG, "class #{klass}")
+          v = factory.getOWLLiteral("subclasses of #{format.getPrefixIRI(IRI.create(klass))}")
+          ann = factory.getOWLAnnotation(p, v)
+          (ah = java.util.HashSet.new) << ann
+          unless (minimal_list = remove_descendants(list, descendants)).empty?
+            partition = partition_list(minimal_list, descendants)
+            log(DEBUG, "partition: #{partition.inspect}")
+            expression = class_expression(partition, factory)
+            if abstracts.include?(klass)
+              c = factory.getOWLClass(IRI.create(klass.to_s))
+              axioms << factory.getOWLDisjointUnionAxiom(c, expression, ah)
+            elsif expression.length > 1
+              axioms << factory.getOWLDisjointClassesAxiom(expression, ah)
+            end
+          end
+        end
+        
+        # Declare selected backbone classes disjoint.
+        
+        ontologies.each do |o|
+          ontology_iri_s = o.getOntologyID.getOntologyIRI.to_string
+          log(DEBUG, "disjoint backbone classes of #{ontology_iri_s}")
+          v = factory.getOWLLiteral("disjoint backbone classes of #{ontology_iri_s}")
+          ann = factory.getOWLAnnotation(p, v)
+          (ah = java.util.HashSet.new) << ann
+          backbone_iri_strings = @options.backbone_disjoints.inject([]) do |m, stem|
+            m << [ to_backbone(@options.backbone_prefix, ontology_iri_s) + "##{stem}" ]
+          end
+          exp = class_expression(backbone_iri_strings, factory)
+          axioms << factory.getOWLDisjointClassesAxiom(exp, ah)
+        end
+        
+        # Create collecting subclass axioms for backbone classes.
+        
+        bundle_iri_s = to_backbone(@options.backbone_prefix, ontology.getOntologyID.getOntologyIRI.to_string)
+        BACKBONE_CLASSES.each do |top, list|
+          bundle_top_iri = IRI.create("#{bundle_iri_s}##{top}")
+          bundle_top = factory.getOWLClass(bundle_top_iri)
+          t = factory.getOWLLiteral(true)
+          ann = factory.getOWLAnnotation(annotations['isAbstract'], t)
+          axioms << factory.getOWLAnnotationAssertionAxiom(bundle_top_iri, ann)
+          list.each do |c|
+            bundle_sub_iri = IRI.create("#{bundle_iri_s}##{c}")
+            bundle_sub = factory.getOWLClass(bundle_sub_iri)
+            log(DEBUG, "#{bundle_sub_iri.toString} subclass of #{bundle_top_iri.toString}")
+            axioms << factory.getOWLSubClassOfAxiom(bundle_sub, bundle_top)
+            axioms << factory.getOWLAnnotationAssertionAxiom(bundle_sub_iri, ann)
+            ontologies.each do |o|
+              ontology_iri_s = to_backbone(@options.backbone_prefix, o.getOntologyID.getOntologyIRI.to_string)
+              ontology_sub_iri = IRI.create("#{ontology_iri_s}##{c}")
+              ontology_sub = factory.getOWLClass(ontology_sub_iri)
+              axioms << factory.getOWLSubClassOfAxiom(ontology_sub, bundle_sub)
+              log(DEBUG, "#{ontology_sub_iri.toString} subclass of #{bundle_sub_iri.toString}")
+            end
           end
         end
       end
+    end
       
-      # Declare selected backbone classes disjoint.
-      
-      ontologies.each do |o|
-        ontology_iri_s = o.getOntologyID.getOntologyIRI.to_string
-        log(DEBUG, "disjoint backbone classes of #{ontology_iri_s}")
-        v = factory.getOWLLiteral("disjoint backbone classes of #{ontology_iri_s}")
-        ann = factory.getOWLAnnotation(p, v)
-        (ah = java.util.HashSet.new) << ann
-        backbone_iri_strings = @options.backbone_disjoints.inject([]) do |m, stem|
-          m << [ to_backbone(@options.backbone_prefix, ontology_iri_s) + "##{stem}" ]
-        end
-        exp = class_expression(backbone_iri_strings, factory)
-        axioms << factory.getOWLDisjointClassesAxiom(exp, ah)
-      end
-      
-      # Create collecting subclass axioms for backbone classes.
-      
-      bundle_iri_s = to_backbone(@options.backbone_prefix, ontology.getOntologyID.getOntologyIRI.to_string)
-      BACKBONE_CLASSES.each do |top, list|
-        bundle_top_iri = IRI.create("#{bundle_iri_s}##{top}")
-        bundle_top = factory.getOWLClass(bundle_top_iri)
-        t = factory.getOWLLiteral(true)
-        ann = factory.getOWLAnnotation(annotations['isAbstract'], t)
-        axioms << factory.getOWLAnnotationAssertionAxiom(bundle_top_iri, ann)
-        list.each do |c|
-          bundle_sub_iri = IRI.create("#{bundle_iri_s}##{c}")
-          bundle_sub = factory.getOWLClass(bundle_sub_iri)
-          log(DEBUG, "#{bundle_sub_iri.toString} subclass of #{bundle_top_iri.toString}")
-          axioms << factory.getOWLSubClassOfAxiom(bundle_sub, bundle_top)
-          axioms << factory.getOWLAnnotationAssertionAxiom(bundle_sub_iri, ann)
-         ontologies.each do |o|
-            ontology_iri_s = to_backbone(@options.backbone_prefix, o.getOntologyID.getOntologyIRI.to_string)
-            ontology_sub_iri = IRI.create("#{ontology_iri_s}##{c}")
-            ontology_sub = factory.getOWLClass(ontology_sub_iri)
-            axioms << factory.getOWLSubClassOfAxiom(ontology_sub, bundle_sub)
-            log(DEBUG, "#{ontology_sub_iri.toString} subclass of #{bundle_sub_iri.toString}")
-          end
-        end
-      end
-      
-      # Add axioms to ontology.
-      
-      axioms.each do |axiom|
-        log(DEBUG, "add axiom #{axiom}")
-        manager.add_axiom(ontology, axiom)
-      end
-      
+    # Add axioms to ontology.
+
+    axioms.each do |axiom|
+      log(DEBUG, "add axiom #{axiom}")
+      manager.add_axiom(ontology, axiom)
     end
       
     # Construct format specification for RDF/XML.
