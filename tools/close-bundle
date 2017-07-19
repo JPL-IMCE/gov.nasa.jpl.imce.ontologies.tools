@@ -47,7 +47,9 @@ ANNOTATIONS = %w{ isAbstract importsBundle bundlesGroup groupsOntology }
 BACKBONE = '-backbone'
 BUNDLE = '-bundle'
 BACKBONE_CLASSES = { 'Thing' => %w{ Entity Aspect ReifiedObjectProperty ReifiedStructuredDataProperty StructuredDatatype } }
+DESCENDANTS_CACHE = '.descendants'
 EMBEDDING = '-embedding'
+WARN_SIZE = 10
 
 class CloseBundleApplication < OWLAPIApplication
   
@@ -113,15 +115,16 @@ class CloseBundleApplication < OWLAPIApplication
       
     # Create ontology manager.
     
-    log(DEBUG, 'create ontology manager')
+    log(Logger::INFO, 'create ontology manager')
     manager = OWLManager.create_owl_ontology_manager
-    log(DEBUG, 'add location mappers')
+    log(Logger::INFO, 'add location mappers')
     location_mappers.each do |mapper|
       manager.add_iri_mapper(mapper)
     end
    
     # Load ontologies.
-    
+
+    log(Logger::INFO, 'load ontologies')
     ontologies = ARGV.map do |arg|
       log(DEBUG, "load ontology #{arg}")
       manager.loadOntology(IRI.create(arg))
@@ -133,16 +136,19 @@ class CloseBundleApplication < OWLAPIApplication
     end
     
     # Create data factory.
-    
+
+    log(Logger::INFO, 'create data factory')
     factory = OWLDataFactoryImpl.new
     
     # Set XML serialization preferences.
-    
+
+    log(Logger::INFO, 'set XML serialization preferences')
     xml_prefs = XMLWriterPreferences.get_instance
     xml_prefs.set_use_namespace_entities(true)
     
     # Create annotation properties.
-    
+
+    log(Logger::INFO, 'create annotation properties')
     annotations = ANNOTATIONS.inject({}) do |h, ps|
       p_iri = format.getIRI('annotation:' + ps)
       p = factory.getOWLAnnotationProperty(p_iri)
@@ -152,11 +158,12 @@ class CloseBundleApplication < OWLAPIApplication
     
     # Create ontology.
     
-    log(INFO, "create ontology for #{@options.uri}")
+    log(Logger::INFO, "create ontology for #{@options.uri}")
     ontology = manager.createOntology(IRI.create(@options.uri))
     
     # Add ontology imports.
-    
+
+    log(Logger::INFO, 'add ontology imports')
     argv.each do |import|
       log(DEBUG, "add imports declaration for #{import}")
       decl = factory.getOWLImportsDeclaration(IRI.create(import))
@@ -164,8 +171,9 @@ class CloseBundleApplication < OWLAPIApplication
       manager.applyChange(import)
     end
     
-    # Add annotations.
-    
+    # Add ontology annotations.
+
+    log(Logger::INFO, 'add ontology annotations')
     { 'rdfs:comment' => "created by #{APPLICATION_NAME}", 'owl:versionInfo' => Time.new.to_s }.each do |ps, vs|
       p_iri = format.getIRI(ps)
       p = factory.getOWLAnnotationProperty(p_iri)
@@ -181,11 +189,12 @@ class CloseBundleApplication < OWLAPIApplication
       
       # Create subclasses graph.
       
-      log(DEBUG, 'create subclass graph')
+      log(Logger::INFO, 'create subclasses graph')
       subclasses_graph = DirectedAcyclicGraph.new(DefaultEdge)
       abstracts = Set.new
       ontologies.each do |o|
-        o.getClassesInSignature(true).each do |klass|
+        log(DEBUG, "  #{o.getOntologyID.getOntologyIRI.toString}")
+        o.getClassesInSignature(false).each do |klass|
           unless klass.isAnonymous
             klass_iri = klass.asOWLClass.getIRI.toString
             subclasses_graph.addVertex(klass_iri)
@@ -205,20 +214,28 @@ class CloseBundleApplication < OWLAPIApplication
       
       # Find top-level classes.
       
-      log(DEBUG, 'find top-level classes')
+      log(Logger::INFO, 'find top-level classes')
       root_nodes = subclasses_graph.vertexSet.inject(Set.new) do |m, node|
         m << node if subclasses_graph.inDegreeOf(node) == 0
         m
       end
-      log(DEBUG, "root_nodes #{root_nodes.inspect}")
   
       # Create descendants graph.
-      
-      descendants_graph = subclasses_graph.clone
-      TransitiveClosure::INSTANCE.closeSimpleDirectedGraph(descendants_graph)
-      
+
+      descendants_graph = nil
+      begin
+        File.open(DESCENDANTS_CACHE, 'r') { |f| descendants_graph = Marshal.load(f) }
+      rescue Errno::ENOENT
+        log(Logger::INFO, 'clone subclasses graph')
+        descendants_graph = subclasses_graph.clone
+        log(Logger::INFO, 'create descendants graph')
+        TransitiveClosure::INSTANCE.closeSimpleDirectedGraph(descendants_graph)
+        File.open(DESCENDANTS_CACHE, 'w') { |g| Marshal.dump(descendants_graph, g) }
+      end
+        
       # Create maps.
-      
+
+      log(Logger::INFO, 'create maps')
       subclasses = Hash.new { |h, k| h[k] = Set.new }
       descendants = Hash.new { |h, k| h[k] = Set.new }
       iter = descendants_graph.iterator
@@ -239,8 +256,8 @@ class CloseBundleApplication < OWLAPIApplication
 
         # Find functional and inverse functional object properties.
         
-        functional_ops = []
-        inv_functional_ops = []
+        functional_ops = Set.new
+        inv_functional_ops = Set.new
         ontologies.each do |o|
           functional_ops += o.getAxioms(AxiomType::FUNCTIONAL_OBJECT_PROPERTY).map do |a|
             a.getProperty
@@ -250,26 +267,99 @@ class CloseBundleApplication < OWLAPIApplication
           end
         end
         log(Logger::INFO, "#{functional_ops.length} functional object properties")
+        functional_ops.each do |f|
+          log(Logger::DEBUG, "functional #{f.getIRI.toString }")
+        end
         log(Logger::INFO, "#{inv_functional_ops.length} inverse functional object properties")
+        inv_functional_ops.each do |i|
+          log(Logger::DEBUG, "inverse functional #{i.getIRI.toString }")
+        end
 
         # Find range restrictions on above object properties.
 
-        functional_rrs = []
-        inv_functional_rrs = []
+        functional_rrs = Hash.new { |h, k| h[k] = Set.new }
+        inv_functional_rrs = Hash.new { |h, k| h[k] = Set.new }
+        restricted_classes = Hash.new { |h, k| h[k] = Set.new }
         ontologies.each do |o|
-          o.getClassesInSignature(true).select do |c|
-            [ ClassExpressionType::OBJECT_ALL_VALUES_FROM,
-              ClassExpressionType::OBJECT_SOME_VALUES_FROM ].include?(c.getClassExpressionType())
-          end.each do |rr|
+          o.getAxioms(AxiomType::SUBCLASS_OF).map do |a|
+            [ a.getSubClass, a.getSuperClass ]
+          end.select do |pair1|
+            sub, sup = *pair1
+            sup.isAnonymous && sup.isObjectRestriction && 
+              [ ClassExpressionType::OBJECT_ALL_VALUES_FROM,
+                ClassExpressionType::OBJECT_SOME_VALUES_FROM ].include?(sup.getClassExpressionType)
+          end.each do |pair2|
+            sub, rr = *pair2
             prop = rr.getProperty()
             log(DEBUG, "range restriction on #{prop.toString}")
-            functional_rrs << rr if functional_ops.include?(prop)
-            inv_functional_rrs << rr if inv_functional_ops.include?(prop)
+            functional_rrs[prop] << rr if functional_ops.include?(prop)
+            inv_functional_rrs[prop] << rr if inv_functional_ops.include?(prop)
+            restricted_classes[rr] << sub
           end
         end
-        log(Logger::INFO, "#{functional_rrs.length} functional range restrictions")
-        log(Logger::INFO, "#{inv_functional_rrs.length} inverse functional range restrictions")
+        log(Logger::INFO, "#{functional_rrs.values.inject(0) { |m, o| m += o.length; m } } functional range restrictions")
+        log(Logger::INFO, "#{inv_functional_rrs.values.inject(0) { |m, o| m += o.length; m } } inverse functional range restrictions")
 
+        # Transform range restrictions into maps x->y such that for each x there can be
+        # at most one y.
+
+        log(Logger::INFO, 'create range restriction maps')
+        rr_map = Hash.new { |h, k| h[k] = Hash.new { |l, m| l[m] = Set.new } }
+        functional_rrs.each do |prop, rrl|
+          rrl.each do |rr|
+            restricted_classes[rr].each do |c|
+              rr_map[prop.getIRI.toString][c.getIRI.toString] << rr.getFiller.getIRI.toString
+            end
+          end
+        end
+        inv_functional_rrs.each do |prop, rrl|
+          rrl.each do |rr|
+            rr_map[prop.getIRI.toString][rr.getFiller.getIRI.toString] += restricted_classes[rr].map { |c| c.getIRI.toString }
+          end
+        end
+        l = rr_map.inject(0) do |m, r|
+          k, v = *r
+          m += v.length
+          m
+        end
+        log(Logger::INFO, "#{l} range restriction map entries")
+        rr_map.each do |k1, v1|
+          log(Logger::DEBUG, "rr_map[#{k1}] = ")
+          v1.each do |k2, v2|
+            log(Logger::DEBUG, "  #{k2} => ")
+            v2.each do |v3|
+              log(Logger::DEBUG, "    #{v3}")
+            end
+          end
+        end
+
+        log(Logger::INFO, 'create disjointness candidate lists')
+        dj_cands = rr_map.inject([]) do |m, o|
+          prop, h = *o
+          x_part = partition_list(h.keys, descendants)
+          l = x_part.each do |xp|
+            m << xp.map { |x| rr_map[prop][x].to_a }.flatten
+          end
+          m
+        end
+        log(Logger::INFO, "#{dj_cands.length} disjointness candidate lists")
+        dj_cands.each do |djc|
+          log(Logger::DEBUG, "candidate: #{djc.inspect}")
+          log(Logger::DEBUG, "length: #{djc.length}")
+        end
+
+        # Create disjointness axioms.
+
+        log(Logger::INFO, 'create disjointness axioms')
+        dj_cands.each do |cl|
+          minimal_list = remove_descendants(cl, descendants)
+          partition = partition_list(minimal_list, descendants)
+          expression = class_expression(partition, factory)
+          if expression.length > 1
+            axioms << factory.getOWLDisjointClassesAxiom(expression)
+          end
+        end
+        
       else
 
         # Create minimal disjoints for any pair of classes without an explicit common subclass.
@@ -376,7 +466,7 @@ class CloseBundleApplication < OWLAPIApplication
     list - list.inject(Set.new) do |m, o|
       m += descendants[o]
       m
-    end
+    end.to_a
   end
   
   # Partition a list of classes into a list of lists, each of which

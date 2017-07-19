@@ -16,24 +16,12 @@
 
 require 'csv'
 require 'json'
-require 'OMFMetadataApplication'
-require 'pellet'
+require 'Application'
 
 APPLICATION_NAME = 'iri-to-mdid'
 
-TBOX = 'http://imce.jpl.nasa.gov/foundation/omf/tbox#'
-HAS_IRI = TBOX + 'hasIRI'
-HAS_UUID = TBOX + 'hasUUID'
-HAS_MD_URL = TBOX + 'hasOTIToolSpecificURL'
-HAS_MD_ID = TBOX + 'hasOTIToolSpecificID'
-MODEL_ENTITY = TBOX + 'ModelEntity'
+class IriToMdid < Application
 
-class IriToMdid < OMFMetadataApplication
-
-  java_import 'org.semanticweb.owlapi.apibinding.OWLManager'
-  java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
-  java_import 'com.clarkparsia.pellet.owlapiv3.PelletReasonerFactory'
-  
   def run
 
     @options.metadata = nil
@@ -47,17 +35,12 @@ class IriToMdid < OMFMetadataApplication
     
     super
     
-    # Create ontology manager.
+    # Load metadata.
     
-    logger.log(Logger::DEBUG, 'create ontology manager')
-    manager = OWLManager.createOWLOntologyManager
-    raise "couldn't create owl ontology manager" unless manager
-
-    # Load metadata ontology.
-    
-    logger.log(INFO, "load metadata ontology from #{@options.metadata}")
-    metadata_file = File.new(@options.metadata).to_inputstream
-    metadata = manager.loadOntologyFromOntologyDocument(metadata_file)
+    logger.log(INFO, "load metadata from #{@options.metadata}")
+    metadata_file = File.new(@options.metadata)
+    raise "no metadata file #{@options.metadata}" unless metadata_file
+    metadata = JSON.parse(metadata_file.read)
     raise "couldn't load metadata" unless metadata
     
     # Load provenance data.
@@ -71,18 +54,6 @@ class IriToMdid < OMFMetadataApplication
     end
     raise "couldn't load provenance" unless provenance
     
-    # Get data factory.
-    
-    logger.log(Logger::INFO, 'get OWL data factory')
-    factory = manager.getOWLDataFactory
-    
-    # Create classes and properties for OMF metadata.
-    
-    logger.log(Logger::INFO, 'create metadata properties')
-    entity = factory.getOWLClass(IRI.create(MODEL_ENTITY))
-    has_iri = factory.getOWLDataProperty(IRI.create(HAS_IRI))
-    has_uuid = factory.getOWLDataProperty(IRI.create(HAS_UUID))
-      
     # Build metadata hash.
     
     logger.log(Logger::INFO, 'collect provenance data')
@@ -120,14 +91,12 @@ class IriToMdid < OMFMetadataApplication
       logger.log(Logger::DEBUG, "prov_map #{k.inspect} => #{m[k].inspect}")
       m
     end
-    metadata.getIndividualsInSignature.inject({}) do |h, i|
-      if (irip = i.getDataPropertyValues(has_iri, metadata).first)
-        iri = irip.getLiteral
-        if (uuidp = i.getDataPropertyValues(has_uuid, metadata).first)
-          uuid = uuidp.getLiteral
-          h[iri] = prov_map[uuid]
-          logger.log(Logger::DEBUG, "prov_hash #{iri.inspect} => (prov_map[#{uuid.inspect}] = #{h[iri].inspect})")
-        end
+    metadata['nodes'].inject({}) do |h, node|
+      iri = node['iri']
+      uuid = node['uuid']
+      if iri && uuid
+        h[iri] = prov_map[uuid]
+        logger.log(Logger::DEBUG, "prov_hash #{iri} => (prov_map[#{uuid}] = #{h[iri].inspect})")
       end
       h
     end
