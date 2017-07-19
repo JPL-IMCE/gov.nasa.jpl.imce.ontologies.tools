@@ -337,8 +337,9 @@ class CloseBundleApplication < OWLAPIApplication
         dj_cands = rr_map.inject([]) do |m, o|
           prop, h = *o
           x_part = partition_list(h.keys, descendants)
-          l = x_part.each do |xp|
-            m << xp.map { |x| rr_map[prop][x].to_a }.flatten
+          x_part.each do |xp|
+            l = xp.map { |x| rr_map[prop][x].to_a }.flatten
+            m << l if l.length > 1
           end
           m
         end
@@ -351,14 +352,17 @@ class CloseBundleApplication < OWLAPIApplication
         # Create disjointness axioms.
 
         log(Logger::INFO, 'create disjointness axioms')
+        n = 0
         dj_cands.each do |cl|
           minimal_list = remove_descendants(cl, descendants)
           partition = partition_list(minimal_list, descendants)
           expression = class_expression(partition, factory)
           if expression.length > 1
             axioms << factory.getOWLDisjointClassesAxiom(expression)
+            n += 1
           end
         end
+        log(Logger::INFO, "#{n} disjointness axioms")
         
       else
 
