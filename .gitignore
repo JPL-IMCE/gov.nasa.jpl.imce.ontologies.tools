@@ -30,3 +30,4 @@ gov.nasa.jpl.imce.ontologies/documents/tests/validate.xml
 target
 local.*
 **/*~
+.Rproj.user

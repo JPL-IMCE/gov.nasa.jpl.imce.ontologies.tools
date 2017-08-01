@@ -81,6 +81,13 @@ class CloseBundleApplication < OWLAPIApplication
     option_parser.on('--export', 'close export bundle') do
       @options.export = true
     end
+    option_parser.on('--cache', 'use cached descendants graph') do
+      @options.cache = true
+    end
+    @options.cache_file = DESCENDANTS_CACHE
+    option_parser.on('--cache-file FILE', 'descendants cache filename [#{@options.cache_file}]') do |v|
+      @options.cache_file = v
+    end
 
     super
     
@@ -224,13 +231,17 @@ class CloseBundleApplication < OWLAPIApplication
 
       descendants_graph = nil
       begin
-        File.open(DESCENDANTS_CACHE, 'r') { |f| descendants_graph = Marshal.load(f) }
+        if @options.cache
+          File.open(@options.cache_file, 'r') { |f| descendants_graph = Marshal.load(f) }
+        else
+          raise Errno::ENOENT
+        end
       rescue Errno::ENOENT
         log(Logger::INFO, 'clone subclasses graph')
         descendants_graph = subclasses_graph.clone
         log(Logger::INFO, 'create descendants graph')
         TransitiveClosure::INSTANCE.closeSimpleDirectedGraph(descendants_graph)
-        File.open(DESCENDANTS_CACHE, 'w') { |g| Marshal.dump(descendants_graph, g) }
+        File.open(@options.cache_file, 'w') { |g| Marshal.dump(descendants_graph, g) } if @options.cache
       end
         
       # Create maps.
