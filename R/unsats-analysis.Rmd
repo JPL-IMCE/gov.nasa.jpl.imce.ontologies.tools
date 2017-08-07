@@ -1,0 +1,97 @@
+---
+title: "Europa Model Export Analysis"
+output: html_notebook
+---
+```{r}
+u <- read.csv("~/git/gov.nasa.jpl.imce.ontologies.analysis/target/workflow/tests/consistency/unsats.csv")
+```
+# Summary
+
+There are `r length(u$class)` unsatisfiable classes.
+```{r}
+upsc <- read.csv("~/git/gov.nasa.jpl.imce.ontologies.analysis/target/workflow/tests/consistency/unsat-sups.csv")
+upsc_ft <- table(upsc$sup)
+supsc_ft <- upsc_ft[which(upsc_ft >= quantile(upsc_ft, .75))]
+upsc_df <- data.frame(supsc_ft, stringsAsFactors = FALSE)
+colnames(upsc_df) <- c("class", "frequency")
+```
+# Class-Related Analyses
+
+## Superclass
+
+`r length(upsc$sup)` unsatisfiability explanations implicate a superclass. This may mean that the class in question is specializing disjoint superclasses. The most commonly implicated superclasses are:
+```{r}
+knitr::kable(upsc_df[order(-upsc_df$frequency),], caption = "Most commonly implicated superclasses.")
+```
+## Root Cause
+
+Unsatisfiability can propagate in two ways:
+
+1. If B is a subclass of A and A is unsatisfiable, then A is also unsatisfiable.
+2. If B has a some-values-from restriction on some property to A and A is unsatisfiable, then B is unsatisfiable.
+
+```{r}
+ur <- read.csv("~/git/gov.nasa.jpl.imce.ontologies.analysis/target/workflow/tests/consistency/unsat-roots.csv")
+q <- .9
+t <- quantile(ur[which(ur$length > 1),]$length, q)
+sur <- ur[which(ur$length >= t),]
+```
+Root causes analysis finds, for each unsatisfiable class, the chain of classes (including itself) to which its unsatisfiability propagates. The following table shows the MagicDraw ID and chain length for the top `r (1.0 - q) * 100`% of chain lengths greater than one. (Note that a class may be unsatisfiable for more than one reason.)
+```{r}
+knitr::kable(sur[,c('md_id', 'length')])
+```
+
+```{r}
+up <- read.csv("~/git/gov.nasa.jpl.imce.ontologies.analysis/target/workflow/tests/consistency/unsat-props.csv")
+up_ft <- table(up$prop)
+sup_ft <- up_ft[which(up_ft >= quantile(up_ft, .75))]
+up_df <- data.frame(sup_ft, stringsAsFactors = FALSE)
+colnames(up_df) <- c("property", "frequency")
+```
+# Property-Related Analyses
+
+## Object Property
+
+`r length(up$prop)` unsatisfiability explanations implicate an object property. The most commonly implicated object properties are
+```{r}
+knitr::kable(up_df[order(-up_df$frequency),])
+```
+```{r}
+ufp <- read.csv("~/git/gov.nasa.jpl.imce.ontologies.analysis/target/workflow/tests/consistency/unsat-func-props.csv")
+ufp_ft <- table(ufp$prop)
+sufp_ft <- ufp_ft
+ufp_df <- data.frame(sufp_ft, stringsAsFactors = FALSE)
+colnames(ufp_df) <- c("property", "frequency")
+```
+## Functional Property
+
+`r length(ufp$prop)` unsatisfiability explanations implicate a functional object property. Such an explanation may suggest that more than one value of the property has been asserted for some subject. The most commonly-implicated functional object properties are:
+```{r}
+knitr::kable(ufp_df[order(-ufp_df$frequency),])
+```
+# Class/Property-Related Analyses
+
+## Subject/Property
+
+`r length(ups$sp)` unsatisfiability explanations implicate `r length(ups_ft)` unique pairs of subject and object property. Such an explanation suggests that the subject may not be in the domain of the property. The most commonly-implicated subject/property pairs are:
+```{r}
+knitr::kable(ups_df[order(-ups_df$frequency),])
+```
+```{r}
+upt <- read.csv("~/git/gov.nasa.jpl.imce.ontologies.analysis/target/workflow/tests/consistency/unsat-prop-targets.csv")
+upt$pt <- interaction(upt$prop, upt$target, drop = TRUE, sep = " ")
+upt_ft <- table(upt$pt)
+supt_ft <- upt_ft[which(upt_ft >= quantile(upt_ft, .75))]
+upt_df = data.frame(supt_ft, stringsAsFactors = FALSE)
+colnames(upt_df) <- c("property/target", "frequency")
+```
+## Property/Object
+
+`r length(upt$pt)` unsatisfiability explanations implicate `r length(upt_ft)` unique pairs of object property and object. Such an explanation suggests that the object may not be in the range of the property. The most commonly-implicated property/object pairs are:
+```{r}
+knitr::kable(upt_df[order(-upt_df$frequency),])
+```
+
+
+
+
