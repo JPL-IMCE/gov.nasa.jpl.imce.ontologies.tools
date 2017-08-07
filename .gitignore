@@ -31,3 +31,6 @@ target
 local.*
 **/*~
 .Rproj.user
+**/*.RData
+**/*.Rhistory
+R/unsats-analysis.nb.html
