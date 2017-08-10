@@ -27,7 +27,7 @@ knitr::kable(upsc_df[order(-upsc_df$frequency),], caption = "Most commonly impli
 
 Unsatisfiability can propagate in two ways:
 
-1. If B is a subclass of A and A is unsatisfiable, then A is also unsatisfiable.
+1. If B is a subclass of A and A is unsatisfiable, then B is also unsatisfiable.
 2. If B has a some-values-from restriction on some property to A and A is unsatisfiable, then B is unsatisfiable.
 
 ```{r}
