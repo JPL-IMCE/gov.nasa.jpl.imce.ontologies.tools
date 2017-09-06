@@ -523,7 +523,7 @@ module OntologyBundles
       @sep = sep
       @iri = "#{IRI_PREFIX}#{@path}/#{@stem}"
       @backbone_iri = "#{IMCE_BACKBONE_PREFIX}/#{@path}/#{@stem}"
-      @file = "#{path}/#{stem}.owl"
+      @file = "#{path}/#{stem.chomp(@sep)}.owl"
       @serialization_file = ""
       @ontology_artifact = "#{ONTOLOGIES_PREFIX}/#{@file}"
       @ontology_artifact_only = false
