@@ -27,6 +27,17 @@ class OWLAPIApplication < Application
   
   DEFAULT_LOCATION_MAPPING = 'location-mapping.yaml'
   
+  BUILTIN_NAMESPACES = {
+    'rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+    'rdfs' => 'http://www.w3.org/2000/01/rdf-schema#',
+    'owl' => 'http://www.w3.org/2002/07/owl#',
+    'xsd' => 'https://www.w3.org/2001/XMLSchema#',
+    'xml' => 'http://www.w3.org/XML/1998/namespace',
+    'dc' => 'http://purl.org/dc/elements/1.1/',
+    'swrl' => 'http://www.w3.org/2003/11/swrl#',
+    'swrlb' => 'http://www.w3.org/2003/11/swrlb#',
+  }
+
   def run
     
     add_options
@@ -64,7 +75,7 @@ class OWLAPIApplication < Application
       namespace_by_prefix = {}
     end
     log(DEBUG, "namespace_by_prefix: #{namespace_by_prefix.inspect}")
-    namespace_by_prefix
+    namespace_by_prefix.merge(BUILTIN_NAMESPACES)
   end
   
   # Construct location mappers.
