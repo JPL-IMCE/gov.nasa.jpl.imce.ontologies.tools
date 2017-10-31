@@ -396,7 +396,7 @@ class RepairOntologyApplication < OWLAPIApplication
     
   end
 
-  def reification_rule(property, source, target)
+  def reification_rule(property, property_name, source, target)
     
     # Create rule variables.
   
@@ -416,10 +416,18 @@ class RepairOntologyApplication < OWLAPIApplication
     body = java.util.HashSet.new
     body << @factory.getSWRLObjectPropertyAtom(source, swrl_var['r'], swrl_var['s'])
     body << @factory.getSWRLObjectPropertyAtom(target, swrl_var['r'], swrl_var['t'])
-    
+
+    # Create annotation set.
+
+    anns = java.util.HashSet.new
+    label_iri = IRI.create(@namespace_by_prefix['rdfs'] + 'label')
+    label_prop = @factory.getOWLAnnotationProperty(label_iri)
+    label = @factory.getOWLLiteral("#{property_name} reification rule")
+    anns << @factory.getOWLAnnotation(label_prop, label)
+
     # Create rule
       
-    @factory.getSWRLRule(body, head)
+    @factory.getSWRLRule(body, head, anns)
       
   end
   
@@ -514,7 +522,7 @@ class RepairOntologyApplication < OWLAPIApplication
 
     if text =~ /no property reification rule/
       
-      axioms << reification_rule(property_entity, src_prop_entity, trg_prop_entity)
+      axioms << reification_rule(property_entity, property, src_prop_entity, trg_prop_entity)
       
     end
     
@@ -546,7 +554,7 @@ class RepairOntologyApplication < OWLAPIApplication
     src_entity = @factory.getOWLObjectProperty(IRI.create(format.getIRI(src)))
     trg_entity = @factory.getOWLObjectProperty(IRI.create(format.getIRI(trg)))
 
-    @manager.add_axiom(model, reification_rule(property_entity, src_entity, trg_entity))
+    @manager.add_axiom(model, reification_rule(property_entity, property, src_entity, trg_entity))
       
   end
   
