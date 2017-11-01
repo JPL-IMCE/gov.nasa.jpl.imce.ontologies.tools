@@ -526,6 +526,18 @@ class RepairOntologyApplication < OWLAPIApplication
       
     end
     
+    if text =~ /property functional and source property inverse functional inconsistent/
+
+      axioms << @factory.getOWLInverseFunctionalObjectPropertyAxiom(src_prop_entity)
+
+    end
+
+    if text =~ /property inverse functional and target property inverse functional inconsistent/
+
+      axioms << @factory.getOWLInverseFunctionalObjectPropertyAxiom(trg_prop_entity)
+
+    end
+
     # Add all axioms.
     
     axioms.each do |axiom|
