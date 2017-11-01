@@ -27,6 +27,15 @@ require 'rexml/document'
 
 APPLICATION_NAME = 'audit-census'
 
+class TestSuite
+  def initialize(name)
+    @suite = name
+    @cases = 0
+    @failures = 0
+  end
+  attr_accessor :suite, :cases, :failures
+end
+
 class AuditCensusApplication < Application
   
   def run
@@ -37,34 +46,39 @@ class AuditCensusApplication < Application
       log(FATAL, 'no input file')
       exit 1
     end
-    
-    testsuites = []
-    total = OpenStruct.new({'suite' => 'total', 'cases' => 0, 'failures' => 0})
+     
+   testsuites = {}
+   total = TestSuite.new('total')
 
-    log(INFO, 'parsing input')
-    audit = REXML::Document.new(ARGF)
-    
-    top = audit.get_elements('testsuites').first
-    unless top
-      log(FATAL, 'no testsuites found')
-      exit 1
+    ARGV.each do |arg|
+      io = File.open(arg)
+      log(INFO, "parsing #{arg}")
+      audit = REXML::Document.new(io)
+
+      top = audit.get_elements('testsuites').first
+      unless top
+        log(FATAL, 'no testsuites found')
+        exit 1
+      end
+
+      total_cases = 0
+      total_failures = 0
+
+      top.each_element('testsuite') do |testsuite|
+        suite = testsuite.attributes['name']
+        log(DEBUG, "test suite #{suite}")
+        os = testsuites[suite] ||= TestSuite.new(suite)
+        cases = testsuite.get_elements('testcase').length
+        os.cases += cases
+        total.cases += cases
+        failures = testsuite.get_elements('testcase/failure').length
+        os.failures += failures
+        total.failures += failures
+        log(DEBUG, os.inspect)
+      end
     end
     
-    total_cases = 0
-    total_failures = 0
-    
-    top.each_element('testsuite') do |testsuite|
-      os = OpenStruct.new
-      os.suite = testsuite.attributes['name']
-      os.cases = testsuite.get_elements('testcase').length
-      total.cases += os.cases
-      os.failures = testsuite.get_elements('testcase/failure').length
-      total.failures += os.failures
-      testsuites << os
-      log(DEBUG, os.inspect)
-    end
-    
-    (testsuites.sort_by { |e| e.suite } << total).each do |ts|
+    (testsuites.values.sort_by { |e| e.suite } << total).each do |ts|
       puts "%6d/%6d %s" % [ts.failures, ts.cases, ts.suite]
     end
     
