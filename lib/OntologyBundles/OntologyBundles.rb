@@ -426,6 +426,16 @@ module OntologyBundles
       @@list.inject([]) { |m, g| m += g.entailments_production_sentinels(type); m }
     end
     
+    def non_embedding_entailments_production_sentinels(type)
+      @@entailment_types << type
+      non_embedding_parts.map { |p| p.entailments_production_sentinel(type) }
+    end
+    
+    def self.non_embedding_entailments_production_sentinels(type)
+      @@entailment_types << type
+      @@list.inject([]) { |m, g| m += g.non_embedding_entailments_production_sentinels(type); m }
+    end
+    
     def all_sentinels
       @@list.inject(Set.new) do |memo, group|
         @@entailment_types.map do |type|
