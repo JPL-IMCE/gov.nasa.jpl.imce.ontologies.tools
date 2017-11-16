@@ -178,12 +178,42 @@ if validation
   bundle_by_name.each do |name, bundle|
     rule = Makefile::Rule.new(bundle.validation_file)
     rule.prereqs << bundle.closure_production_sentinel
+    bundle.groups.each do |group|
+      group.non_embedding_parts.each do |part|
+        rule.prereqs << part.ontology_production_sentinel
+        i_iris = closure_by_ontology[part.iri]
+        i_iris.each do |i_iri|
+          i_part = part_by_iri[i_iri]
+          rule.prereqs << i_part.ontology_production_sentinel
+        end
+      end
+      rule.prereqs += types.map { |type| group.non_embedding_entailments_production_sentinels(type) }.flatten
+      rule.prereqs += group.all_predecessors.inject(Set.new) do |m, g|
+        m += types.map { |type| g.non_embedding_entailments_production_sentinels(type) }.flatten
+        m
+      end
+    end
     puts rule
     
     if bundle.type == 'imce'
       rule = Makefile::Rule.new(bundle.embedding_validation_file)
-	  rule.prereqs << bundle.closure_embedding_production_sentinel if bundle.type ==  'imce'
-	  puts rule
+      rule.prereqs << bundle.closure_embedding_production_sentinel if bundle.type ==  'imce'
+      bundle.groups.each do |group|
+        group.parts.each do |part|
+          rule.prereqs << part.ontology_production_sentinel
+          i_iris = closure_by_ontology[part.iri]
+          i_iris.each do |i_iri|
+            i_part = part_by_iri[i_iri]
+            rule.prereqs << i_part.ontology_production_sentinel
+          end
+        end
+        rule.prereqs += types.map { |type| group.entailments_production_sentinels(type) }.flatten
+        rule.prereqs += group.all_predecessors.inject(Set.new) do |m, g|
+          m += types.map { |type| g.entailments_production_sentinels(type) }.flatten
+          m
+        end
+      end
+      puts rule
     end
   end
 
