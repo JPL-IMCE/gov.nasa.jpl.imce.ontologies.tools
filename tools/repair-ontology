@@ -126,7 +126,7 @@ class RepairOntologyApplication < OWLAPIApplication
                   end
                 end
               when 'add-label'          
-                if m = text.match(/ontology\s+(\S+)\s+entity\s+(\S+)\s+lacks\s+label\s+'([^']+)'/)
+                if m = text.match(/ontology\s+(\S+)\s+entity\s+(\S+)\s+lacks\s+label\.\s+Suggest\s+'([^']+)'/)
                   ontology = m[1]
                   element = m[2]
                   text = m[3]
