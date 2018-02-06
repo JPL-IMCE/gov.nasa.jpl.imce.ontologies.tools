@@ -116,7 +116,7 @@ class JenaApplication < Application
     if @options.prefix_file
       namespace_by_prefix = YAML.load(File.open(@options.prefix_file))
     else
-      namespace_by_prefix = @data_service.get_model.get_ns_prefix_map
+      namespace_by_prefix = @data_service.get_model.get_ns_prefix_map.to_hash
     end
     log(DEBUG, "namespace_by_prefix: #{namespace_by_prefix.inspect}")
     namespace_by_prefix.merge(BUILTIN_NAMESPACES)
