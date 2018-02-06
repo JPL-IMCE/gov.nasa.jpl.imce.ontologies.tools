@@ -225,7 +225,7 @@ module OntologyAudit
               @logger.log(Logger::DEBUG, "keys: #{keys.inspect}") if @logger
               c << keys
             end
-            line = keys.map { |k| result[k].toString } 
+            line = keys.map { |k| result[k].nil? ? '(nil)' : result[k].toString } 
             @logger.log(Logger::DEBUG, "line: #{line.inspect}") if @logger
             c << line
           end
