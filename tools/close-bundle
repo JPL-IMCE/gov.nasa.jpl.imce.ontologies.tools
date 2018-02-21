@@ -88,6 +88,10 @@ class CloseBundleApplication < OWLAPIApplication
     option_parser.on('--cache-file FILE', 'descendants cache filename [#{@options.cache_file}]') do |v|
       @options.cache_file = v
     end
+    @options.iri_file = nil
+    option_parser.on('--iri-file FILE', 'input IRI file [nil]') do |v|
+      @options.iri_file = v
+    end
 
     super
     
@@ -99,7 +103,7 @@ class CloseBundleApplication < OWLAPIApplication
       log(FATAL, 'no bundle uri')
       return 1
     end
-    if argv.empty?
+    if argv.empty? && @options.iri_file.nil?
       log(FATAL, 'no named ontologies')
       return 1
     end
@@ -128,12 +132,28 @@ class CloseBundleApplication < OWLAPIApplication
     location_mappers.each do |mapper|
       manager.add_iri_mapper(mapper)
     end
-   
+
+    # Get IRI list to load.
+
+    if @options.iri_file
+      begin
+        iris = File.open(@options.iri_file).readlines.map { |l| l.strip }
+      rescue
+        log(FATAL, "error reading IRI file #{@options.iri_file}")
+        raise $!
+      end
+    else
+      iris = argv
+    end
+    
     # Load ontologies.
 
     log(Logger::INFO, 'load ontologies')
-    ontologies = ARGV.map do |arg|
-      log(DEBUG, "load ontology #{arg}")
+    total = iris.length
+    n = 0
+    ontologies = iris.map do |arg|
+      n += 1
+      log(DEBUG, "load ontology #{arg} (#{n} of #{total})")
       manager.loadOntology(IRI.create(arg))
     end
     format = manager.getOntologyFormat(ontologies.first)
@@ -171,7 +191,7 @@ class CloseBundleApplication < OWLAPIApplication
     # Add ontology imports.
 
     log(Logger::INFO, 'add ontology imports')
-    argv.each do |import|
+    iris.each do |import|
       log(DEBUG, "add imports declaration for #{import}")
       decl = factory.getOWLImportsDeclaration(IRI.create(import))
       import = AddImport.new(ontology, decl)
@@ -199,8 +219,11 @@ class CloseBundleApplication < OWLAPIApplication
       log(Logger::INFO, 'create subclasses graph')
       subclasses_graph = DirectedAcyclicGraph.new(DefaultEdge)
       abstracts = Set.new
+      total = ontologies.length
+      n = 0
       ontologies.each do |o|
-        log(DEBUG, "  #{o.getOntologyID.getOntologyIRI.toString}")
+        n += 1
+        log(DEBUG, "subclasses in #{o.getOntologyID.getOntologyIRI.toString} (#{n} of #{total})")
         o.getClassesInSignature(false).each do |klass|
           unless klass.isAnonymous
             klass_iri = klass.asOWLClass.getIRI.toString
