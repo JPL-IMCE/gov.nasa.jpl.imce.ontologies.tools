@@ -89,6 +89,10 @@ class EntailApplication < PelletApplication
     option_parser.on('--remove-unsats', "remove entailments due to unsatisfiability [#{@options.remove_unsats}]") do
       @options.remove_unsats = true
     end
+    @options.vacuous = false
+    option_parser.on('--vacuous', 'create vacuous entailments (for testing)') do
+      @options.vacuous = true
+    end
     
     super
     
@@ -136,20 +140,28 @@ class EntailApplication < PelletApplication
     logger.log(INFO, "get ontology format")
     format = manager.getOntologyFormat(input_ontology)
     raise "couldn't get ontology format" unless format
+
+    unless @options.vacuous
       
-    # Extract entailments
-    
-    log(INFO, 'extract entailments')
-    entailments = extract_entailments(input_ontology, types, logger)
-    
-    # Remove trivial axioms involving owl:Thing and owl:Nothing.
-    
-    entailments = remove_trivial(entailments, @options.remove_unsats)
-    
-    # Minimize entailments.
-    
-    log(INFO, 'minimize entailments')
-    entailments = minimize_entailments(entailments, files)
+      # Extract entailments
+
+      log(INFO, 'extract entailments')
+      entailments = extract_entailments(input_ontology, types, logger)
+
+      # Remove trivial axioms involving owl:Thing and owl:Nothing.
+
+      entailments = remove_trivial(entailments, @options.remove_unsats)
+
+      # Minimize entailments.
+
+      log(INFO, 'minimize entailments')
+      entailments = minimize_entailments(entailments, files)
+
+    else
+      
+      entailments = ModelFactory.createDefaultModel
+      
+    end
     
     # Create ontology model for results.
     
