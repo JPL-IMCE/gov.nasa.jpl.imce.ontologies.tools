@@ -149,8 +149,11 @@ class CloseBundleApplication < OWLAPIApplication
     # Load ontologies.
 
     log(Logger::INFO, 'load ontologies')
+    total = iris.length
+    n = 0
     ontologies = iris.map do |arg|
-      log(DEBUG, "load ontology #{arg}")
+      n += 1
+      log(DEBUG, "load ontology #{arg} (#{n} of #{total})")
       manager.loadOntology(IRI.create(arg))
     end
     format = manager.getOntologyFormat(ontologies.first)
@@ -188,7 +191,7 @@ class CloseBundleApplication < OWLAPIApplication
     # Add ontology imports.
 
     log(Logger::INFO, 'add ontology imports')
-    argv.each do |import|
+    iris.each do |import|
       log(DEBUG, "add imports declaration for #{import}")
       decl = factory.getOWLImportsDeclaration(IRI.create(import))
       import = AddImport.new(ontology, decl)
@@ -216,8 +219,11 @@ class CloseBundleApplication < OWLAPIApplication
       log(Logger::INFO, 'create subclasses graph')
       subclasses_graph = DirectedAcyclicGraph.new(DefaultEdge)
       abstracts = Set.new
+      total = ontologies.length
+      n = 0
       ontologies.each do |o|
-        log(DEBUG, "  #{o.getOntologyID.getOntologyIRI.toString}")
+        n += 1
+        log(DEBUG, "subclasses in #{o.getOntologyID.getOntologyIRI.toString} (#{n} of #{total})")
         o.getClassesInSignature(false).each do |klass|
           unless klass.isAnonymous
             klass_iri = klass.asOWLClass.getIRI.toString
