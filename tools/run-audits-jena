@@ -46,6 +46,11 @@ class JenaAuditApplication < JenaApplication
       options.report = true
     end
     
+    options.iri_file = nil
+    option_parser.on('--iri-file FILE', 'input IRI file [nil]') do |v|
+      options.iri_file = v
+    end
+
     # Audit options.
     
     options.audit_options = OpenStruct.new
@@ -57,10 +62,22 @@ class JenaAuditApplication < JenaApplication
       
     super
     
-    if argv.empty?
+    if argv.empty? && options.iri_file.nil?
       log(FATAL, 'no named ontologies')
       return 1
     end
+
+    # Load IRIs from file if specified.
+
+    if options.iri_file
+      begin
+        argv = File.open(@options.iri_file).readlines.map { |l| l.strip }
+      rescue
+        log(FATAL, "error reading IRI file #{@options.iri_file}")
+        raise $!
+      end
+    end
+    
     
     # Pass information through in options.
     
