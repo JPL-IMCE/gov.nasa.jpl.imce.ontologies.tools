@@ -10,6 +10,10 @@ class Union
     @classes << k
   end
   
+  def merge(o)
+    Union.new(classes.union(o.classes))
+  end
+ 
   attr_reader :classes
   
   def eql?(o)

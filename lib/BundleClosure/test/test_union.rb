@@ -35,5 +35,17 @@ class TestKlass < Test::Unit::TestCase
     u2 << a3
     assert_equal u1, u2
   end
+
+  def test_merge
+    a = Klass.new('A')
+    b = Klass.new('B')
+    c = Klass.new('C')
+    d = Klass.new('D')
+    u1 = Union.new([a, b])
+    u2 = Union.new([c, d])
+    u3 = u1.merge(u2)
+    u4 = Union.new([a, b, c, d])
+    assert_equal u3, u4
+  end
   
 end
