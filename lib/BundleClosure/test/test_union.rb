@@ -4,6 +4,11 @@ require 'klass'
 
 class TestKlass < Test::Unit::TestCase
   
+  def test_create
+    u = Union.new
+    assert_instance_of Union, u
+  end
+  
   def test_to_s_1
     a = Klass.new('A')
     u = Union.new([a])
