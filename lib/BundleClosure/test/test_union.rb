@@ -1,8 +1,10 @@
-require 'test/unit'
 require 'union'
 require 'klass'
 
-class TestKlass < Test::Unit::TestCase
+gem 'minitest'
+require 'minitest/autorun'
+
+class TestUnion < Minitest::Test
   
   def test_create
     u = Union.new

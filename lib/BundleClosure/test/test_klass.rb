@@ -1,7 +1,9 @@
-require 'test/unit'
 require 'klass'
 
-class TestKlass < Test::Unit::TestCase
+gem 'minitest'
+require 'minitest/autorun'
+
+class TestKlass < Minitest::Test
   
   def test_to_s
     a = Klass.new('A')

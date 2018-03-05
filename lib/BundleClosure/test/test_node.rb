@@ -1,7 +1,9 @@
 require 'node'
-require 'test/unit'
 
-class TestNode < Test::Unit::TestCase
+gem 'minitest'
+require 'minitest/autorun'
+
+class TestNode < Minitest::Test
 
   def test_to_s
     classes = %w{A B C}
@@ -57,6 +59,19 @@ class TestNode < Test::Unit::TestCase
 
     na.clear_parents
     assert_empty na.parents
+  end
+
+  def test_traverse 
+    node = 'A'.upto('P').map { |l| Node.new(Union.new([Klass.new(l)])) }
+    0.upto(6) do |p|
+      c = node[2 * p + 1..2 * p + 2]
+      node[p].add_children(c)
+    end
+    r = node[0].children.inject([]) do |m, n|
+      m << n
+      m
+    end
+    assert_equal [], r.map { |n| n.to_s }
   end
   
 end

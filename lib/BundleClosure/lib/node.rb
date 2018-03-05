@@ -53,5 +53,12 @@ class Node
   def to_s
     "Node(#{@union.to_s})"
   end
+
+  def traverse(&block)
+    yield self
+    @children.each do |c|
+      c.traverse(&block)
+    end
+  end
   
 end
