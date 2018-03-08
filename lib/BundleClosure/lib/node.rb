@@ -9,6 +9,12 @@ class Node
   end
 
   attr_reader :union, :children, :parents
+
+  def eql?(o)
+    @union.eql?(o.union)
+  end
+
+  alias :== :eql?
   
   def add_child(c)
     @children.add(c)
@@ -58,6 +64,20 @@ class Node
     yield self
     @children.each do |c|
       c.traverse(&block)
+    end
+  end
+
+  def descendants
+    @descendants ||= get_descendants
+  end
+
+  private
+
+  def get_descendants
+    @children.inject(Set.new) do |m, c|
+      m << c
+      m += c.descendants
+      m
     end
   end
   

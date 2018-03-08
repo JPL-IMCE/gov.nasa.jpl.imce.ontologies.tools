@@ -9,8 +9,4 @@ class TestGraph < MiniTest::Test
     assert_equal '', g.to_s
   end
 
-  def traverse(&block)
-    @root.traverse(&block)
-  end
-  
 end
