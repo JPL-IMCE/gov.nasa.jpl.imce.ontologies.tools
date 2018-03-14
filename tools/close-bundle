@@ -161,6 +161,12 @@ class CloseBundleApplication < OWLAPIApplication
       m += manager.getImportsClosure(o)
       m
     end
+
+    loaded = manager.getOntologies()
+    log(DEBUG, "loaded #{loaded.length} ontologies")
+    loaded.each do |l|
+      log(DEBUG, "loaded #{l.getOntologyID.getOntologyIRI.toString}")
+    end
     
     # Create data factory.
 
@@ -292,7 +298,7 @@ class CloseBundleApplication < OWLAPIApplication
         
         functional_ops = Set.new
         inv_functional_ops = Set.new
-        ontologies.each do |o|
+        (ontologies + imports_set).each do |o|
           functional_ops += o.getAxioms(AxiomType::FUNCTIONAL_OBJECT_PROPERTY).map do |a|
             a.getProperty
           end

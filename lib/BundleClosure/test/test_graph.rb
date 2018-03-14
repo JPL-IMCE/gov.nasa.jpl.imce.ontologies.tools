@@ -6,7 +6,7 @@ class TestGraph < MiniTest::Test
 
   def test_to_s
     g = Graph.new
-    assert_equal '', g.to_s
+    assert_equal "Graph {\n}", g.to_s
   end
 
 end
