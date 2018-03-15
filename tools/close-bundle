@@ -201,7 +201,11 @@ class CloseBundleApplication < OWLAPIApplication
     # Add ontology annotations.
 
     log(Logger::INFO, 'add ontology annotations')
-    { 'rdfs:comment' => "created by #{APPLICATION_NAME}", 'owl:versionInfo' => Time.new.to_s }.each do |ps, vs|
+    {
+      'rdfs:comment' => "created by #{APPLICATION_NAME}",
+      'owl:versionInfo' => Time.new.to_s,
+      'oml:isOMLBundle' => true,
+    }.each do |ps, vs|
       p_iri = format.getIRI(ps)
       p = factory.getOWLAnnotationProperty(p_iri)
       v = factory.getOWLLiteral(vs)
