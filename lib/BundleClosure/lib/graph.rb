@@ -34,10 +34,14 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
 
     g = RGL::DirectedAdjacencyGraph.new
     edges.each do |edge|
-      if s.include?(edge.target)
-        g.add_edge(edge.source, new_vertex)
-      elsif s.include?(edge.source)
+      source_in_s = s.include?(edge.source)
+      target_in_s = s.include?(edge.target)
+      if source_in_s && target_in_s
+        # do nothing
+      elsif source_in_s
         g.add_edge(new_vertex, edge.target)
+      elsif target_in_s
+        g.add_edge(edge.source, new_vertex)
       else
         g.add_edge(edge.source, edge.target)
       end
