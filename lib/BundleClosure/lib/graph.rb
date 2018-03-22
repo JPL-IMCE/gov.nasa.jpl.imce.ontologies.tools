@@ -1,30 +1,64 @@
-require 'node'
+require 'rgl/adjacency'
+require 'rgl/transitivity'
+require 'rgl/topsort'
+require 'delegate'
 
-class Graph
+class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
 
-  def initialize(r = Node.new(Union.new([Klass.new('A')])))
-    @root = r
-    @node = {}
-    add_node(r)
+  def initialize(g = RGL::DirectedAdjacencyGraph.new)
+    super(g)
   end
-
+  
   def to_s
     s = []
     s << 'Graph {'
+    edges.each do |e|
+      s << "#{e.source.to_s} -> #{e.target.to_s}"
+    end
     s << '}'
     s.join("\n")
   end
-  
-  def traverse(&block)
-    @root.traverse(&block)
+
+  def multi_parent_child
+    topsort_iterator.to_a.reverse.detect do |c|
+      edges.select { |e| e.target == c }.length > 1
+    end
   end
 
-  def add_node(n)
-    @node[n.union] = n unless @node.contains?(n.union)
+  def parents_of(c)
+    edges.select { |e| e.target == c }.map { |e| e.source }
   end
-  
-  def self.parse(io)
-    io.each_line do |l|
+
+  def merge_vertices(s)
+    new_vertex = Union.new(s.inject(Set.new) { |m, o| m = m.union(o.classes) })
+
+    g = RGL::DirectedAdjacencyGraph.new
+    edges.each do |edge|
+      if s.include?(edge.target)
+        g.add_edge(edge.source, new_vertex)
+      elsif s.include?(edge.source)
+        g.add_edge(new_vertex, edge.target)
+      else
+        g.add_edge(edge.source, edge.target)
+      end
+    end
+    
+    Graph.new(g.transitive_reduction)
+  end
+
+  def treeify
+    if c = multi_parent_child
+      merge_vertices(parents_of(c)).treeify
+    else
+      self
+    end
+  end
+
+  def sibling_groups
+    vertices.map do |v|
+      edges.select { |e| e.source == v }.map { |e| e.target }
+    end.select do |g|
+      g.length > 1
     end
   end
   
