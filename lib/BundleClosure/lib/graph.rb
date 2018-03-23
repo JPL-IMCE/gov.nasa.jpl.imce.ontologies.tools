@@ -20,9 +20,13 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
   end
 
   def multi_parent_child
-    topsort_iterator.to_a.reverse.detect do |c|
-      edges.select { |e| e.target == c }.length > 1
+    count = Hash.new { |h, k| h[k] = 0 }
+    edges.each do |edge|
+      t = edge.target
+      return t if count[t] == 1
+      count[t] += 1
     end
+    nil
   end
 
   def parents_of(c)
@@ -47,14 +51,14 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
       end
     end
     
-    Graph.new(g.transitive_reduction)
+    Graph.new(g)
   end
 
   def treeify
     if c = multi_parent_child
       merge_vertices(parents_of(c)).treeify
     else
-      self
+      Graph.new(transitive_reduction)
     end
   end
 
