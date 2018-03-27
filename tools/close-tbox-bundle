@@ -250,7 +250,10 @@ class CloseBundleApplication < OWLAPIApplication
       # Create disjointness axioms.
 
       log(Logger::INFO, 'create disjointness axioms')
-      axioms = []
+      sibling_groups.each do |sibs|
+        expression = class_expression(sibs, factory)
+        axioms << factory.getOWLDisjointClassesAxiom(expression) if expression.length > 1
+      end
 
       # Add axioms to ontology.
 
