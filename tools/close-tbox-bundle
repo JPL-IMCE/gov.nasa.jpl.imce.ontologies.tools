@@ -233,7 +233,14 @@ class CloseBundleApplication < OWLAPIApplication
       # Treeify class taxonomy.
 
       log(Logger::INFO, 'treeify class taxonomy')
-      tree = class_taxonomy.treeify
+      tree = class_taxonomy.treeify do |msg, doing, done|
+        case msg
+        when :in_progress
+          log(Logger::DEBUG, "merge #{doing} vertices, #{done} done")
+        when :done
+          log(Logger::INFO, "merged #{done} vertices")
+        end
+      end
 
       # Create sibling groups.
       

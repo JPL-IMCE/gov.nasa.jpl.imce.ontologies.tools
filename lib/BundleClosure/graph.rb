@@ -54,10 +54,15 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
     Graph.new(g)
   end
 
-  def treeify
+  def treeify(count = 0, &block)
     if c = multi_parent_child
-      merge_vertices(parents_of(c)).treeify
+      parents = parents_of(c)
+      pl = parents.length
+      yield(:in_progress, pl, count) if block_given?
+      count += pl
+      merge_vertices(parents).treeify(count, &block)
     else
+      yield(:done, nil, count) if block_given?
       Graph.new(transitive_reduction)
     end
   end
