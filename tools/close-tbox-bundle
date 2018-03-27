@@ -233,26 +233,33 @@ class CloseBundleApplication < OWLAPIApplication
       # Treeify class taxonomy.
 
       log(Logger::INFO, 'treeify class taxonomy')
-      tree = class_taxonomy.treeify do |msg, doing, done|
+      tree = class_taxonomy.treeify do |msg, child, parents, done|
         case msg
-        when :in_progress
-          log(Logger::DEBUG, "merge #{doing} vertices, #{done} done")
-        when :done
+        when :merging
+          log(Logger::DEBUG, "merge parents of #{child.inspect}: #{parents.inspect}, #{done} done")
+        when :merged
           log(Logger::INFO, "merged #{done} vertices")
+          log(Logger::INFO, 'form transitive reduction')
         end
       end
 
+      # Root tree at OWL:Thing
+
+      log(Logger::INFO, 'root tree at OWL:Thing')
+      thing = factory.getOWLClass('owl:Thing', format)
+      rooted_tree = tree.root_at(Set.new([thing]))
+      
       # Create sibling groups.
       
       log(Logger::INFO, 'create sibling groups')
-      sibling_groups = tree.sibling_groups
+      sibling_groups = rooted_tree.sibling_groups
 
       # Create disjointness axioms.
 
       log(Logger::INFO, 'create disjointness axioms')
       sibling_groups.each do |sibs|
         expression = class_expression(sibs, factory)
-        axioms << factory.getOWLDisjointClassesAxiom(expression) if expression.length > 1
+        axioms << factory.getOWLDisjointClassesAxiom(expression)
       end
 
       # Add axioms to ontology.

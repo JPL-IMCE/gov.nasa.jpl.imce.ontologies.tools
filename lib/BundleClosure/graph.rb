@@ -55,18 +55,32 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
   end
 
   def treeify(count = 0, &block)
-    if c = multi_parent_child
-      parents = parents_of(c)
-      pl = parents.length
-      yield(:in_progress, pl, count) if block_given?
-      count += pl
+    if child = multi_parent_child
+      parents = parents_of(child)
+      yield(:merging, child, parents, count) if block_given?
+      count += parents.length
       merge_vertices(parents).treeify(count, &block)
     else
-      yield(:done, nil, count) if block_given?
+      yield(:merged, nil, nil, count) if block_given?
       Graph.new(transitive_reduction)
     end
   end
 
+  def root_at(root)
+    g = RGL::DirectedAdjacencyGraph.new
+    edges.each do |edge|
+      g.add_edge(edge.source, edge.target)
+    end
+    top_vertices = g.edges.inject(Set.new(g.vertices)) do |set, edge|
+      set.delete(edge.target)
+      set
+    end
+    top_vertices.each do |v|
+      g.add_edge(root, v)
+    end
+    Graph.new(g)
+  end
+  
   def sibling_groups
     vertices.map do |v|
       edges.select { |e| e.source == v }.map { |e| e.target }

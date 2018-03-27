@@ -49,7 +49,7 @@ end
 # Process arguments.
 
 def usage
-  warn 'dependencies --parts parts --groups groups --bundles bundles --types types [ --validation ] [ imports ]'
+  warn 'dependencies --parts parts --groups groups --bundles bundles --types types [ --validation ]'
 end
 
 log_level = Logger::FATAL
@@ -244,19 +244,6 @@ else
   # ONTOLOGY GROUP DEPENDENCIES
   #
   
-  group_by_iri.each do |g_iri, group|
-    group.parts.each do |part|
-      
-      # imports artifact depends on imported ontology files
-  
-      log.debug("rule: #{part.imports_artifact}")
-      rule = Makefile::Rule.new(part.imports_artifact)
-      rule.prereqs << part.file
-      rule.prereqs += closure_by_ontology[part.iri].map_filter(part_by_iri, :file)
-      puts rule
-    end
-  end
-    
   #
   # ONTOLOGY BUNDLE DEPENDENCIES
   #
