@@ -27,7 +27,7 @@
 require 'rexml/document'
 
 require 'OWLAPIApplication'
-#require 'OntologyBundles'
+require 'graph'
 
 java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
 java_import 'org.coode.xml.XMLWriterPreferences'
@@ -197,18 +197,63 @@ class CloseBundleApplication < OWLAPIApplication
       change = AddOntologyAnnotation.new(ontology, ann)
       manager.applyChange(change)
     end
+
+    # Bundle closure is currently too expensive for embedding ontologies.
     
-    # Create disjointness axioms.
-
-    axioms = []
+    unless @options.embedding
       
-    # Add axioms to ontology.
+      # Create class taxonomy.
 
-    axioms.each do |axiom|
-      log(DEBUG, "add axiom #{axiom}")
-      manager.add_axiom(ontology, axiom)
+      log(Logger::INFO, 'create class taxonomy')
+      class_taxonomy = Graph.new
+      abstracts = Set.new
+      total = ontologies.length
+      n = 0
+      ontologies.each do |o|
+        n += 1
+        log(DEBUG, "subclasses in #{o.getOntologyID.getOntologyIRI.toString} (#{n} of #{total})")
+        o.getClassesInSignature(false).each do |klass|
+          unless klass.isAnonymous
+            klass_iri = klass.asOWLClass.getIRI.toString
+            klass_set ||= Set.new([klass_iri])
+            abstract_annotations = klass.getAnnotations(o, annotations['isAbstract'])
+            abstracts << klass_iri if abstract_annotations.any? { |a| a.getValue.parseBoolean }
+            klass.getSubClasses(imports_set).reject do |sc|
+              sc.isAnonymous
+            end.map do |sc|
+              sc.asOWLClass.getIRI.toString
+            end.each do |sub_iri|
+              sub_set ||= Set.new([sub_iri])
+              class_taxonomy.add_edge(klass_set, sub_set)
+            end
+          end
+        end
+      end
+
+      # Treeify class taxonomy.
+
+      log(Logger::INFO, 'treeify class taxonomy')
+      tree = class_taxonomy.treeify
+
+      # Create sibling groups.
+      
+      log(Logger::INFO, 'create sibling groups')
+      sibling_groups = tree.sibling_groups
+
+      # Create disjointness axioms.
+
+      log(Logger::INFO, 'create disjointness axioms')
+      axioms = []
+
+      # Add axioms to ontology.
+
+      axioms.each do |axiom|
+        log(DEBUG, "add axiom #{axiom}")
+        manager.add_axiom(ontology, axiom)
+      end
+
     end
-      
+    
     # Construct format specification for RDF/XML.
     
     rdfxml_format = RDFXMLOntologyFormat.new

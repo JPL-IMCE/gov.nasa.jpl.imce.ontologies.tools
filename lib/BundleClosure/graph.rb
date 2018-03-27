@@ -34,7 +34,7 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
   end
 
   def merge_vertices(s)
-    new_vertex = Union.new(s.inject(Set.new) { |m, o| m = m.union(o.classes) })
+    new_vertex = s.inject(Set.new){ |m, o| m = m.union(o) }
 
     g = RGL::DirectedAdjacencyGraph.new
     edges.each do |edge|
