@@ -21,10 +21,7 @@
 
 # close-bundle loads an bundle ontology specifed by its IRI (and its imports) and produces on standard output
 # the corresponding bundle closure ontology. A bundle closure contains the smallest set of OWLDisjointClassesAxioms
-# and OWLDisjointUnionAxioms such that any two classes that do not have an explicit intersection are disjoint. Classes
-# with the annotation isAbstract are declared to be the disjoint union of a set of class expressions.
-
-require 'rexml/document'
+# such that any two classes that do not have an explicit intersection are disjoint.
 
 require 'OWLAPIApplication'
 require 'graph'
@@ -37,11 +34,7 @@ java_import 'org.semanticweb.owlapi.model.ClassExpressionType'
 
 APPLICATION_NAME = 'close-tbox-bundle'
 
-ANNOTATIONS = %w{ isAbstract importsBundle bundlesGroup groupsOntology }
-BACKBONE = '-backbone'
-BUNDLE = '-bundle'
-BACKBONE_CLASSES = { 'Thing' => %w{ Entity Aspect ReifiedObjectProperty ReifiedStructuredDataProperty StructuredDatatype } }
-EMBEDDING = '-embedding'
+ANNOTATIONS = %w{ importsBundle }
 
 class CloseBundleApplication < OWLAPIApplication
   
@@ -64,12 +57,6 @@ class CloseBundleApplication < OWLAPIApplication
     option_parser.on('--embedding', "embedding bundle") do
       @options.embedding = true
     end
-    option_parser.on('--backbone-disjoints "LIST"', 'backbone disjoints') do |v|
-      @options.backbone_disjoints = v.split
-    end
-    option_parser.on('--backbone-prefix PREFIX', 'backbone prefix') do |v|
-      @options.backbone_prefix = v
-    end
     @options.iri_file = nil
     option_parser.on('--iri-file FILE', 'input IRI file [nil]') do |v|
       @options.iri_file = v
@@ -91,14 +78,6 @@ class CloseBundleApplication < OWLAPIApplication
     end
     unless @options.namespace.keys.length == 2
       log(FATAL, '2 namespace definitions required')
-      return 1
-    end
-    unless @options.backbone_disjoints
-      log(FATAL, 'no backbone disjoints specified')
-      return 1
-    end
-    unless @options.backbone_prefix
-      log(FATAL, 'no backbone prefix specified')
       return 1
     end
     
@@ -206,7 +185,6 @@ class CloseBundleApplication < OWLAPIApplication
 
       log(Logger::INFO, 'create class taxonomy')
       class_taxonomy = Graph.new
-      abstracts = Set.new
       total = ontologies.length
       n = 0
       klass_set = {}
@@ -216,15 +194,13 @@ class CloseBundleApplication < OWLAPIApplication
         o.getClassesInSignature(true).each do |klass|
           unless klass.isAnonymous
             klass_iri = klass.asOWLClass.getIRI.toString
-            klass_set[klass_iri] ||= Set.new([klass_iri])
-            abstract_annotations = klass.getAnnotations(o, annotations['isAbstract'])
-            abstracts << klass_iri if abstract_annotations.any? { |a| a.getValue.parseBoolean }
+            klass_set[klass_iri] ||= Union.new([klass_iri])
             klass.getSubClasses(imports_set).reject do |sc|
               sc.isAnonymous
             end.map do |sc|
               sc.asOWLClass.getIRI.toString
             end.each do |sub_iri|
-              sub_set = (klass_set[sub_iri] ||= Set.new([sub_iri]))
+              sub_set = (klass_set[sub_iri] ||= Union.new([sub_iri]))
               log(DEBUG, "#{sub_iri} subclass of #{klass_iri}")
               class_taxonomy.add_edge(klass_set[klass_iri], sub_set)
             end
@@ -249,7 +225,7 @@ class CloseBundleApplication < OWLAPIApplication
 
       log(Logger::INFO, 'root tree at OWL:Thing')
       thing = factory.getOWLClass('owl:Thing', format)
-      rooted_tree = tree.root_at(Set.new([thing]))
+      rooted_tree = tree.root_at(Union.new([thing]))
 
       # Create sibling groups.
       

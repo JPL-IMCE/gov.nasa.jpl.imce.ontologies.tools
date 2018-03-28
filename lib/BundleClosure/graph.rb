@@ -1,8 +1,10 @@
 require 'rgl/adjacency'
 require 'rgl/transitivity'
 require 'rgl/topsort'
-require 'rgl/dot'
 require 'delegate'
+
+class Union < Set
+end
 
 class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
 
@@ -25,7 +27,7 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
   end
 
   def merge_vertices(s)
-    new_vertex = s.inject(Set.new){ |m, o| m = m.union(o); m }
+    new_vertex = s.inject(Union.new){ |m, o| m = m.union(o); m }
 
     g = RGL::DirectedAdjacencyGraph.new
     edges.each do |edge|
