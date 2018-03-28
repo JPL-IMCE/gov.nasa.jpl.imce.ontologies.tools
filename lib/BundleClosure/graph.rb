@@ -4,28 +4,12 @@ require 'rgl/topsort'
 require 'rgl/dot'
 require 'delegate'
 
-class RGL::DirectedAdjacencyGraph
-  def vertex_label(v)
-    v.to_a.join(',')
-  end
-end
-
 class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   def initialize(g = RGL::DirectedAdjacencyGraph.new)
     super(g)
   end
   
-  def to_sX
-    s = []
-    s << 'Graph {'
-    edges.each do |e|
-      s << "#{e.source.to_s} -> #{e.target.to_s}"
-    end
-    s << '}'
-    s.join("\n")
-  end
-
   def multi_parent_child
     count = Hash.new { |h, k| h[k] = 0 }
     edges.each do |edge|
@@ -62,7 +46,6 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
   end
 
   def treeify(count = 0, &block)
-    yield(:result, self, nil, count) if block_given?
     if child = multi_parent_child
       parents = parents_of(child)
       yield(:merging, child, parents, count) if block_given?

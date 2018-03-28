@@ -198,7 +198,7 @@ class CloseBundleApplication < OWLAPIApplication
       manager.applyChange(change)
     end
 
-    # Bundle closure is currently too expensive for embedding ontologies.
+    # Bundle closure is largely redundant for embedding ontologies.
     
     unless @options.embedding
       
@@ -213,7 +213,7 @@ class CloseBundleApplication < OWLAPIApplication
       ontologies.each do |o|
         n += 1
         log(DEBUG, "subclasses in #{o.getOntologyID.getOntologyIRI.toString} (#{n} of #{total})")
-        o.getClassesInSignature(false).each do |klass|
+        o.getClassesInSignature(true).each do |klass|
           unless klass.isAnonymous
             klass_iri = klass.asOWLClass.getIRI.toString
             klass_set[klass_iri] ||= Set.new([klass_iri])
@@ -225,6 +225,7 @@ class CloseBundleApplication < OWLAPIApplication
               sc.asOWLClass.getIRI.toString
             end.each do |sub_iri|
               sub_set = (klass_set[sub_iri] ||= Set.new([sub_iri]))
+              log(DEBUG, "#{sub_iri} subclass of #{klass_iri}")
               class_taxonomy.add_edge(klass_set[klass_iri], sub_set)
             end
           end
@@ -233,7 +234,6 @@ class CloseBundleApplication < OWLAPIApplication
 
       # Treeify class taxonomy.
 
-      require 'rgl/dot'
       log(Logger::INFO, 'treeify class taxonomy')
       tree = class_taxonomy.treeify do |msg, child, parents, done|
         case msg
@@ -242,8 +242,6 @@ class CloseBundleApplication < OWLAPIApplication
         when :merged
           log(Logger::INFO, "merged #{done} vertices")
           log(Logger::INFO, 'form transitive reduction')
-        when :result
-          child.write_to_graphic_file('svg', "#{@options.name}-#{'%04d' % done}")
         end
       end
 
@@ -253,8 +251,6 @@ class CloseBundleApplication < OWLAPIApplication
       thing = factory.getOWLClass('owl:Thing', format)
       rooted_tree = tree.root_at(Set.new([thing]))
 
-      rooted_tree.write_to_graphic_file('svg', @options.name)
-      
       # Create sibling groups.
       
       log(Logger::INFO, 'create sibling groups')
