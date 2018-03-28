@@ -209,13 +209,14 @@ class CloseBundleApplication < OWLAPIApplication
       abstracts = Set.new
       total = ontologies.length
       n = 0
+      klass_set = {}
       ontologies.each do |o|
         n += 1
         log(DEBUG, "subclasses in #{o.getOntologyID.getOntologyIRI.toString} (#{n} of #{total})")
         o.getClassesInSignature(false).each do |klass|
           unless klass.isAnonymous
             klass_iri = klass.asOWLClass.getIRI.toString
-            klass_set ||= Set.new([klass_iri])
+            klass_set[klass_iri] ||= Set.new([klass_iri])
             abstract_annotations = klass.getAnnotations(o, annotations['isAbstract'])
             abstracts << klass_iri if abstract_annotations.any? { |a| a.getValue.parseBoolean }
             klass.getSubClasses(imports_set).reject do |sc|
@@ -223,8 +224,8 @@ class CloseBundleApplication < OWLAPIApplication
             end.map do |sc|
               sc.asOWLClass.getIRI.toString
             end.each do |sub_iri|
-              sub_set ||= Set.new([sub_iri])
-              class_taxonomy.add_edge(klass_set, sub_set)
+              sub_set = (klass_set[sub_iri] ||= Set.new([sub_iri]))
+              class_taxonomy.add_edge(klass_set[klass_iri], sub_set)
             end
           end
         end
@@ -232,6 +233,7 @@ class CloseBundleApplication < OWLAPIApplication
 
       # Treeify class taxonomy.
 
+      require 'rgl/dot'
       log(Logger::INFO, 'treeify class taxonomy')
       tree = class_taxonomy.treeify do |msg, child, parents, done|
         case msg
@@ -240,6 +242,8 @@ class CloseBundleApplication < OWLAPIApplication
         when :merged
           log(Logger::INFO, "merged #{done} vertices")
           log(Logger::INFO, 'form transitive reduction')
+        when :result
+          child.write_to_graphic_file('svg', "#{@options.name}-#{'%04d' % done}")
         end
       end
 
@@ -248,6 +252,8 @@ class CloseBundleApplication < OWLAPIApplication
       log(Logger::INFO, 'root tree at OWL:Thing')
       thing = factory.getOWLClass('owl:Thing', format)
       rooted_tree = tree.root_at(Set.new([thing]))
+
+      rooted_tree.write_to_graphic_file('svg', @options.name)
       
       # Create sibling groups.
       

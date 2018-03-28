@@ -1,7 +1,14 @@
 require 'rgl/adjacency'
 require 'rgl/transitivity'
 require 'rgl/topsort'
+require 'rgl/dot'
 require 'delegate'
+
+class RGL::DirectedAdjacencyGraph
+  def vertex_label(v)
+    v.to_a.join(',')
+  end
+end
 
 class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
 
@@ -9,7 +16,7 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
     super(g)
   end
   
-  def to_s
+  def to_sX
     s = []
     s << 'Graph {'
     edges.each do |e|
@@ -34,7 +41,7 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
   end
 
   def merge_vertices(s)
-    new_vertex = s.inject(Set.new){ |m, o| m = m.union(o) }
+    new_vertex = s.inject(Set.new){ |m, o| m = m.union(o); m }
 
     g = RGL::DirectedAdjacencyGraph.new
     edges.each do |edge|
@@ -55,6 +62,7 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
   end
 
   def treeify(count = 0, &block)
+    yield(:result, self, nil, count) if block_given?
     if child = multi_parent_child
       parents = parents_of(child)
       yield(:merging, child, parents, count) if block_given?
