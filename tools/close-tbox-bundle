@@ -1,0 +1,299 @@
+#!/usr/bin/env ruby
+
+#--
+#
+# Copyright 2018 California Institute of Technology ("Caltech").
+# U.S. Government sponsorship acknowledged.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+#++
+
+# close-bundle loads an bundle ontology specifed by its IRI (and its imports) and produces on standard output
+# the corresponding bundle closure ontology. A bundle closure contains the smallest set of OWLDisjointClassesAxioms
+# such that any two classes that do not have an explicit intersection are disjoint.
+
+require 'OWLAPIApplication'
+require 'taxonomy'
+
+java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
+java_import 'org.coode.xml.XMLWriterPreferences'
+java_import 'org.semanticweb.owlapi.model.AddImport'
+java_import 'org.semanticweb.owlapi.model.AxiomType'
+java_import 'org.semanticweb.owlapi.model.ClassExpressionType'
+
+APPLICATION_NAME = 'close-tbox-bundle'
+
+ANNOTATIONS = %w{ importsBundle }
+
+class CloseBundleApplication < OWLAPIApplication
+  
+  def run
+    
+    option_parser.on('--name NAME', 'bundle name (required)') do |v|
+      @options.name = v
+    end
+    option_parser.on('--uri URI', 'bundle uri (required)') do |v|
+      @options.uri = v
+    end
+    @options.namespace = {}
+    option_parser.on('--namespace PREFIX=>NAMESPACE', "namespace prefix definition (2 required)") do |v|
+      p, n = v.split(/\s*=>\s*/)
+      if (p.empty? || n.empty?)
+        log(FATAL, "invalid namespace definition '#{v}'")
+      end
+      @options.namespace[p] = n
+    end
+    option_parser.on('--embedding', "embedding bundle") do
+      @options.embedding = true
+    end
+    @options.iri_file = nil
+    option_parser.on('--iri-file FILE', 'input IRI file [nil]') do |v|
+      @options.iri_file = v
+    end
+
+    super
+    
+    if @options.name.nil?
+      log(FATAL, 'no bundle name')
+      return 1
+    end
+    if @options.uri.nil?
+      log(FATAL, 'no bundle uri')
+      return 1
+    end
+    if argv.empty? && @options.iri_file.nil?
+      log(FATAL, 'no named ontologies')
+      return 1
+    end
+    unless @options.namespace.keys.length == 2
+      log(FATAL, '2 namespace definitions required')
+      return 1
+    end
+    
+    # Axiom storage.
+    
+    axioms = java.util.HashSet.new
+      
+    # Create ontology manager.
+    
+    log(Logger::INFO, 'create ontology manager')
+    manager = OWLManager.create_owl_ontology_manager
+    log(Logger::INFO, 'add location mappers')
+    location_mappers.each do |mapper|
+      manager.add_iri_mapper(mapper)
+    end
+
+    # Get IRI list to load.
+
+    if @options.iri_file
+      begin
+        iris = File.open(@options.iri_file).readlines.map { |l| l.strip }
+      rescue
+        log(FATAL, "error reading IRI file #{@options.iri_file}")
+        raise $!
+      end
+    else
+      iris = argv
+    end
+    
+    # Load ontologies.
+
+    log(Logger::INFO, 'load ontologies')
+    total = iris.length
+    n = 0
+    ontologies = iris.map do |arg|
+      n += 1
+      log(DEBUG, "load ontology #{arg} (#{n} of #{total})")
+      manager.loadOntology(IRI.create(arg))
+    end
+    format = manager.getOntologyFormat(ontologies.first)
+    imports_set = ontologies.inject(java.util.HashSet.new) do |m, o|
+      m += manager.getImportsClosure(o)
+      m
+    end
+
+    loaded = manager.getOntologies()
+    log(DEBUG, "loaded #{loaded.length} ontologies")
+    loaded.each do |l|
+      log(DEBUG, "loaded #{l.getOntologyID.getOntologyIRI.toString}")
+    end
+    
+    # Create data factory.
+
+    log(Logger::INFO, 'create data factory')
+    factory = OWLDataFactoryImpl.new
+    
+    # Set XML serialization preferences.
+
+    log(Logger::INFO, 'set XML serialization preferences')
+    xml_prefs = XMLWriterPreferences.get_instance
+    xml_prefs.set_use_namespace_entities(true)
+    
+    # Create annotation properties.
+
+    log(Logger::INFO, 'create annotation properties')
+    annotations = ANNOTATIONS.inject({}) do |h, ps|
+      p_iri = format.getIRI('annotation:' + ps)
+      p = factory.getOWLAnnotationProperty(p_iri)
+      h[ps] = p
+      h
+    end
+    
+    # Create ontology.
+    
+    log(Logger::INFO, "create ontology for #{@options.uri}")
+    ontology = manager.createOntology(IRI.create(@options.uri))
+    
+    # Add ontology imports.
+
+    log(Logger::INFO, 'add ontology imports')
+    iris.each do |import|
+      log(DEBUG, "add imports declaration for #{import}")
+      decl = factory.getOWLImportsDeclaration(IRI.create(import))
+      import = AddImport.new(ontology, decl)
+      manager.applyChange(import)
+    end
+    
+    # Add ontology annotations.
+
+    log(Logger::INFO, 'add ontology annotations')
+    { 'rdfs:comment' => "created by #{APPLICATION_NAME}", 'owl:versionInfo' => Time.new.to_s }.each do |ps, vs|
+      p_iri = format.getIRI(ps)
+      p = factory.getOWLAnnotationProperty(p_iri)
+      v = factory.getOWLLiteral(vs)
+      ann = factory.getOWLAnnotation(p, v)
+      change = AddOntologyAnnotation.new(ontology, ann)
+      manager.applyChange(change)
+    end
+
+    # Bundle closure is largely redundant for embedding ontologies.
+    
+    unless @options.embedding
+      
+      # Create class taxonomy.
+
+      log(Logger::INFO, 'create class taxonomy')
+      class_taxonomy = Taxonomy.new
+      total = ontologies.length
+      n = 0
+      klass_set = {}
+      ontologies.each do |o|
+        n += 1
+        log(DEBUG, "subclasses in #{o.getOntologyID.getOntologyIRI.toString} (#{n} of #{total})")
+        o.getClassesInSignature(true).each do |klass|
+          unless klass.isAnonymous
+            klass_iri = klass.asOWLClass.getIRI.toString
+            klass_set[klass_iri] ||= Union.new([klass_iri])
+            klass.getSubClasses(imports_set).reject do |sc|
+              sc.isAnonymous
+            end.map do |sc|
+              sc.asOWLClass.getIRI.toString
+            end.each do |sub_iri|
+              sub_set = (klass_set[sub_iri] ||= Union.new([sub_iri]))
+              log(DEBUG, "#{sub_iri} subclass of #{klass_iri}")
+              class_taxonomy.add_edge(klass_set[klass_iri], sub_set)
+            end
+          end
+        end
+      end
+
+      # Treeify class taxonomy.
+
+      log(Logger::INFO, 'treeify class taxonomy')
+      tree = class_taxonomy.treeify do |msg, child, parents, done|
+        case msg
+        when :merging
+          log(Logger::DEBUG, "merge #{parents.length} vertices, #{done} done")
+        when :merged
+          log(Logger::INFO, "merged #{done} vertices")
+          log(Logger::INFO, 'form transitive reduction')
+        end
+      end
+
+      # Root tree at OWL:Thing
+
+      log(Logger::INFO, 'root tree at OWL:Thing')
+      thing = factory.getOWLClass('owl:Thing', format)
+      rooted_tree = tree.root_at(Union.new([thing]))
+
+      # Create sibling groups.
+      
+      log(Logger::INFO, 'create sibling groups')
+      sibling_groups = rooted_tree.sibling_groups
+
+      # Create disjointness axioms.
+
+      log(Logger::INFO, 'create disjointness axioms')
+      sibling_groups.each do |sibs|
+        expression = class_expression(sibs, factory)
+        axioms << factory.getOWLDisjointClassesAxiom(expression)
+      end
+
+      # Add axioms to ontology.
+
+      axioms.each do |axiom|
+        log(DEBUG, "add axiom #{axiom}")
+        manager.add_axiom(ontology, axiom)
+      end
+
+    end
+    
+    # Construct format specification for RDF/XML.
+    
+    rdfxml_format = RDFXMLOntologyFormat.new
+    
+    # Copy prefixes from first bundled ontology.
+    
+    rdfxml_format.copyPrefixesFrom(format)
+    
+    # Add prefixes for bundle.
+    
+    @options.namespace.each do |p, n|
+      u = n + '#'
+      log(DEBUG, "set prefix #{p} -> #{u}")
+      rdfxml_format.setPrefix(p, u)
+    end
+    
+    # Write modified ontology in OWL/XML.
+  
+    manager.save_ontology(ontology, rdfxml_format, STDOUT.to_outputstream)
+    
+    # Exit.
+    
+    return 0
+          
+  end
+  
+  # Create an OWL Class or a union of Classes from a list.
+  
+  def class_expression(disjoint_set, factory)
+    result = java.util.HashSet.new
+    disjoint_set.each do |union_list|
+      case union_list.length
+      when 1
+        result << factory.getOWLClass(IRI.create(union_list.first.to_s))
+      else
+        union_hash = union_list.inject(java.util.HashSet.new) do |m, c|
+          m << factory.getOWLClass(IRI.create(c.to_s))
+          m
+        end
+        result << factory.getOWLObjectUnionOf(union_hash)
+      end
+    end
+    result
+  end
+  
+end
+
+exit(CloseBundleApplication.new(APPLICATION_NAME).start)

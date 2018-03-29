@@ -88,7 +88,7 @@ module OntologyBundles
   class OntologyBundle
     
     @@list = Set.new
-    @@clean = [ :digest_file, :artifact, :imports_artifact ]
+    @@clean = [ :digest_file, :artifact ]
     @@serialization_file = '.ontology-bundles-serialized'
     
     attr_reader :iri, :prefix, :file, :path, :groups, :stem, :type, :imports_iri,
@@ -516,7 +516,7 @@ module OntologyBundles
   class OntologyPart
     
     @@list = Set.new
-    @@clean = [:ontology_artifact, :owl_validation_file, :imports_artifact, :ontology_production_sentinel]
+    @@clean = [:ontology_artifact, :owl_validation_file, :ontology_production_sentinel]
     @@serialization_file = '.ontology-parts-serialized'
     @@prefix_file = PREFIX_FILE
       

@@ -34,3 +34,5 @@ local.*
 **/*.RData
 **/*.Rhistory
 R/unsats-analysis.nb.html
+**/#*#
+**/.#*
