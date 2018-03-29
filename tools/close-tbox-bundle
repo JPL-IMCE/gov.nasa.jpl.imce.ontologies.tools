@@ -214,7 +214,7 @@ class CloseBundleApplication < OWLAPIApplication
       tree = class_taxonomy.treeify do |msg, child, parents, done|
         case msg
         when :merging
-          log(Logger::DEBUG, "merge parents of #{child.inspect}: #{parents.inspect}, #{done} done")
+          log(Logger::DEBUG, "merge #{parents.length} vertices, #{done} done")
         when :merged
           log(Logger::INFO, "merged #{done} vertices")
           log(Logger::INFO, 'form transitive reduction')
