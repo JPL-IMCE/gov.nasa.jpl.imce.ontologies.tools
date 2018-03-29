@@ -24,7 +24,7 @@
 # such that any two classes that do not have an explicit intersection are disjoint.
 
 require 'OWLAPIApplication'
-require 'graph'
+require 'taxonomy'
 
 java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
 java_import 'org.coode.xml.XMLWriterPreferences'
@@ -184,7 +184,7 @@ class CloseBundleApplication < OWLAPIApplication
       # Create class taxonomy.
 
       log(Logger::INFO, 'create class taxonomy')
-      class_taxonomy = Graph.new
+      class_taxonomy = Taxonomy.new
       total = ontologies.length
       n = 0
       klass_set = {}

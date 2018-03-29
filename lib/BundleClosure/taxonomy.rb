@@ -3,14 +3,25 @@ require 'rgl/transitivity'
 require 'rgl/topsort'
 require 'delegate'
 
+# Each vertex of a Taxonomy is a set of class IRIs representing a union.
+
 class Union < Set
+
+  def to_s
+    '{' + to_a.join(',') + '}'
+  end
+  
 end
 
-class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
+# A Taxonomy is a directed graph of class unions.
+
+class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   def initialize(g = RGL::DirectedAdjacencyGraph.new)
     super(g)
   end
+  
+  # Find a vertex with multiple parents. Returns nil if none.
   
   def multi_parent_child
     count = Hash.new { |h, k| h[k] = 0 }
@@ -22,10 +33,15 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
     nil
   end
 
+  # Find parents of a vertex.
+  
   def parents_of(c)
     edges.select { |e| e.target == c }.map { |e| e.source }
   end
 
+  # Create a new Taxonomy with the specified vertices merged into a
+  # single vertex.
+  
   def merge_vertices(s)
     new_vertex = s.inject(Union.new){ |m, o| m = m.union(o); m }
 
@@ -44,9 +60,11 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
       end
     end
     
-    Graph.new(g)
+    Taxonomy.new(g)
   end
 
+  # Recursively merge vertices until the resulting Taxonomy is a tree.
+  
   def treeify(count = 0, &block)
     if child = multi_parent_child
       parents = parents_of(child)
@@ -55,10 +73,12 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
       merge_vertices(parents).treeify(count, &block)
     else
       yield(:merged, nil, nil, count) if block_given?
-      Graph.new(transitive_reduction)
+      Taxonomy.new(transitive_reduction)
     end
   end
 
+  # Create a new Taxonomy rooted at the specified element.
+  
   def root_at(root)
     g = RGL::DirectedAdjacencyGraph.new
     edges.each do |edge|
@@ -71,8 +91,10 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
     top_vertices.each do |v|
       g.add_edge(root, v)
     end
-    Graph.new(g)
+    Taxonomy.new(g)
   end
+
+  # Return an array of arrays representing groups of siblings.
   
   def sibling_groups
     vertices.map do |v|
@@ -80,6 +102,7 @@ class Graph < DelegateClass(RGL::DirectedAdjacencyGraph)
     end.select do |g|
       g.length > 1
     end
+
   end
   
 end
