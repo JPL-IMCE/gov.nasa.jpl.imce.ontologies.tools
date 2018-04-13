@@ -77,6 +77,43 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     end
   end
 
+  # Excise specific vertex.
+
+  def excise_vertex(v)
+    g = RGL::DirectedAdjacencyGraph.new
+    parents = Set.new
+    children = Set.new
+    edges.each do |edge|
+      if edge.source == v
+        children << edge.target
+      elsif edge.target == v
+        parents << edge.source
+      else
+        g.add_edge(edge.source, edge.target)
+      end
+    end
+    parents.each do |p|
+      children.each do |c|
+        g.add_edge(p, c)
+      end
+    end
+    
+    Taxonomy.new(g)
+  end
+
+  # Excise all vertices that include a match to a given pattern.
+
+  def excise(pattern, count = 0, &block)
+    if m = vertices.detect { |v| v.any? { |x| x =~ pattern } }
+      count += 1
+      yield :excising, m, count if block_given?
+      excise_vertex(m).excise(pattern, count, &block)
+    else
+      yield :excised, nil, count if block_given?
+      self
+    end
+  end
+  
   # Create a new Taxonomy rooted at the specified element.
   
   def root_at(root)

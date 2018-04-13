@@ -36,6 +36,8 @@ APPLICATION_NAME = 'close-tbox-bundle'
 
 ANNOTATIONS = %w{ importsBundle }
 
+BACKBONE = Regexp.new('http://imce.jpl.nasa.gov/backbone')
+
 class CloseBundleApplication < OWLAPIApplication
   
   def run
@@ -208,10 +210,23 @@ class CloseBundleApplication < OWLAPIApplication
         end
       end
 
+      # Excise backbone classes.
+
+      log(Logger::INFO, 'excise backbone classes')
+      excised_taxonomy = class_taxonomy.excise(BACKBONE) do |msg, klass, done|
+        case msg
+        when :excising
+          ks = '[' + klass.to_a.join(',') + ']'
+          log(Logger::DEBUG, "excise #{ks}, #{done} done")
+        when :excised
+          log(Logger::INFO, "excised #{done} backbone classes")
+        end
+      end
+      
       # Treeify class taxonomy.
 
-      log(Logger::INFO, 'treeify class taxonomy')
-      tree = class_taxonomy.treeify do |msg, child, parents, done|
+      log(Logger::INFO, 'treeify excised class taxonomy')
+      tree = excised_taxonomy.treeify do |msg, child, parents, done|
         case msg
         when :merging
           log(Logger::DEBUG, "merge #{parents.length} vertices, #{done} done")
