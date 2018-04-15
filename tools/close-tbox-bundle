@@ -61,6 +61,10 @@ class CloseBundleApplication < OWLAPIApplication
     option_parser.on('--iri-file FILE', 'input IRI file [nil]') do |v|
       @options.iri_file = v
     end
+    @options.excise_pattern = nil
+    option_parser.on('--excise PATTERN', 'excise classes with IRIs matching PATTERN') do |v|
+      @options.excise_pattern = Regexp.new(v)
+    end
 
     super
     
@@ -208,10 +212,27 @@ class CloseBundleApplication < OWLAPIApplication
         end
       end
 
+      # Excise backbone classes.
+
+      if pat = @options.excise_pattern
+        log(Logger::INFO, 'excise backbone classes')
+        stage2 = class_taxonomy.excise(pat) do |msg, klass, done|
+          case msg
+          when :excising
+            ks = '[' + klass.to_a.join(',') + ']'
+            log(Logger::DEBUG, "excise #{ks}, #{done} done")
+          when :excised
+            log(Logger::INFO, "excised #{done} backbone classes")
+          end
+        end
+      else
+        stage2 = class_taxonomy
+      end
+      
       # Treeify class taxonomy.
 
       log(Logger::INFO, 'treeify class taxonomy')
-      tree = class_taxonomy.treeify do |msg, child, parents, done|
+      tree = stage2.treeify do |msg, child, parents, done|
         case msg
         when :merging
           log(Logger::DEBUG, "merge #{parents.length} vertices, #{done} done")
