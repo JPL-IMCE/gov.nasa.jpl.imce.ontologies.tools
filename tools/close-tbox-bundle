@@ -25,6 +25,7 @@
 
 require 'OWLAPIApplication'
 require 'taxonomy'
+require 'rgl/dot'
 
 java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
 java_import 'org.coode.xml.XMLWriterPreferences'
@@ -188,7 +189,7 @@ class CloseBundleApplication < OWLAPIApplication
       # Create class taxonomy.
 
       log(Logger::INFO, 'create class taxonomy')
-      class_taxonomy = Taxonomy.new
+      taxonomy_stage0 = Taxonomy.new
       total = ontologies.length
       n = 0
       klass_set = {}
@@ -206,17 +207,36 @@ class CloseBundleApplication < OWLAPIApplication
             end.each do |sub_iri|
               sub_set = (klass_set[sub_iri] ||= Union.new([sub_iri]))
               log(DEBUG, "#{sub_iri} subclass of #{klass_iri}")
-              class_taxonomy.add_edge(klass_set[klass_iri], sub_set)
+              taxonomy_stage0.add_edge(klass_set[klass_iri], sub_set)
             end
           end
         end
       end
 
+      count = -1
+      taxonomy_stage0.write_to_graphic_file('svg', "tree-%04d" % (count += 1))
+      raise 'cyclic' unless taxonomy_stage0.acyclic?
+      
+      # Root tree at OWL:Thing
+
+      log(Logger::INFO, 'root tree at OWL:Thing')
+      thing = factory.getOWLClass('owl:Thing', format)
+      taxonomy_stage1 = taxonomy_stage0.root_at(Union.new([thing]))
+      taxonomy_stage1.write_to_graphic_file('svg', "tree-%04d" % (count += 1))
+      raise 'cyclic' unless taxonomy_stage1.acyclic?
+
+      # Perform transitive reduction.
+
+      log(Logger::INFO, 'form transitive reduction')
+      taxonomy_stage2 = taxonomy_stage1.transitive_reduction
+      taxonomy_stage2.write_to_graphic_file('svg', "tree-%04d" % (count += 1))
+      raise 'cyclic' unless taxonomy_stage2.acyclic?
+      
       # Excise backbone classes.
 
       if pat = @options.excise_pattern
         log(Logger::INFO, 'excise backbone classes')
-        stage2 = class_taxonomy.excise(pat) do |msg, klass, done|
+        taxonomy_stage3 = taxonomy_stage2.excise(pat) do |msg, klass, done|
           case msg
           when :excising
             ks = '[' + klass.to_a.join(',') + ']'
@@ -226,32 +246,32 @@ class CloseBundleApplication < OWLAPIApplication
           end
         end
       else
-        stage2 = class_taxonomy
+        taxonomy_stage3 = taxonomy_stage2
       end
-      
+      taxonomy_stage3.write_to_graphic_file('svg', "tree-%04d" % (count += 1))
+      raise 'cyclic' unless taxonomy_stage3.acyclic?
+
       # Treeify class taxonomy.
 
       log(Logger::INFO, 'treeify class taxonomy')
-      tree = stage2.treeify do |msg, child, parents, done|
+      tree = taxonomy_stage3.treeify do |msg, tree, child, parents, done|
         case msg
         when :merging
-          log(Logger::DEBUG, "merge #{parents.length} vertices, #{done} done")
-        when :merged
+          tree.write_to_graphic_file('svg', "tree-%04d" % (count += 1))
+          log(Logger::DEBUG, "graphic tree-%04d" % count)
+          log(Logger::DEBUG, "merge #{parents.length} parents of #{child.to_a.join(',') }")
+          parents.each do |p|
+            log(Logger::DEBUG, "parent: #{p.to_a.join(',') }")
+          end
+        when :mergedp
           log(Logger::INFO, "merged #{done} vertices")
-          log(Logger::INFO, 'form transitive reduction')
         end
       end
-
-      # Root tree at OWL:Thing
-
-      log(Logger::INFO, 'root tree at OWL:Thing')
-      thing = factory.getOWLClass('owl:Thing', format)
-      rooted_tree = tree.root_at(Union.new([thing]))
 
       # Create sibling groups.
       
       log(Logger::INFO, 'create sibling groups')
-      sibling_groups = rooted_tree.sibling_groups
+      sibling_groups = tree.sibling_groups
 
       # Create disjointness axioms.
 
