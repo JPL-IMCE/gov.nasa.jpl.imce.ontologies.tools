@@ -226,6 +226,7 @@ class CloseBundleApplication < OWLAPIApplication
 
       # Find all aspects (non-concrete classes).
 
+      log(Logger::INFO, 'find pure aspects')
       all_classes = {}
       BACKBONE_STEMS.each do |type, stems|
           pats = stems.map do |s|
