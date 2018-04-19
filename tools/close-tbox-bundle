@@ -32,9 +32,8 @@ java_import 'org.semanticweb.owlapi.model.AddImport'
 java_import 'org.semanticweb.owlapi.model.AxiomType'
 java_import 'org.semanticweb.owlapi.model.ClassExpressionType'
 
-APPLICATION_NAME = 'close-tbox-bundle'
-
 ANNOTATIONS = %w{ importsBundle }
+APPLICATION_NAME = 'close-tbox-bundle'
 
 class CloseBundleApplication < OWLAPIApplication
   
@@ -65,6 +64,17 @@ class CloseBundleApplication < OWLAPIApplication
     option_parser.on('--excise PATTERN', 'excise classes with IRIs matching PATTERN') do |v|
       @options.excise_pattern = Regexp.new(v)
     end
+    @options.backbone_iri = 'http://imce.jpl.nasa.gov/backbone/'
+    option_parser.on('--backbone_iri IRI', '') do |v|
+      @options.backbone_iri = v
+    end
+    @options.backbone_stems = {}
+    option_parser.on('--abstract "stem1 stem2 ... " ', '') do |v|
+      @options.backbone_stems[:abstract] = v.split(/\s+/)
+    end
+    option_parser.on('--concrete "stem1 stem2 ... " ', '') do |v|
+      @options.backbone_stems[:concrete] = v.split(/\s+/)
+    end
 
     super
     
@@ -83,6 +93,17 @@ class CloseBundleApplication < OWLAPIApplication
     unless @options.namespace.keys.length == 2
       log(FATAL, '2 namespace definitions required')
       return 1
+    end
+    if @options.backbone_stems[:abstract]
+      unless @options.backbone_stems[:concrete]
+        log(FATAL, '--abstract specified but not --concrete')
+        return 1
+      end
+    else
+      if @options.backbone_stems[:concrete]
+        log(FATAL, '--concrete specified but not --abstract')
+        return 1
+      end
     end
     
     # Axiom storage.
@@ -188,7 +209,7 @@ class CloseBundleApplication < OWLAPIApplication
       # Create class taxonomy.
 
       log(Logger::INFO, 'create class taxonomy')
-      class_taxonomy = Taxonomy.new
+      taxonomy_stage0 = Taxonomy.new
       total = ontologies.length
       n = 0
       klass_set = {}
@@ -206,17 +227,57 @@ class CloseBundleApplication < OWLAPIApplication
             end.each do |sub_iri|
               sub_set = (klass_set[sub_iri] ||= Union.new([sub_iri]))
               log(DEBUG, "#{sub_iri} subclass of #{klass_iri}")
-              class_taxonomy.add_edge(klass_set[klass_iri], sub_set)
+              taxonomy_stage0.add_edge(klass_set[klass_iri], sub_set)
             end
           end
         end
       end
 
+      # Root tree at OWL:Thing
+
+      log(Logger::INFO, 'root tree at OWL:Thing')
+      thing = factory.getOWLClass('owl:Thing', format)
+      taxonomy_stage1 = taxonomy_stage0.root_at(Union.new([thing]))
+
+      # Find all aspects (non-concrete classes).
+
+      unless @options.backbone_stems[:abstract].empty? && @options.backbone_stems[:concrete].empty?
+        log(Logger::INFO, 'find pure aspects')
+        all_classes = {}
+        @options.backbone_stems.each do |type, stems|
+            pats = stems.map do |s|
+            Regexp.new('\A' + @options.backbone_iri + '[^#]*#' + s + '\z')
+          end
+          bb_classes = taxonomy_stage1.vertices.select do |v|
+            pats.any? { |p| v.first =~ p }
+          end
+          all_classes[type] = bb_classes.flat_map do |c|
+            taxonomy_stage1.descendants_of(c)
+          end
+        end
+        aspects = all_classes[:abstract] - all_classes[:concrete]
+
+        # Excise aspects.
+
+        log(Logger::INFO, 'excise aspects')
+        taxonomy_stage2 = taxonomy_stage1.excise_vertices(aspects) do |msg, klass, done|
+          case msg
+          when :excising
+            ks = '[' + klass.to_a.join(',') + ']'
+            log(Logger::DEBUG, "excise #{ks}, #{done} done")
+          when :excised
+            log(Logger::INFO, "excised #{done} aspects")
+          end
+        end
+      else
+        taxonomy_stage2 = taxonomy_stage1
+      end
+        
       # Excise backbone classes.
 
       if pat = @options.excise_pattern
         log(Logger::INFO, 'excise backbone classes')
-        stage2 = class_taxonomy.excise(pat) do |msg, klass, done|
+        taxonomy_stage3 = taxonomy_stage2.excise_pattern(pat) do |msg, klass, done|
           case msg
           when :excising
             ks = '[' + klass.to_a.join(',') + ']'
@@ -226,32 +287,33 @@ class CloseBundleApplication < OWLAPIApplication
           end
         end
       else
-        stage2 = class_taxonomy
+        taxonomy_stage3 = taxonomy_stage2
       end
+
+      # Perform transitive reduction.
+
+      log(Logger::INFO, 'form transitive reduction')
+      taxonomy_stage4 = taxonomy_stage3.transitive_reduction
       
       # Treeify class taxonomy.
 
       log(Logger::INFO, 'treeify class taxonomy')
-      tree = stage2.treeify do |msg, child, parents, done|
+      tree = taxonomy_stage4.treeify do |msg, tree, child, parents, done|
         case msg
         when :merging
-          log(Logger::DEBUG, "merge #{parents.length} vertices, #{done} done")
-        when :merged
+          log(Logger::DEBUG, "merge #{parents.length} parents of #{child.to_a.join(',') }")
+          parents.each do |p|
+            log(Logger::DEBUG, "parent: #{p.to_a.join(',') }")
+          end
+        when :mergedp
           log(Logger::INFO, "merged #{done} vertices")
-          log(Logger::INFO, 'form transitive reduction')
         end
       end
-
-      # Root tree at OWL:Thing
-
-      log(Logger::INFO, 'root tree at OWL:Thing')
-      thing = factory.getOWLClass('owl:Thing', format)
-      rooted_tree = tree.root_at(Union.new([thing]))
 
       # Create sibling groups.
       
       log(Logger::INFO, 'create sibling groups')
-      sibling_groups = rooted_tree.sibling_groups
+      sibling_groups = tree.sibling_groups
 
       # Create disjointness axioms.
 
