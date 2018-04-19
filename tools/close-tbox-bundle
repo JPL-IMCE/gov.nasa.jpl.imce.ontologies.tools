@@ -35,13 +35,6 @@ java_import 'org.semanticweb.owlapi.model.ClassExpressionType'
 ANNOTATIONS = %w{ importsBundle }
 APPLICATION_NAME = 'close-tbox-bundle'
 
-BACKBONE_IRI = 'http://imce.jpl.nasa.gov/backbone'
-
-BACKBONE_STEMS = {
-  :abstract => %w{ Aspect },
-  :concrete => %w{ Concept Entity ReifiedObjectProperty ReifiedStructuredDataProperty StructuredDatatype }
-}
-
 class CloseBundleApplication < OWLAPIApplication
   
   def run
@@ -71,6 +64,17 @@ class CloseBundleApplication < OWLAPIApplication
     option_parser.on('--excise PATTERN', 'excise classes with IRIs matching PATTERN') do |v|
       @options.excise_pattern = Regexp.new(v)
     end
+    @options.backbone_iri = 'http://imce.jpl.nasa.gov/backbone/'
+    option_parser.on('--backbone_iri IRI', '') do |v|
+      @options.backbone_iri = v
+    end
+    @options.backbone_stems = {}
+    option_parser.on('--abstract "stem1 stem2 ... " ', '') do |v|
+      @options.backbone_stems[:abstract] = v.split(/\s+/)
+    end
+    option_parser.on('--concrete "stem1 stem2 ... " ', '') do |v|
+      @options.backbone_stems[:concrete] = v.split(/\s+/)
+    end
 
     super
     
@@ -89,6 +93,17 @@ class CloseBundleApplication < OWLAPIApplication
     unless @options.namespace.keys.length == 2
       log(FATAL, '2 namespace definitions required')
       return 1
+    end
+    if @options.backbone_stems[:abstract]
+      unless @options.backbone_stems[:concrete]
+        log(FATAL, '--abstract specified but not --concrete')
+        return 1
+      end
+    else
+      if @options.backbone_stems[:concrete]
+        log(FATAL, '--concrete specified but not --abstract')
+        return 1
+      end
     end
     
     # Axiom storage.
@@ -226,32 +241,36 @@ class CloseBundleApplication < OWLAPIApplication
 
       # Find all aspects (non-concrete classes).
 
-      log(Logger::INFO, 'find pure aspects')
-      all_classes = {}
-      BACKBONE_STEMS.each do |type, stems|
-          pats = stems.map do |s|
-          Regexp.new('\A' + BACKBONE_IRI + '[^#]*#' + s + '\z')
+      unless @options.backbone_stems[:abstract].empty? && @options.backbone_stems[:concrete].empty?
+        log(Logger::INFO, 'find pure aspects')
+        all_classes = {}
+        @options.backbone_stems.each do |type, stems|
+            pats = stems.map do |s|
+            Regexp.new('\A' + @options.backbone_iri + '[^#]*#' + s + '\z')
+          end
+          bb_classes = taxonomy_stage1.vertices.select do |v|
+            pats.any? { |p| v.first =~ p }
+          end
+          all_classes[type] = bb_classes.flat_map do |c|
+            taxonomy_stage1.descendants_of(c)
+          end
         end
-        bb_classes = taxonomy_stage1.vertices.select do |v|
-          pats.any? { |p| v.first =~ p }
-        end
-        all_classes[type] = bb_classes.flat_map do |c|
-          taxonomy_stage1.descendants_of(c)
-        end
-      end
-      aspects = all_classes[:abstract] - all_classes[:concrete]
+        aspects = all_classes[:abstract] - all_classes[:concrete]
 
-      # Excise aspects.
+        # Excise aspects.
 
-      log(Logger::INFO, 'excise aspects')
-      taxonomy_stage2 = taxonomy_stage1.excise_vertices(aspects) do |msg, klass, done|
-        case msg
-        when :excising
-          ks = '[' + klass.to_a.join(',') + ']'
-          log(Logger::DEBUG, "excise #{ks}, #{done} done")
-        when :excised
-          log(Logger::INFO, "excised #{done} aspects")
+        log(Logger::INFO, 'excise aspects')
+        taxonomy_stage2 = taxonomy_stage1.excise_vertices(aspects) do |msg, klass, done|
+          case msg
+          when :excising
+            ks = '[' + klass.to_a.join(',') + ']'
+            log(Logger::DEBUG, "excise #{ks}, #{done} done")
+          when :excised
+            log(Logger::INFO, "excised #{done} aspects")
+          end
         end
+      else
+        taxonomy_stage2 = taxonomy_stage1
       end
         
       # Excise backbone classes.
