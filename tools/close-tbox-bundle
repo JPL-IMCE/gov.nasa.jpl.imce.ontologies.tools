@@ -25,7 +25,6 @@
 
 require 'OWLAPIApplication'
 require 'taxonomy'
-require 'rgl/dot'
 
 java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
 java_import 'org.coode.xml.XMLWriterPreferences'
@@ -33,9 +32,15 @@ java_import 'org.semanticweb.owlapi.model.AddImport'
 java_import 'org.semanticweb.owlapi.model.AxiomType'
 java_import 'org.semanticweb.owlapi.model.ClassExpressionType'
 
+ANNOTATIONS = %w{ importsBundle }
 APPLICATION_NAME = 'close-tbox-bundle'
 
-ANNOTATIONS = %w{ importsBundle }
+BACKBONE_IRI = 'http://imce.jpl.nasa.gov/backbone'
+
+BACKBONE_STEMS = {
+  :abstract => %w{ Aspect },
+  :concrete => %w{ Concept Entity ReifiedObjectProperty ReifiedStructuredDataProperty StructuredDatatype }
+}
 
 class CloseBundleApplication < OWLAPIApplication
   
@@ -213,30 +218,46 @@ class CloseBundleApplication < OWLAPIApplication
         end
       end
 
-      count = -1
-      taxonomy_stage0.write_to_graphic_file('svg', "tree-%04d" % (count += 1))
-      raise 'cyclic' unless taxonomy_stage0.acyclic?
-      
       # Root tree at OWL:Thing
 
       log(Logger::INFO, 'root tree at OWL:Thing')
       thing = factory.getOWLClass('owl:Thing', format)
       taxonomy_stage1 = taxonomy_stage0.root_at(Union.new([thing]))
-      taxonomy_stage1.write_to_graphic_file('svg', "tree-%04d" % (count += 1))
-      raise 'cyclic' unless taxonomy_stage1.acyclic?
 
-      # Perform transitive reduction.
+      # Find all aspects (non-concrete classes).
 
-      log(Logger::INFO, 'form transitive reduction')
-      taxonomy_stage2 = taxonomy_stage1.transitive_reduction
-      taxonomy_stage2.write_to_graphic_file('svg', "tree-%04d" % (count += 1))
-      raise 'cyclic' unless taxonomy_stage2.acyclic?
-      
+      all_classes = {}
+      BACKBONE_STEMS.each do |type, stems|
+          pats = stems.map do |s|
+          Regexp.new('\A' + BACKBONE_IRI + '[^#]*#' + s + '\z')
+        end
+        bb_classes = taxonomy_stage1.vertices.select do |v|
+          pats.any? { |p| v.first =~ p }
+        end
+        all_classes[type] = bb_classes.flat_map do |c|
+          taxonomy_stage1.descendants_of(c)
+        end
+      end
+      aspects = all_classes[:abstract] - all_classes[:concrete]
+
+      # Excise aspects.
+
+      log(Logger::INFO, 'excise aspects')
+      taxonomy_stage2 = taxonomy_stage1.excise_vertices(aspects) do |msg, klass, done|
+        case msg
+        when :excising
+          ks = '[' + klass.to_a.join(',') + ']'
+          log(Logger::DEBUG, "excise #{ks}, #{done} done")
+        when :excised
+          log(Logger::INFO, "excised #{done} aspects")
+        end
+      end
+        
       # Excise backbone classes.
 
       if pat = @options.excise_pattern
         log(Logger::INFO, 'excise backbone classes')
-        taxonomy_stage3 = taxonomy_stage2.excise(pat) do |msg, klass, done|
+        taxonomy_stage3 = taxonomy_stage2.excise_pattern(pat) do |msg, klass, done|
           case msg
           when :excising
             ks = '[' + klass.to_a.join(',') + ']'
@@ -248,17 +269,18 @@ class CloseBundleApplication < OWLAPIApplication
       else
         taxonomy_stage3 = taxonomy_stage2
       end
-      taxonomy_stage3.write_to_graphic_file('svg', "tree-%04d" % (count += 1))
-      raise 'cyclic' unless taxonomy_stage3.acyclic?
 
+      # Perform transitive reduction.
+
+      log(Logger::INFO, 'form transitive reduction')
+      taxonomy_stage4 = taxonomy_stage3.transitive_reduction
+      
       # Treeify class taxonomy.
 
       log(Logger::INFO, 'treeify class taxonomy')
-      tree = taxonomy_stage3.treeify do |msg, tree, child, parents, done|
+      tree = taxonomy_stage4.treeify do |msg, tree, child, parents, done|
         case msg
         when :merging
-          tree.write_to_graphic_file('svg', "tree-%04d" % (count += 1))
-          log(Logger::DEBUG, "graphic tree-%04d" % count)
           log(Logger::DEBUG, "merge #{parents.length} parents of #{child.to_a.join(',') }")
           parents.each do |p|
             log(Logger::DEBUG, "parent: #{p.to_a.join(',') }")

@@ -36,7 +36,6 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   # Find descendants of a vertex.
   
   def descendants_of(v, key = Random.rand(1000))
-    warn "descendants_of([#{v.to_a.join(',')}], #{key})"
     if (c = children_of(v)).empty?
       []
     else
@@ -58,7 +57,6 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   # Find ancestors of a vertex.
   
   def ancestors_of(v, key = Random.rand(1000))
-    warn "ancestors_of([#{v.to_a.join(',')}], #{key})"
     if (p = parents_of(v)).empty?
       []
     else
@@ -82,7 +80,6 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   # single vertex.
   
   def merge_vertices(s)
-warn "merge: [#{s.map { |p| p.to_s }.join(',')}]"
     new_vertex = s.inject(Union.new){ |m, o| m = m.union(o); m }
 
     g = RGL::DirectedAdjacencyGraph.new
@@ -101,12 +98,8 @@ warn "merge: [#{s.map { |p| p.to_s }.join(',')}]"
         g.add_edge(edge.source, edge.target)
       end
     end
-warn "pl before: [#{pl.map { |p| p.to_s }.join(',')}]"
     pl -= pl.flat_map { |p| ancestors_of(p) }
-warn "pl after: [#{pl.map { |p| p.to_s }.join(',')}]"
-warn "cl before: [#{cl.map { |p| p.to_s }.join(',')}]"
     cl -= cl.flat_map { |c| descendants_of(c) }
-warn "cl after: [#{cl.map { |p| p.to_s }.join(',')}]"
 
     pl.each do |p|
       g.add_edge(p, new_vertex)
@@ -157,13 +150,27 @@ warn "cl after: [#{cl.map { |p| p.to_s }.join(',')}]"
     Taxonomy.new(g)
   end
 
+  # Excise vertices.
+
+  def excise_vertices(s, count = 0, &block)
+    unless s.empty?
+      count += 1
+      first, rest = s.first, s.drop(1)
+      yield :excising, first, count if block_given?
+      excise_vertex(first).excise_vertices(rest, count, &block)
+    else
+      yield :excised, nil, count if block_given?
+      self
+    end
+  end
+  
   # Excise all vertices that include a match to a given pattern.
 
-  def excise(pattern, count = 0, &block)
+  def excise_pattern(pattern, count = 0, &block)
     if m = vertices.detect { |v| v.any? { |x| x =~ pattern } }
       count += 1
       yield :excising, m, count if block_given?
-      excise_vertex(m).excise(pattern, count, &block)
+      excise_vertex(m).excise_pattern(pattern, count, &block)
     else
       yield :excised, nil, count if block_given?
       self
@@ -180,7 +187,6 @@ warn "cl after: [#{cl.map { |p| p.to_s }.join(',')}]"
     top_vertices = g.edges.inject(Set.new(g.vertices)) do |set, edge|
       set.delete(edge.target)
     end
-    warn "top_vertices #{top_vertices.map { |v| v.to_a.join(',') }}"
     top_vertices.each do |v|
       g.add_edge(root, v)
     end
