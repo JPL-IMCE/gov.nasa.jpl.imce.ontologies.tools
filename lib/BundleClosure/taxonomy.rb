@@ -24,7 +24,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   # Find a vertex with multiple parents. Returns nil if none.
   
   def multi_parent_child
-    vertices.detect { |v| direct_parents_of(v).length > 1 }
+    each_vertex.detect { |v| direct_parents_of(v).length > 1 }
   end
 
   # Find children of a vertex.
@@ -43,6 +43,8 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     end
   end
 
+  # Find direct children of a vertex.
+  
   def direct_children_of(v)
     c = children_of(c)
     c - c.flat_map { |x| descendants_of(x) }
@@ -64,6 +66,8 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     end
   end
 
+  # Find direct parents of a vertex.
+  
   def direct_parents_of(v)
     p = parents_of(v)
     p - p.flat_map { |x| ancestors_of(x) }
@@ -83,32 +87,33 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     new_vertex = s.inject(Union.new){ |m, o| m = m.union(o); m }
 
     g = RGL::DirectedAdjacencyGraph.new
-    pl = Set.new
-    cl = Set.new
+    parent_list = Set.new
+    child_list = Set.new
+    
     edges.each do |edge|
       source_in_s = s.include?(edge.source)
       target_in_s = s.include?(edge.target)
       if source_in_s && target_in_s
         # do nothing
       elsif source_in_s
-        cl << edge.target
+        child_list << edge.target
       elsif target_in_s
-        pl << edge.source
+        parent_list << edge.source
       else
         g.add_edge(edge.source, edge.target)
       end
     end
-    pl -= pl.flat_map { |p| ancestors_of(p) }
-    cl -= cl.flat_map { |c| descendants_of(c) }
+    
+    direct_parents = parent_list - parent_list.flat_map { |p| ancestors_of(p) }
+    direct_children = child_list - child_list.flat_map { |c| descendants_of(c) }
 
-    pl.each do |p|
+    direct_parents.each do |p|
       g.add_edge(p, new_vertex)
     end
-    cl.each do |c|
+    direct_children.each do |c|
       g.add_edge(new_vertex, c)
     end
 
-    raise "cyclic" unless acyclic?
     Taxonomy.new(g)
   end
 
@@ -150,7 +155,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     Taxonomy.new(g)
   end
 
-  # Excise vertices.
+  # Excise a set of vertices.
 
   def excise_vertices(s, count = 0, &block)
     unless s.empty?
