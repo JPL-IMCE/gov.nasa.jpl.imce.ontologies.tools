@@ -232,12 +232,14 @@ class CloseBundleApplication < OWLAPIApplication
           end
         end
       end
+      raise 'class taxonomy is cyclic' unless taxonomy_stage0.acyclic?
 
       # Root tree at OWL:Thing
 
       log(Logger::INFO, 'root tree at OWL:Thing')
       thing = factory.getOWLClass('owl:Thing', format)
       taxonomy_stage1 = taxonomy_stage0.root_at(Union.new([thing]))
+      raise 'rooted class taxonomy is cyclic' unless taxonomy_stage1.acyclic?
 
       # Find all aspects (non-concrete classes).
 
@@ -272,6 +274,7 @@ class CloseBundleApplication < OWLAPIApplication
       else
         taxonomy_stage2 = taxonomy_stage1
       end
+      raise 'concrete class taxonomy is cyclic' unless taxonomy_stage2.acyclic?
         
       # Excise backbone classes.
 
@@ -289,11 +292,13 @@ class CloseBundleApplication < OWLAPIApplication
       else
         taxonomy_stage3 = taxonomy_stage2
       end
+      raise 'backbone-free class taxonomy is cyclic' unless taxonomy_stage3.acyclic?
 
       # Perform transitive reduction.
 
       log(Logger::INFO, 'form transitive reduction')
       taxonomy_stage4 = taxonomy_stage3.transitive_reduction
+      raise 'reduced class taxonomy is cyclic' unless taxonomy_stage4.acyclic?
       
       # Treeify class taxonomy.
 
@@ -309,6 +314,7 @@ class CloseBundleApplication < OWLAPIApplication
           log(Logger::INFO, "merged #{done} vertices")
         end
       end
+      raise 'merged tree is cyclic' unless tree.acyclic?
 
       # Create sibling groups.
       
