@@ -243,7 +243,7 @@ class CloseBundleApplication < OWLAPIApplication
 
       # Find all aspects (non-concrete classes).
 
-      unless @options.backbone_stems[:abstract].empty? && @options.backbone_stems[:concrete].empty?
+      unless @options.backbone_stems[:abstract].empty? || @options.backbone_stems[:concrete].empty?
         log(Logger::INFO, 'find pure aspects')
         all_classes = {}
         @options.backbone_stems.each do |type, stems|
