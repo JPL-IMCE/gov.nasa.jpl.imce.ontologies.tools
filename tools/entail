@@ -93,6 +93,14 @@ class EntailApplication < PelletApplication
     option_parser.on('--vacuous', 'create vacuous entailments (for testing)') do
       @options.vacuous = true
     end
+    @options.backbone_iri = 'http://imce.jpl.nasa.gov/backbone/'
+    option_parser.on('--backbone_iri IRI', '') do |v|
+      @options.backbone_iri = v
+    end
+    @options.remove_backbone = false
+    option_parser.on('--remove-backbone', '') do
+      @options.remove_backbone = true
+    end
     
     super
     
@@ -152,6 +160,10 @@ class EntailApplication < PelletApplication
 
       entailments = remove_trivial(entailments, @options.remove_unsats)
 
+      # Remove backbone entailments.
+
+      entailments = remove_backbone(entailments, Regexp.new(@options.backbone_iri)) if @options.remove_backbone
+      
       # Minimize entailments.
 
       log(INFO, 'minimize entailments')
@@ -235,6 +247,26 @@ class EntailApplication < PelletApplication
     end
     entailments.remove(trivial)
     logger.log(Logger::INFO, "removed #{trivial.size} trivial axioms")
+    entailments
+  end
+
+  # Remove entailments involving backbone items.
+
+  def remove_backbone(entailments, pattern)
+    iterator = entailments.listStatements
+    backbone = []
+    while iterator.hasNext
+      statement = iterator.next
+      subject = statement.getSubject
+      predicate = statement.getPredicate
+      object = statement.getObject
+      object_iri = object.getURI
+      if (predicate == RDFS.subClassOf || predicate == RDFS.subPropertyOf) && object_iri =~ pattern
+        backbone << statement
+      end
+    end
+    entailments.remove(backbone)
+    logger.log(Logger::INFO, "removed #{backbone.size} backbone axioms")
     entailments
   end
   
