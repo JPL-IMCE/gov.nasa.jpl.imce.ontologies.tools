@@ -258,6 +258,7 @@ class CloseBundleApplication < OWLAPIApplication
           end.to_set
         end
         aspects = all_classes[:abstract] - all_classes[:concrete]
+        log(INFO, "found #{aspects.length} pure aspects")
 
         # Excise aspects.
 
