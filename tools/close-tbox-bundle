@@ -112,9 +112,9 @@ class CloseBundleApplication < OWLAPIApplication
       
     # Create ontology manager.
     
-    log(Logger::INFO, 'create ontology manager')
+    log(INFO, 'create ontology manager')
     manager = OWLManager.create_owl_ontology_manager
-    log(Logger::INFO, 'add location mappers')
+    log(INFO, 'add location mappers')
     location_mappers.each do |mapper|
       manager.add_iri_mapper(mapper)
     end
@@ -134,7 +134,7 @@ class CloseBundleApplication < OWLAPIApplication
     
     # Load ontologies.
 
-    log(Logger::INFO, 'load ontologies')
+    log(INFO, 'load ontologies')
     total = iris.length
     n = 0
     ontologies = iris.map do |arg|
@@ -156,18 +156,18 @@ class CloseBundleApplication < OWLAPIApplication
     
     # Create data factory.
 
-    log(Logger::INFO, 'create data factory')
+    log(INFO, 'create data factory')
     factory = OWLDataFactoryImpl.new
     
     # Set XML serialization preferences.
 
-    log(Logger::INFO, 'set XML serialization preferences')
+    log(INFO, 'set XML serialization preferences')
     xml_prefs = XMLWriterPreferences.get_instance
     xml_prefs.set_use_namespace_entities(true)
     
     # Create annotation properties.
 
-    log(Logger::INFO, 'create annotation properties')
+    log(INFO, 'create annotation properties')
     annotations = ANNOTATIONS.inject({}) do |h, ps|
       p_iri = format.getIRI('annotation:' + ps)
       p = factory.getOWLAnnotationProperty(p_iri)
@@ -177,12 +177,12 @@ class CloseBundleApplication < OWLAPIApplication
     
     # Create ontology.
     
-    log(Logger::INFO, "create ontology for #{@options.uri}")
+    log(INFO, "create ontology for #{@options.uri}")
     ontology = manager.createOntology(IRI.create(@options.uri))
     
     # Add ontology imports.
 
-    log(Logger::INFO, 'add ontology imports')
+    log(INFO, 'add ontology imports')
     iris.each do |import|
       log(DEBUG, "add imports declaration for #{import}")
       decl = factory.getOWLImportsDeclaration(IRI.create(import))
@@ -192,7 +192,7 @@ class CloseBundleApplication < OWLAPIApplication
     
     # Add ontology annotations.
 
-    log(Logger::INFO, 'add ontology annotations')
+    log(INFO, 'add ontology annotations')
     { 'rdfs:comment' => "created by #{APPLICATION_NAME}", 'owl:versionInfo' => Time.new.to_s }.each do |ps, vs|
       p_iri = format.getIRI(ps)
       p = factory.getOWLAnnotationProperty(p_iri)
@@ -208,7 +208,7 @@ class CloseBundleApplication < OWLAPIApplication
       
       # Create class taxonomy.
 
-      log(Logger::INFO, 'create class taxonomy')
+      log(INFO, 'create class taxonomy')
       taxonomy_stage0 = Taxonomy.new
       total = ontologies.length
       n = 0
@@ -236,7 +236,7 @@ class CloseBundleApplication < OWLAPIApplication
 
       # Root tree at OWL:Thing
 
-      log(Logger::INFO, 'root tree at OWL:Thing')
+      log(INFO, 'root tree at OWL:Thing')
       thing = factory.getOWLClass('owl:Thing', format)
       taxonomy_stage1 = taxonomy_stage0.root_at(Union.new([thing]))
       raise 'rooted class taxonomy is cyclic' unless taxonomy_stage1.acyclic?
@@ -244,7 +244,7 @@ class CloseBundleApplication < OWLAPIApplication
       # Find all aspects (non-concrete classes).
 
       unless @options.backbone_stems[:abstract].empty? || @options.backbone_stems[:concrete].empty?
-        log(Logger::INFO, 'find pure aspects')
+        log(INFO, 'find pure aspects')
         all_classes = {}
         @options.backbone_stems.each do |type, stems|
             pats = stems.map do |s|
@@ -252,23 +252,23 @@ class CloseBundleApplication < OWLAPIApplication
           end
           bb_classes = taxonomy_stage1.vertices.select do |v|
             pats.any? { |p| v.first =~ p }
-          end
+          end.uniq
           all_classes[type] = bb_classes.flat_map do |c|
             taxonomy_stage1.descendants_of(c)
-          end
+          end.to_set
         end
         aspects = all_classes[:abstract] - all_classes[:concrete]
 
         # Excise aspects.
 
-        log(Logger::INFO, 'excise aspects')
+        log(INFO, 'excise aspects')
         taxonomy_stage2 = taxonomy_stage1.excise_vertices(aspects) do |msg, klass, done|
           case msg
           when :excising
             ks = '[' + klass.to_a.join(',') + ']'
-            log(Logger::DEBUG, "excise #{ks}, #{done} done")
+            log(DEBUG, "excise #{ks}, #{done} done")
           when :excised
-            log(Logger::INFO, "excised #{done} aspects")
+            log(INFO, "excised #{done} aspects")
           end
         end
       else
@@ -279,14 +279,14 @@ class CloseBundleApplication < OWLAPIApplication
       # Excise backbone classes.
 
       if pat = @options.excise_pattern
-        log(Logger::INFO, 'excise backbone classes')
+        log(INFO, 'excise backbone classes')
         taxonomy_stage3 = taxonomy_stage2.excise_pattern(pat) do |msg, klass, done|
           case msg
           when :excising
             ks = '[' + klass.to_a.join(',') + ']'
-            log(Logger::DEBUG, "excise #{ks}, #{done} done")
+            log(DEBUG, "excise #{ks}, #{done} done")
           when :excised
-            log(Logger::INFO, "excised #{done} backbone classes")
+            log(INFO, "excised #{done} backbone classes")
           end
         end
       else
@@ -296,34 +296,34 @@ class CloseBundleApplication < OWLAPIApplication
 
       # Perform transitive reduction.
 
-      log(Logger::INFO, 'form transitive reduction')
+      log(INFO, 'form transitive reduction')
       taxonomy_stage4 = taxonomy_stage3.transitive_reduction
       raise 'reduced class taxonomy is cyclic' unless taxonomy_stage4.acyclic?
       
       # Treeify class taxonomy.
 
-      log(Logger::INFO, 'treeify class taxonomy')
+      log(INFO, 'treeify class taxonomy')
       tree = taxonomy_stage4.treeify do |msg, tree, child, parents, done|
         case msg
         when :merging
-          log(Logger::DEBUG, "merge #{parents.length} parents of #{child.to_a.join(',') }")
+          log(DEBUG, "merge #{parents.length} parents of #{child.to_a.join(',')}, #{done} done")
           parents.each do |p|
-            log(Logger::DEBUG, "parent: #{p.to_a.join(',') }")
+            log(DEBUG, "parent: #{p.to_a.join(',') }")
           end
-        when :mergedp
-          log(Logger::INFO, "merged #{done} vertices")
+        when :merged
+          log(INFO, "merged #{done} vertices")
         end
       end
       raise 'merged tree is cyclic' unless tree.acyclic?
 
       # Create sibling groups.
       
-      log(Logger::INFO, 'create sibling groups')
+      log(INFO, 'create sibling groups')
       sibling_groups = tree.sibling_groups
 
       # Create disjointness axioms.
 
-      log(Logger::INFO, 'create disjointness axioms')
+      log(INFO, 'create disjointness axioms')
       sibling_groups.each do |sibs|
         expression = class_expression(sibs, factory)
         axioms << factory.getOWLDisjointClassesAxiom(expression)
@@ -335,6 +335,7 @@ class CloseBundleApplication < OWLAPIApplication
         log(DEBUG, "add axiom #{axiom}")
         manager.add_axiom(ontology, axiom)
       end
+      log(INFO, "added #{axioms.length} disjointness axioms")
 
     end
     
