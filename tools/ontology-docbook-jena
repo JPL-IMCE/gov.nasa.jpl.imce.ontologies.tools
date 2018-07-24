@@ -1748,7 +1748,7 @@ class OntologyDocbookApplication < JenaApplication
       where {
         ?prop rdf:type ?ptype .
         ?prop owl:inverseOf ?inverse .
-        filter (?ptype = owl:DatatypeProperty || ?ptype = owl:ObjectProperty)
+        filter (!isBlank(?inverse) && (?ptype = owl:DatatypeProperty || ?ptype = owl:ObjectProperty))
       }
     }
     run_select_query(query) do |resp|

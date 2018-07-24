@@ -31,7 +31,7 @@ class JenaApplication < Application
     'rdf' => 'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
     'rdfs' => 'http://www.w3.org/2000/01/rdf-schema#',
     'owl' => 'http://www.w3.org/2002/07/owl#',
-    'xsd' => 'https://www.w3.org/2001/XMLSchema#',
+    'xsd' => 'http://www.w3.org/2001/XMLSchema#',
     'xml' => 'http://www.w3.org/XML/1998/namespace',
     'dc' => 'http://purl.org/dc/elements/1.1/',
     'swrl' => 'http://www.w3.org/2003/11/swrl#',
@@ -115,11 +115,15 @@ class JenaApplication < Application
     log(INFO, 'get namespace definitions')
     if @options.prefix_file
       namespace_by_prefix = YAML.load(File.open(@options.prefix_file))
+      namespace_by_prefix.merge!(BUILTIN_NAMESPACES)
     else
+      BUILTIN_NAMESPACES.each do |p, n|
+        @data_service.get_model.set_ns_prefix(p, n)
+      end
       namespace_by_prefix = @data_service.get_model.get_ns_prefix_map.to_hash
     end
     log(DEBUG, "namespace_by_prefix: #{namespace_by_prefix.inspect}")
-    namespace_by_prefix.merge(BUILTIN_NAMESPACES)
+    namespace_by_prefix
   end
 
   # Construct SPARQL prefixes.
