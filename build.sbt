@@ -26,6 +26,10 @@ lazy val root = Project("gov-nasa-jpl-imce-ontologies-tools", file("."))
         "artifact.kind" -> "omf.ontologies")
     },
 
+    libraryDependencies += "org.scala-lang.modules" %% "scala-java8-compat" % "0.9.0",
+
+    unmanagedJars in Compile := ((baseDirectory.value / "lib") **  "*.jar").classpath,
+
     // disable using the Scala version in output paths and artifacts
     crossPaths := false,
 
