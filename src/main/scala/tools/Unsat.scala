@@ -3,13 +3,13 @@ import com.clarkparsia.pellet.owlapiv3.{PelletReasoner, PelletReasonerFactory}
 import com.clarkparsia.owlapi.explanation.GlassBoxExplanation
 import org.semanticweb.owlapi.io.OWLFunctionalSyntaxOntologyFormat
 import org.semanticweb.owlapi.io.StringDocumentTarget
-import org.semanticweb.owlapi.model.{IRI, OWLOntology}
+import org.semanticweb.owlapi.model.{IRI, OWLClass, OWLOntology}
 import org.semanticweb.owlapi.vocab.PrefixOWLOntologyFormat
 import uk.ac.manchester.cs.owl.owlapi.OWLOntologyIRIMapperImpl
 
 import scala.io.Source
 import scala.compat.java8.FunctionConverters._
-import scala.collection.JavaConversions.{asScalaSet, _}
+import scala.collection.JavaConversions.{asScalaSet, iterableAsScalaIterable, _}
 
 /**
   * Usage: <modules file> <resource dir> <iri prefix file>
@@ -48,18 +48,18 @@ object Unsat {
         None
     }.to[Set]
 
-    val iriMap = Source.fromFile(modulesFile).getLines().map { moduleIRI =>
+    val iriMap = Source.fromFile(modulesFile).getLines().flatMap { moduleIRI =>
       val moduleRelPath = moduleIRI.stripPrefix("http://") + ".owl"
       val moduleFile = resourcesDir.toPath.resolve(moduleRelPath).toFile
-      if (!moduleFile.exists() || !moduleFile.canRead)
-        throw new IllegalArgumentException(s"Cannot read module file: $moduleFile")
-      val ontologyIRI = IRI.create(moduleIRI)
-      val documentIRI = IRI.create(moduleFile)
-//      System.out.println(s"# Ontology IRI: $ontologyIRI")
-//      System.out.println(s"# Document IRI: $documentIRI")
-      mapper.addMapping(ontologyIRI, documentIRI)
-
-      ontologyIRI -> documentIRI
+      if (!moduleFile.exists() || !moduleFile.canRead) {
+        System.out.println(s"Cannot read module file: $moduleFile")
+        None
+      } else {
+        val ontologyIRI = IRI.create(moduleIRI)
+        val documentIRI = IRI.create(moduleFile)
+        mapper.addMapping(ontologyIRI, documentIRI)
+        Some(ontologyIRI -> documentIRI)
+      }
     }.toMap
 
     System.out.println(s"Read ${iriMap.size} mappings.")
@@ -102,14 +102,15 @@ object Unsat {
     }
 
     val df = om.getOWLDataFactory
-    val owl_thing = df.getOWLThing
+    val owl_nothing = df.getOWLNothing
+
     val reasoner: PelletReasoner = PelletReasonerFactory.getInstance().createReasoner(collection_ontology)
     val gb_explanation = new GlassBoxExplanation(reasoner)
 
     val classes = collection_ontology.getClassesInSignature.to[Set]
     System.out.println(s"Collection ontology has: ${classes.size} classes")
 
-    val subset = classes.filter { cls =>
+    val subset: Set[OWLClass] = classes.filter { cls =>
       val iri = cls.getIRI.toString
       iriPrefixes.exists(iri.startsWith)
     }
@@ -117,11 +118,12 @@ object Unsat {
 
     reasoner.refresh()
 
-    subset.foreach { cls =>
+    val unsat: Set[OWLClass] = subset.flatMap { cls =>
       System.out.println(s"Satisfiability: ${cls.getIRI}")
-      if (reasoner.isSatisfiable(cls))
+      if (reasoner.isSatisfiable(cls)) {
         System.out.println(s" => SAT!")
-      else {
+        None
+      } else {
         System.out.println(s" => UNSAT!")
         val axioms = gb_explanation.getExplanation(cls)
         val ont = om.createOntology(axioms)
@@ -130,7 +132,23 @@ object Unsat {
         System.out.println("========================================")
         System.out.println(target.toString)
         System.out.println("========================================")
+        Some(cls)
       }
     }
+
+    if (unsat.isEmpty) {
+      System.out.println(s"No unsatisfiable classes found in the ${subset.size} subset of all ${classes.size} classes!")
+      val result = (reasoner.getUnsatisfiableClasses.to[Set] - owl_nothing).to[Vector].sortBy(_.getIRI.toString)
+      if (result.isEmpty) {
+        System.out.println(s"*** No unsatisfiable classes among all of all ${classes.size} classes!")
+      } else {
+        System.out.println(s"*** ${result.size} unsatisfiable classes among all of all ${classes.size} classes!")
+        result.foreach(u => System.out.println(u.getIRI.toString))
+      }
+    } else {
+      System.out.println(s"Found ${unsat.size} unsatisfiable classes in the ${subset.size} subset of all ${classes.size} classes!")
+
+    }
+
   }
 }
