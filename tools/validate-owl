@@ -173,21 +173,22 @@ class ValidateOwlApplication < PelletApplication
         # Check satisfiability.
         
         all_classes = collection_ontology.getClassesInSignature(true)
+        logger.log(Logger::INFO, "#{all_classes.length} total classes") 
         raise "can't get all classes" unless all_classes
-        node = reasoner.getUnsatisfiableClasses
-        raise "can't get unsatisfiable classes" unless node
-        unsat = node.getEntities.reject { |n| n.isOWLNothing }
-        raise "can't get entities" unless unsat
-        logger.log(Logger::INFO, "#{unsat.length} unsatisfiable classes") 
+        n_unsats = 0
         all_classes.each do  |klass|
           case_name = "#{@options.id} #{renderer.render(klass)}"
-          satisfiable = !unsat.include?(klass)
+          log(DEBUG, "#{klass}")
+          satisfiable = reasoner.isSatisfiable(klass)
+          log(DEBUG, "#{klass} #{satisfiable ? '' : 'un'}satisfiable")
           success[SATISFIABILITY][case_name] = satisfiable
           unless satisfiable
+            n_unsats += 1
             explanation[SATISFIABILITY][case_name] =
               explain_class(klass, gb_explanation, manager, functional_syntax_format)
           end
         end      
+        logger.log(Logger::INFO, "#{n_unsats} unsatisfiable classes") 
       end
     end
 
