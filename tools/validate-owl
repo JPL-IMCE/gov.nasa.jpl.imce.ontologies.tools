@@ -183,8 +183,10 @@ class ValidateOwlApplication < PelletApplication
           klass_name = renderer.render(klass)
           case_name = "#{@options.id} #{klass_name}"
           log(DEBUG, "#{klass_name} (#{count += 1} of #{n_class})")
+          t_start = Time.new
           satisfiable = reasoner.isSatisfiable(klass)
-          log(DEBUG, "#{klass_name} #{satisfiable ? '' : 'un'}satisfiable")
+          t_end = Time.new
+          log(DEBUG, "#{klass_name} #{satisfiable ? '' : 'un'}satisfiable (#{t_end - t_start} s)")
           success[SATISFIABILITY][case_name] = satisfiable
           unless satisfiable
             n_unsat += 1
