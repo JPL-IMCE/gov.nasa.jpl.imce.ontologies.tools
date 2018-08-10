@@ -175,20 +175,24 @@ class ValidateOwlApplication < PelletApplication
         all_classes = collection_ontology.getClassesInSignature(true)
         logger.log(Logger::INFO, "#{all_classes.length} total classes") 
         raise "can't get all classes" unless all_classes
-        n_unsats = 0
-        all_classes.each do  |klass|
-          case_name = "#{@options.id} #{renderer.render(klass)}"
-          log(DEBUG, "#{klass}")
+
+        n_class = all_classes.length
+        count = 0
+        n_unsat = 0
+        all_classes.each do |klass|
+          klass_name = renderer.render(klass)
+          case_name = "#{@options.id} #{klass_name}"
+          log(DEBUG, "#{klass_name} (#{count += 1} of #{n_class})")
           satisfiable = reasoner.isSatisfiable(klass)
-          log(DEBUG, "#{klass} #{satisfiable ? '' : 'un'}satisfiable")
+          log(DEBUG, "#{klass_name} #{satisfiable ? '' : 'un'}satisfiable")
           success[SATISFIABILITY][case_name] = satisfiable
           unless satisfiable
-            n_unsats += 1
+            n_unsat += 1
             explanation[SATISFIABILITY][case_name] =
               explain_class(klass, gb_explanation, manager, functional_syntax_format)
           end
         end      
-        logger.log(Logger::INFO, "#{n_unsats} unsatisfiable classes") 
+        logger.log(Logger::INFO, "#{n_unsat} unsatisfiable classes") 
       end
     end
 
