@@ -53,8 +53,11 @@ class CloseBundleApplication < OWLAPIApplication
       end
       @options.namespace[p] = n
     end
+    option_parser.on('--no-disjoints', "inhibit disjunctions") do
+      @options.no_disjoints = true
+    end
     option_parser.on('--embedding', "embedding bundle") do
-      @options.embedding = true
+      @options.no_disjoints = true
     end
     @options.iri_file = nil
     option_parser.on('--iri-file FILE', 'input IRI file [nil]') do |v|
@@ -204,7 +207,7 @@ class CloseBundleApplication < OWLAPIApplication
 
     # Bundle closure is largely redundant for embedding ontologies.
     
-    unless @options.embedding
+    unless @options.no_disjoints
       
       # Create class taxonomy.
 
