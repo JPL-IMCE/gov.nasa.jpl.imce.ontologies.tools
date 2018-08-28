@@ -41,13 +41,6 @@ class EntailApplication < PelletApplication
   java_import com.hp.hpl.jena.vocabulary.OWL2
   
   STATEMENT_TYPES = {
-    'AllClassStatements' => StatementType::ALL_CLASS_STATEMENTS,
-    'AllIndividualStatements' => StatementType::ALL_INDIVIDUAL_STATEMENTS,
-    'AllPropertyStatements' => StatementType::ALL_PROPERTY_STATEMENTS,
-    'AllStatements' => StatementType::ALL_STATEMENTS,
-    'AllStatementsIncludingJena' => StatementType::ALL_STATEMENTS_INCLUDING_JENA,
-    'DefaultStatements' => StatementType::DEFAULT_STATEMENTS,
-    'PropertyValue' => StatementType::PROPERTY_VALUE,
     'AllInstance' => StatementType::ALL_INSTANCE,
     'AllSubclass' => StatementType::ALL_SUBCLASS,
     'AllSubproperty' => StatementType::ALL_SUBPROPERTY,
@@ -257,12 +250,13 @@ class EntailApplication < PelletApplication
     backbone = []
     while iterator.hasNext
       statement = iterator.next
-      subject = statement.getSubject
       predicate = statement.getPredicate
       object = statement.getObject
-      object_iri = object.getURI
-      if (predicate == RDFS.subClassOf || predicate == RDFS.subPropertyOf) && object_iri =~ pattern
-        backbone << statement
+      unless object.isLiteral || object.isAnon
+        object_iri = object.getURI
+        if (predicate == RDFS.subClassOf || predicate == RDFS.subPropertyOf) && object_iri =~ pattern
+          backbone << statement
+        end
       end
     end
     entailments.remove(backbone)

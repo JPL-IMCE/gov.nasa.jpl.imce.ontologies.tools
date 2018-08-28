@@ -53,8 +53,11 @@ class CloseBundleApplication < OWLAPIApplication
       end
       @options.namespace[p] = n
     end
+    option_parser.on('--no-disjoints', "inhibit disjunctions") do
+      @options.no_disjoints = true
+    end
     option_parser.on('--embedding', "embedding bundle") do
-      @options.embedding = true
+      @options.no_disjoints = true
     end
     @options.iri_file = nil
     option_parser.on('--iri-file FILE', 'input IRI file [nil]') do |v|
@@ -68,7 +71,7 @@ class CloseBundleApplication < OWLAPIApplication
     option_parser.on('--backbone_iri IRI', '') do |v|
       @options.backbone_iri = v
     end
-    @options.backbone_stems = {}
+    @options.backbone_stems = Hash.new { |h, k| h[k] = [] }
     option_parser.on('--abstract "stem1 stem2 ... " ', '') do |v|
       @options.backbone_stems[:abstract] = v.split(/\s+/)
     end
@@ -137,10 +140,16 @@ class CloseBundleApplication < OWLAPIApplication
     log(Logger::INFO, 'load ontologies')
     total = iris.length
     n = 0
-    ontologies = iris.map do |arg|
+    ontologies = iris.inject([]) do |m, arg|
       n += 1
       log(DEBUG, "load ontology #{arg} (#{n} of #{total})")
-      manager.loadOntology(IRI.create(arg))
+      iri = IRI.create(arg)
+      begin
+        m << manager.loadOntology(iri)
+      rescue Java::OrgSemanticwebOwlapiModel::OWLOntologyDocumentAlreadyExistsException => e
+        log(DEBUG, "#{e.getOntologyDocumentIRI.toString} already loaded")
+      end
+      m
     end
     format = manager.getOntologyFormat(ontologies.first)
     imports_set = ontologies.inject(java.util.HashSet.new) do |m, o|
@@ -204,7 +213,7 @@ class CloseBundleApplication < OWLAPIApplication
 
     # Bundle closure is largely redundant for embedding ontologies.
     
-    unless @options.embedding
+    unless @options.no_disjoints
       
       # Create class taxonomy.
 
