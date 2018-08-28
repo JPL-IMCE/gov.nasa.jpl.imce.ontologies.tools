@@ -71,7 +71,7 @@ class CloseBundleApplication < OWLAPIApplication
     option_parser.on('--backbone_iri IRI', '') do |v|
       @options.backbone_iri = v
     end
-    @options.backbone_stems = {}
+    @options.backbone_stems = Hash.new { |h, k| h[k] = [] }
     option_parser.on('--abstract "stem1 stem2 ... " ', '') do |v|
       @options.backbone_stems[:abstract] = v.split(/\s+/)
     end
@@ -140,10 +140,16 @@ class CloseBundleApplication < OWLAPIApplication
     log(Logger::INFO, 'load ontologies')
     total = iris.length
     n = 0
-    ontologies = iris.map do |arg|
+    ontologies = iris.inject([]) do |m, arg|
       n += 1
       log(DEBUG, "load ontology #{arg} (#{n} of #{total})")
-      manager.loadOntology(IRI.create(arg))
+      iri = IRI.create(arg)
+      begin
+        m << manager.loadOntology(iri)
+      rescue Java::OrgSemanticwebOwlapiModel::OWLOntologyDocumentAlreadyExistsException => e
+        log(DEBUG, "#{e.getOntologyDocumentIRI.toString} already loaded")
+      end
+      m
     end
     format = manager.getOntologyFormat(ontologies.first)
     imports_set = ontologies.inject(java.util.HashSet.new) do |m, o|
