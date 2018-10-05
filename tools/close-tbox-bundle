@@ -270,7 +270,7 @@ class CloseBundleApplication < OWLAPIApplication
 
         # Excise aspects.
 
-        log(Logger::INFO, 'excise aspects')
+        log(Logger::INFO, "excise #{aspects.length} aspects")
         taxonomy_stage2 = taxonomy_stage1.excise_vertices(aspects) do |msg, klass, done|
           case msg
           when :excising
