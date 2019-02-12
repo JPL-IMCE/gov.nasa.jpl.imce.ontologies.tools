@@ -191,7 +191,7 @@ class CloseBundleApplication < OWLAPIApplication
     log(Logger::INFO, "copy prefix definitions")
     manager.getOntologies.each do |o|
       if f = manager.getOntologyFormat(o)
-      log(Logger::DEBUG, "copy prefix definitions from #{o.getOntologyID.getOntologyIRI.toString}")
+        log(Logger::DEBUG, "copy prefix definitions from #{o.getOntologyID.getOntologyIRI.toString}")
         format.copyPrefixesFrom(f)
       end
     end
