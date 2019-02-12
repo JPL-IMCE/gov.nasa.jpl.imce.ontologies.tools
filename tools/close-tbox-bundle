@@ -31,7 +31,7 @@ java_import 'org.coode.xml.XMLWriterPreferences'
 java_import 'org.semanticweb.owlapi.model.AddImport'
 java_import 'org.semanticweb.owlapi.model.AxiomType'
 java_import 'org.semanticweb.owlapi.model.ClassExpressionType'
-java_import 'org.semanticweb.owlapi.formats.PrefixOWLOntologyFormat'
+java_import 'org.semanticweb.owlapi.vocab.PrefixOWLOntologyFormat'
 
 ANNOTATIONS = %w{ importsBundle }
 APPLICATION_NAME = 'close-tbox-bundle'
