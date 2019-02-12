@@ -31,6 +31,7 @@ java_import 'org.coode.xml.XMLWriterPreferences'
 java_import 'org.semanticweb.owlapi.model.AddImport'
 java_import 'org.semanticweb.owlapi.model.AxiomType'
 java_import 'org.semanticweb.owlapi.model.ClassExpressionType'
+java_import 'org.semanticweb.owlapi.vocab.PrefixOWLOntologyFormat'
 
 ANNOTATIONS = %w{ importsBundle }
 APPLICATION_NAME = 'close-tbox-bundle'
@@ -151,7 +152,7 @@ class CloseBundleApplication < OWLAPIApplication
       end
       m
     end
-    format = manager.getOntologyFormat(ontologies.first)
+
     imports_set = ontologies.inject(java.util.HashSet.new) do |m, o|
       m += manager.getImportsClosure(o)
       m
@@ -174,6 +175,27 @@ class CloseBundleApplication < OWLAPIApplication
     xml_prefs = XMLWriterPreferences.get_instance
     xml_prefs.set_use_namespace_entities(true)
     
+    # Create ontology.
+    
+    log(Logger::INFO, "create ontology for #{@options.uri}")
+    ontology = manager.createOntology(IRI.create(@options.uri))
+
+    # Set ontology format.
+    
+    log(Logger::INFO, "create ontology format")
+    format = PrefixOWLOntologyFormat.new
+    manager.setOntologyFormat(ontology, format)
+
+    # Copy prefix definitions.
+    
+    log(Logger::INFO, "copy prefix definitions")
+    manager.getOntologies.each do |o|
+      if f = manager.getOntologyFormat(o)
+        log(Logger::DEBUG, "copy prefix definitions from #{o.getOntologyID.getOntologyIRI.toString}")
+        format.copyPrefixesFrom(f)
+      end
+    end
+    
     # Create annotation properties.
 
     log(Logger::INFO, 'create annotation properties')
@@ -183,11 +205,6 @@ class CloseBundleApplication < OWLAPIApplication
       h[ps] = p
       h
     end
-    
-    # Create ontology.
-    
-    log(Logger::INFO, "create ontology for #{@options.uri}")
-    ontology = manager.createOntology(IRI.create(@options.uri))
     
     # Add ontology imports.
 
