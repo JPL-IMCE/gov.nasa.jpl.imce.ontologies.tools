@@ -4,21 +4,47 @@ require 'rgl/topsort'
 require 'delegate'
 
 module ClassExpression
-  class Simple < String
-  end
-  class Singleton < Simple
-  end
-  class Complement < Simple
+  class Singleton
+    def initialize(name)
+      @name = name
+    end
     def to_s
-      'Complement(' + super + ')'
+      @name
     end
   end
-  class Complex < Set
-    def to_s
-      '(' + to_a.join(',') + ')'
+  class Unary
+    def initialize(s)
+      @s = s
     end
   end
-  class Union < Complex
+  class Complement < Unary
+    def to_s
+      'complement(' + @s.to_s + ')'
+    end
+  end
+  class Binary
+    def initialize(a, b)
+      @a = a
+      @b = b
+    end
+    def to_s
+      '(' + @a.to_s + ',' + @b.to_s + ')'
+    end
+  end
+  class Difference < Binary
+    def to_s
+      'difference' + super
+    end
+  end
+  class NAry
+    def initialize(s)
+      @s = s.to_set
+    end
+    def to_s
+      '(' + @s.to_a.join(',') + ')'
+    end
+  end
+  class Union < NAry
     def to_s
       'union' + super
     end
@@ -26,53 +52,26 @@ module ClassExpression
       self.dup << s
     end
   end
-  class Intersection < Complex
+  class Intersection < NAry
     def to_s
       'intersection' + super
     end
     def intersection(s)
       self.dup << s
     end
-    def difference(s)
-      self.dup << Complement(s)
-    end
   end
 
-  def complement(s)
-    Complement.new(s)
+  def complement
+    Complement.new(self.dup)
   end
   def union(s)
-    Union.new(self.dup << s)
+    Union.new([self.dup, s])
   end
   def intersection(s)
-    Intersection.new(self.dup << s)
+    Intersection.new([self.dup, s])
   end
   def difference(s)
-    intersection(complement(s))
-  end
-end
-
-module SimpleClassExpression < String
-end
-
-class SingletonClassExpression < SimpleClassExpression
-end
-
-class ComplementClassExpression < SimpleClassExpression
-end
-
-module ComplexClassExpression < Set
-end
-
-class UnionClassExpression < Set
-  def to_s
-    'Union' + super
-  end
-end
-
-class IntersectionClassExpression < Set
-  def to_s
-    'Intersection' + super
+    Difference.new(self.dup, s)
   end
 end
 
@@ -92,6 +91,10 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   def initialize(g = RGL::DirectedAdjacencyGraph.new)
     super(g)
+  end
+
+  def self.[](*a)
+    Taxonomy.new((RGL::DirectedAdjacencyGraph[*a]))
   end
   
   # Find a vertex with multiple parents. Returns nil if none.
@@ -294,3 +297,63 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   end
 
 end
+
+require 'minitest/autorun'
+
+class TestEmptyTaxonomy < Minitest::Test
+
+  def setup
+    @t = Taxonomy.new
+  end
+
+  def test_treeify
+    tree = @t.treeify
+    assert_kind_of(Taxonomy, tree)
+  end
+  
+end
+
+class TestSingletonTaxonomy < Minitest::Test
+
+  def setup
+    @t = Taxonomy.new
+    @t.add_vertex('a')
+  end
+
+  def test_treeify
+    assert_nil @t.multi_parent_child
+    tree = @t.treeify
+    assert tree.vertices == [ 'a' ]
+    assert_empty tree.edges
+  end
+  
+end
+
+class Test3Tree < Minitest::Test
+
+  def setup
+    @t = Taxonomy[1,2, 1,3]
+   end
+
+  def test_treeify
+    assert_nil @t.multi_parent_child
+    tree = @t.treeify
+    assert_equal tree.vertices, @t.vertices
+    assert_equal tree.edges, @t.edges
+  end
+  
+end
+
+class Test3InvertedTree < Minitest::Test
+
+  def setup
+    @t = Taxonomy[1,3, 2,3]
+   end
+
+  def test_treeify
+    assert_equal 3, @t.multi_parent_child
+    tree = @t.treeify
+  end
+  
+end
+
