@@ -8,14 +8,14 @@ module ClassExpression
     def complement
       Complement.new(self.dup)
     end
+    def difference(s)
+      Difference.new(self.dup, s)
+    end
     def union(s)
       Union.new([self.dup, s])
     end
     def intersection(s)
       Intersection.new([self.dup, s])
-    end
-    def difference(s)
-      Difference.new(self.dup, s)
     end
   end
   class Singleton
@@ -60,6 +60,7 @@ module ClassExpression
     end
   end
   class Binary
+    include Operators
     def initialize(a, b)
       @a = a
       @b = b
@@ -83,6 +84,7 @@ module ClassExpression
     end
   end
   class NAry
+    include Operators
     def initialize(s)
       @s = s.to_set
     end
@@ -343,12 +345,15 @@ end
 
 require 'minitest/autorun'
 
+
 class TestSingleton < Minitest::Test
 
+  include ClassExpression
+  
   def setup
-    @a1 = ClassExpression::Singleton.new('a')
-    @a2 = ClassExpression::Singleton.new('a')
-    @b = ClassExpression::Singleton.new('b')
+    @a1 = Singleton.new('a')
+    @a2 = Singleton.new('a')
+    @b = Singleton.new('b')
   end
 
   def test_singleton_equality
@@ -365,13 +370,15 @@ end
 
 class TestComplement < Minitest::Test
 
+  include ClassExpression
+  
   def setup
-    @a1 = ClassExpression::Singleton.new('a')
-    @a2 = ClassExpression::Singleton.new('a')
-    @b = ClassExpression::Singleton.new('b')
-    @a1c = ClassExpression::Complement.new(@a1)
-    @a2c = ClassExpression::Complement.new(@a2)
-    @bc = ClassExpression::Complement.new(@b)
+    @a1 = Singleton.new('a')
+    @a2 = Singleton.new('a')
+    @b = Singleton.new('b')
+    @a1c = Complement.new(@a1)
+    @a2c = Complement.new(@a2)
+    @bc = Complement.new(@b)
     
   end
 
@@ -396,12 +403,14 @@ end
 
 class TestDifference < Minitest::Test
 
+  include ClassExpression
+  
   def setup
-    @a = ClassExpression::Singleton.new('a')
-    @b = ClassExpression::Singleton.new('b')
-    @dab1 = ClassExpression::Difference.new(@a, @b)
-    @dab2 = ClassExpression::Difference.new(@a, @b)
-    @dba = ClassExpression::Difference.new(@b, @a)
+    @a = Singleton.new('a')
+    @b = Singleton.new('b')
+    @dab1 = Difference.new(@a, @b)
+    @dab2 = Difference.new(@a, @b)
+    @dba = Difference.new(@b, @a)
   end
 
   def test_difference_equality
@@ -418,15 +427,17 @@ end
 
 class TestUnion < Minitest::Test
 
+  include ClassExpression
+  
   def setup
-    @a = ClassExpression::Singleton.new('a')
-    @b = ClassExpression::Singleton.new('b')
-    @c = ClassExpression::Singleton.new('c')
-    @aub1 = ClassExpression::Union.new([@a, @b])
-    @aub2 = ClassExpression::Union.new([@a, @b])
-    @bua = ClassExpression::Union.new([@b, @a])
-    @auc = ClassExpression::Union.new([@a, @c])
-    @aubuc = ClassExpression::Union.new([@a, @b, @c])
+    @a = Singleton.new('a')
+    @b = Singleton.new('b')
+    @c = Singleton.new('c')
+    @aub1 = Union.new([@a, @b])
+    @aub2 = Union.new([@a, @b])
+    @bua = Union.new([@b, @a])
+    @auc = Union.new([@a, @c])
+    @aubuc = Union.new([@a, @b, @c])
   end
 
   def test_union_equality
@@ -449,15 +460,17 @@ end
 
 class TestIntersection < Minitest::Test
 
+  include ClassExpression
+  
   def setup
-    @a = ClassExpression::Singleton.new('a')
-    @b = ClassExpression::Singleton.new('b')
-    @c = ClassExpression::Singleton.new('c')
-    @aib1 = ClassExpression::Intersection.new([@a, @b])
-    @aib2 = ClassExpression::Intersection.new([@a, @b])
-    @bia = ClassExpression::Intersection.new([@b, @a])
-    @aic = ClassExpression::Intersection.new([@a, @c])
-    @aibic = ClassExpression::Intersection.new([@a, @b, @c])
+    @a = Singleton.new('a')
+    @b = Singleton.new('b')
+    @c = Singleton.new('c')
+    @aib1 = Intersection.new([@a, @b])
+    @aib2 = Intersection.new([@a, @b])
+    @bia = Intersection.new([@b, @a])
+    @aic = Intersection.new([@a, @c])
+    @aibic = Intersection.new([@a, @b, @c])
   end
 
   def test_intersection_equality
@@ -478,8 +491,56 @@ class TestIntersection < Minitest::Test
   
 end
 
+class TestOperators < Minitest::Test
+
+  include ClassExpression
+  
+  def setup
+    @s = Singleton.new('a')
+    @c = Complement.new(Singleton.new('b'))
+    @d = Difference.new(Singleton.new('c'), Singleton.new('d'))
+    @u = Union.new(%w{e f g}.map { |k| Singleton.new(k) })
+    @i = Intersection.new(%w{h i j}.map { |k| Singleton.new(k) })
+  end
+
+  def test_complement
+    assert_kind_of Complement, @s.complement
+    assert_kind_of Singleton, @c.complement
+    assert_kind_of Complement, @d.complement
+    assert_kind_of Complement, @u.complement
+    assert_kind_of Complement, @i.complement
+  end
+
+  def test_difference
+    assert_kind_of Difference, @s.difference(@c)
+    assert_kind_of Difference, @c.difference(@d)
+    assert_kind_of Difference, @d.difference(@u)
+    assert_kind_of Difference, @u.difference(@i)
+    assert_kind_of Difference, @i.difference(@s)
+  end
+  
+  def test_union
+    assert_kind_of Union, @s.union(@c)
+    assert_kind_of Union, @c.union(@d)
+    assert_kind_of Union, @d.union(@u)
+    assert_kind_of Union, @u.union(@i)
+    assert_kind_of Union, @i.union(@s)
+  end
+
+  def test_intersection
+    assert_kind_of Intersection, @s.intersection(@c)
+    assert_kind_of Intersection, @c.intersection(@d)
+    assert_kind_of Intersection, @d.intersection(@u)
+    assert_kind_of Intersection, @u.intersection(@i)
+    assert_kind_of Intersection, @i.intersection(@s)
+  end
+  
+end
+
 class TestEmptyTaxonomy < Minitest::Test
 
+  include ClassExpression
+  
   def setup
     @t = Taxonomy.new
   end
@@ -493,9 +554,11 @@ end
 
 class TestSingletonTaxonomy < Minitest::Test
 
+  include ClassExpression
+  
   def setup
     @t = Taxonomy.new
-    @a = ClassExpression::Singleton.new('a')
+    @a = Singleton.new('a')
     @t.add_vertex(@a)
   end
 
@@ -510,6 +573,8 @@ end
 
 class Test3Tree < Minitest::Test
 
+  include ClassExpression
+  
   def setup
     @t = Taxonomy[1,2, 1,3]
    end
@@ -525,6 +590,8 @@ end
 
 class Test3InvertedTree < Minitest::Test
 
+  include ClassExpression
+  
   def setup
     @t = Taxonomy[1,3, 2,3]
    end
