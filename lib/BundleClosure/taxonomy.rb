@@ -151,39 +151,39 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   # Find children of a vertex.
   
   def children_of(v)
-    edges.select { |e| e.source == v }.map { |e| e.target }
+    Set.new(edges.select { |e| e.source == v }.map { |e| e.target })
   end
 
   # Find descendants of a vertex.
   
   def descendants_of(v, key = Random.rand(1000))
     if (c = children_of(v)).empty?
-      []
+      Set.new
     else
-      c + c.flat_map { |x| descendants_of(x, key) }
+      Set.new(c + c.flat_map { |x| descendants_of(x, key).to_a })
     end
   end
 
   # Find direct children of a vertex.
   
   def direct_children_of(v)
-    c = children_of(c)
-    c - c.flat_map { |x| descendants_of(x) }
+    c = children_of(v)
+    Set.new(c - c.flat_map { |x| descendants_of(x).to_a })
   end
   
   # Find parents of a vertex.
   
   def parents_of(v)
-    edges.select { |e| e.target == v }.map { |e| e.source }
+    Set.new(edges.select { |e| e.target == v }.map { |e| e.source })
   end
 
   # Find ancestors of a vertex.
   
   def ancestors_of(v, key = Random.rand(1000))
     if (p = parents_of(v)).empty?
-      []
+      Set.new
     else
-      p + p.flat_map { |x| ancestors_of(x, key) }
+      Set.new(p + p.flat_map { |x| ancestors_of(x, key).to_a })
     end
   end
 
@@ -191,7 +191,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   
   def direct_parents_of(v)
     p = parents_of(v)
-    p - p.flat_map { |x| ancestors_of(x) }
+    Set.new(p - p.flat_map { |x| ancestors_of(x).to_a })
   end
   
   # Form transitive reduction
@@ -231,12 +231,12 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
         end
       end
 
-      direct_children = child_list - child_list.flat_map { |x| descendants_of(x) }
+      direct_children = child_list - child_list.flat_map { |x| descendants_of(x).to_a }
       direct_children.each do |c|
         g.add_edge(new_vertex, c)
       end
 
-      direct_parents = parent_list - parent_list.flat_map { |x| ancestors_of(x) }
+      direct_parents = parent_list - parent_list.flat_map { |x| ancestors_of(x).to_a }
       direct_parents.each do |p|
         g.add_edge(p, new_vertex)
       end
@@ -256,7 +256,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
       parents = direct_parents_of(child)
       yield(:merging, self, child, parents, count) if block_given?
       count += parents.length
-      partition_parents(child, parents).raise_child(child).treeify(count, &block)
+      partition_vertices(child, parents).raise_child(child).treeify(count, &block)
     else
       yield(:merged, nil, nil, nil, count) if block_given?
       self
@@ -267,6 +267,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   def excise_vertex(v)
     g = RGL::DirectedAdjacencyGraph.new
+    g.add_vertices(*(vertices - [v]))
     parents = Set.new
     children = Set.new
     edges.each do |edge|
@@ -582,27 +583,65 @@ class Test3Tree < Minitest::Test
    end
 
   def test_tree_operations
-    assert_nil @t.multi_parent_child
-    t1 = @t.treeify
-    assert_equal t1, @t
     c = @vertex_map['c']
-    t2 = @t.excise_vertex(c)
+    assert_nil @t.multi_parent_child
+    
+    t1 = @t.excise_vertex(c)
+    assert_equal t1.vertices, @t.vertices - [c]
+    assert_equal 1, t1.edges.length
+    
+    t2 = @t.excise_vertices([c])
     assert_equal t2.vertices, @t.vertices - [c]
+    assert_equal 1, t2.edges.length
+    
+    t3 = @t.treeify
+    assert_equal t3, @t
   end
   
 end
 
-class Test3InvertedTree < Minitest::Test
+class Test4DiamondTree < Minitest::Test
 
   include ClassExpression
   
   def setup
-    @t = Taxonomy[1,3, 2,3]
+    edges = %w{a b  a c  b d  c d}
+    @vertex_map = edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
+    @t = Taxonomy[*edges.map { |v| @vertex_map[v] }]
    end
 
   def test_tree_operations
-    assert_equal 3, @t.multi_parent_child
-    # tree = @t.treeify
+    a = @vertex_map['a']
+    d = @vertex_map['d']
+
+    a_children = Set.new(%w{b c}.map { |k| @vertex_map[k] })
+    a_descendants = Set.new(%w{b c d}.map { |k| @vertex_map[k] })
+    d_parents = Set.new(%w{b c}.map { |k| @vertex_map[k] })
+    d_ancestors = Set.new(%w{a b c}.map { |k| @vertex_map[k] })
+    
+    assert_equal a_children, @t.children_of(a)
+    assert_equal a_children, @t.direct_children_of(a)
+    assert_equal a_descendants, @t.descendants_of(a)
+    
+    assert_equal d_parents, @t.parents_of(d)
+    assert_equal d_parents, @t.direct_parents_of(d)
+    assert_equal d_ancestors, @t.ancestors_of(d)
+    
+    assert_equal d, @t.multi_parent_child
+
+    remaining_vertices = @t.vertices - [d]
+    remaining_edges = @t.edges.reject { |e| e.source == d || e.target == d }
+    
+    t1 = @t.excise_vertex(d)
+    assert_equal t1.vertices, remaining_vertices
+    assert_equal t1.edges, remaining_edges
+    
+    t2 = @t.excise_vertices([d])
+    assert_equal t2.vertices, remaining_vertices
+    assert_equal t2.edges, remaining_edges
+
+    t3 = @t.partition_vertices(d, d_parents)
+    # assert_equal t3, @t
   end
   
 end
