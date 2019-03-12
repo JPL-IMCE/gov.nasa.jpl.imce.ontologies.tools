@@ -141,7 +141,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   def self.[](*a)
     Taxonomy.new((RGL::DirectedAdjacencyGraph[*a]))
   end
-  
+
   # Find a vertex with multiple parents. Returns nil if none.
   
   def multi_parent_child
@@ -545,9 +545,10 @@ class TestEmptyTaxonomy < Minitest::Test
     @t = Taxonomy.new
   end
 
-  def test_treeify
+  def test_tree_operations
+    assert_nil @t.multi_parent_child
     tree = @t.treeify
-    assert_kind_of(Taxonomy, tree)
+    assert_equal tree, @t
   end
   
 end
@@ -562,11 +563,10 @@ class TestSingletonTaxonomy < Minitest::Test
     @t.add_vertex(@a)
   end
 
-  def test_treeify
+  def test_tree_operations
     assert_nil @t.multi_parent_child
     tree = @t.treeify
-    assert tree.vertices == [ @a ]
-    assert_empty tree.edges
+    assert_equal tree, @t
   end
   
 end
@@ -576,14 +576,18 @@ class Test3Tree < Minitest::Test
   include ClassExpression
   
   def setup
-    @t = Taxonomy[1,2, 1,3]
+    edges = %w{a b  a c}
+    @vertex_map = edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
+    @t = Taxonomy[*edges.map { |v| @vertex_map[v] }]
    end
 
-  def test_treeify
+  def test_tree_operations
     assert_nil @t.multi_parent_child
-    tree = @t.treeify
-    assert_equal tree.vertices, @t.vertices
-    assert_equal tree.edges, @t.edges
+    t1 = @t.treeify
+    assert_equal t1, @t
+    c = @vertex_map['c']
+    t2 = @t.excise_vertex(c)
+    assert_equal t2.vertices, @t.vertices - [c]
   end
   
 end
@@ -596,7 +600,7 @@ class Test3InvertedTree < Minitest::Test
     @t = Taxonomy[1,3, 2,3]
    end
 
-  def test_treeify
+  def test_tree_operations
     assert_equal 3, @t.multi_parent_child
     # tree = @t.treeify
   end
