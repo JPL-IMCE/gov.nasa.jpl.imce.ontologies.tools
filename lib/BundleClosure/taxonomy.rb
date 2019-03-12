@@ -4,22 +4,59 @@ require 'rgl/topsort'
 require 'delegate'
 
 module ClassExpression
+  module Operators
+    def complement
+      Complement.new(self.dup)
+    end
+    def union(s)
+      Union.new([self.dup, s])
+    end
+    def intersection(s)
+      Intersection.new([self.dup, s])
+    end
+    def difference(s)
+      Difference.new(self.dup, s)
+    end
+  end
   class Singleton
+    include Operators
     def initialize(name)
       @name = name
     end
     def to_s
       @name
     end
+    def ==(o)
+      @name == o.name
+    end
+    alias :eql? :==
+    def hash
+      @name.hash
+    end
+    protected
+    attr_reader :name
   end
   class Unary
+    include Operators
     def initialize(s)
       @s = s
     end
+    def ==(o)
+      @s == o.s
+    end
+    alias :eql? :==
+    def hash
+      @s.hash
+    end
+    protected
+    attr_reader :s
   end
   class Complement < Unary
     def to_s
       'complement(' + @s.to_s + ')'
+    end
+    def complement
+      @s.dup
     end
   end
   class Binary
@@ -30,6 +67,15 @@ module ClassExpression
     def to_s
       '(' + @a.to_s + ',' + @b.to_s + ')'
     end
+    def ==(o)
+      [@a, @b] == [o.a, o.b]
+    end
+    alias :eql? :==
+    def hash
+      [@a, @b].hash
+    end
+    protected
+    attr_reader :a, :b
   end
   class Difference < Binary
     def to_s
@@ -43,36 +89,33 @@ module ClassExpression
     def to_s
       '(' + @s.to_a.join(',') + ')'
     end
+    def ==(o)
+      @s == o.s
+    end
+    alias :eql? :==
+    def hash
+      @s.hash
+    end
+    protected
+    attr_reader :s
   end
   class Union < NAry
     def to_s
       'union' + super
     end
-    def union(s)
-      self.dup << s
+    def union(o)
+      Union.new(@s.dup << o)
     end
   end
   class Intersection < NAry
     def to_s
       'intersection' + super
     end
-    def intersection(s)
-      self.dup << s
+    def intersection(o)
+      Intersection.new(@s.dup << o)
     end
   end
 
-  def complement
-    Complement.new(self.dup)
-  end
-  def union(s)
-    Union.new([self.dup, s])
-  end
-  def intersection(s)
-    Intersection.new([self.dup, s])
-  end
-  def difference(s)
-    Difference.new(self.dup, s)
-  end
 end
 
 # Each vertex of a Taxonomy is a set of class IRIs representing a union.
@@ -300,6 +343,141 @@ end
 
 require 'minitest/autorun'
 
+class TestSingleton < Minitest::Test
+
+  def setup
+    @a1 = ClassExpression::Singleton.new('a')
+    @a2 = ClassExpression::Singleton.new('a')
+    @b = ClassExpression::Singleton.new('b')
+  end
+
+  def test_singleton_equality
+    assert_equal @a1, @a2
+    refute_equal @a1, @b
+  end
+
+  def test_singleton_to_s
+    assert_equal 'a', @a1.to_s
+    assert_equal 'b', @b.to_s
+  end
+  
+end
+
+class TestComplement < Minitest::Test
+
+  def setup
+    @a1 = ClassExpression::Singleton.new('a')
+    @a2 = ClassExpression::Singleton.new('a')
+    @b = ClassExpression::Singleton.new('b')
+    @a1c = ClassExpression::Complement.new(@a1)
+    @a2c = ClassExpression::Complement.new(@a2)
+    @bc = ClassExpression::Complement.new(@b)
+    
+  end
+
+  def test_complement_equality
+    assert_equal @a1c, @a2c
+    assert_equal @a1.complement, @a1c
+    refute_equal @a1c, @bc
+    refute_equal @a1.complement, @bc
+  end
+
+  def test_complement_idempotency
+    assert_equal @b, @bc.complement
+    assert_equal @b, @b.complement.complement
+  end
+
+  def test_complement_to_s
+    assert_equal 'complement(a)', @a1c.to_s
+    assert_equal 'complement(b)', @bc.to_s
+  end
+  
+end
+
+class TestDifference < Minitest::Test
+
+  def setup
+    @a = ClassExpression::Singleton.new('a')
+    @b = ClassExpression::Singleton.new('b')
+    @dab1 = ClassExpression::Difference.new(@a, @b)
+    @dab2 = ClassExpression::Difference.new(@a, @b)
+    @dba = ClassExpression::Difference.new(@b, @a)
+  end
+
+  def test_difference_equality
+    assert_equal @dab1, @dab2
+    refute_equal @dab1, @dba
+    refute_equal @dab2, @dba
+  end
+
+  def test_difference_to_s
+    assert_equal 'difference(a,b)', @dab1.to_s
+  end
+  
+end
+
+class TestUnion < Minitest::Test
+
+  def setup
+    @a = ClassExpression::Singleton.new('a')
+    @b = ClassExpression::Singleton.new('b')
+    @c = ClassExpression::Singleton.new('c')
+    @aub1 = ClassExpression::Union.new([@a, @b])
+    @aub2 = ClassExpression::Union.new([@a, @b])
+    @bua = ClassExpression::Union.new([@b, @a])
+    @auc = ClassExpression::Union.new([@a, @c])
+    @aubuc = ClassExpression::Union.new([@a, @b, @c])
+  end
+
+  def test_union_equality
+    assert_equal @aub1, @aub2
+    assert_equal @aub1, @bua
+    refute_equal @aub1, @auc
+  end
+
+  def test_union_union
+    assert_equal @aub1.union(@c), @aubuc
+    assert_equal @bua.union(@c), @aubuc
+    assert_equal @a.union(@b).union(@c), @aubuc
+  end
+  
+  def test_union_to_s
+    assert_equal 'union(a,b)', @aub2.to_s
+  end
+  
+end
+
+class TestIntersection < Minitest::Test
+
+  def setup
+    @a = ClassExpression::Singleton.new('a')
+    @b = ClassExpression::Singleton.new('b')
+    @c = ClassExpression::Singleton.new('c')
+    @aib1 = ClassExpression::Intersection.new([@a, @b])
+    @aib2 = ClassExpression::Intersection.new([@a, @b])
+    @bia = ClassExpression::Intersection.new([@b, @a])
+    @aic = ClassExpression::Intersection.new([@a, @c])
+    @aibic = ClassExpression::Intersection.new([@a, @b, @c])
+  end
+
+  def test_intersection_equality
+    assert_equal @aib1, @aib2
+    assert_equal @aib1, @bia
+    refute_equal @aib1, @aic
+  end
+
+  def test_intersection_intersection
+    assert_equal @aib1.intersection(@c), @aibic
+    assert_equal @bia.intersection(@c), @aibic
+    assert_equal @a.intersection(@b).intersection(@c), @aibic
+  end
+  
+  def test_intersection_to_s
+    assert_equal 'intersection(a,b)', @aib1.to_s
+  end
+  
+end
+
 class TestEmptyTaxonomy < Minitest::Test
 
   def setup
@@ -317,13 +495,14 @@ class TestSingletonTaxonomy < Minitest::Test
 
   def setup
     @t = Taxonomy.new
-    @t.add_vertex('a')
+    @a = ClassExpression::Singleton.new('a')
+    @t.add_vertex(@a)
   end
 
   def test_treeify
     assert_nil @t.multi_parent_child
     tree = @t.treeify
-    assert tree.vertices == [ 'a' ]
+    assert tree.vertices == [ @a ]
     assert_empty tree.edges
   end
   
@@ -352,7 +531,7 @@ class Test3InvertedTree < Minitest::Test
 
   def test_treeify
     assert_equal 3, @t.multi_parent_child
-    tree = @t.treeify
+    # tree = @t.treeify
   end
   
 end
