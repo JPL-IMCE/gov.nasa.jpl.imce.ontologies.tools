@@ -1,6 +1,5 @@
 require 'rgl/adjacency'
 require 'rgl/transitivity'
-require 'rgl/topsort'
 require 'delegate'
 
 module ClassExpression
@@ -200,53 +199,69 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   def transitive_reduction
     Taxonomy.new(inner_transitive_reduction)
   end
-  
-  # Create a new Taxonomy with the specified child c and parent set
-  # ps = {p1, p2,... pn} vertices replaced by {p1-c, p2-c,... pn-c, c}.
-  
-  def partition_vertices(c, ps, count = 0, &block)
 
-    unless old_vertex = ps.first
-      yield(:partitioning, self, child, parents, count) if block_given?
+  def hoist_child(child, parent)
+ 
+    g = RGL::DirectedAdjacencyGraph.new
 
-      new_vertex = old_vertex.difference(c)
+    g.add_vertices(*self.vertices)
+    g.add_edges(*self.edges)
 
-      g = RGL::DirectedAdjacencyGraph.new
+    direct_parents_of(parent).each do |gp|
+      g.add_edge(gp, child)
+    end
+    
+    Taxonomy.new(g)
+    
+  end
 
-      parent_list = Set.new
-      global_parent_list = Set.new
-      child_list = Set.new
-
-      edges.each do |edge|
-        source_in_s = edge.source == old_vertex
-        target_in_s = edge.target == old_vertex
-        if source_in_s && target_in_s
-          # do nothing
-        elsif source_in_s
-          child_list << edge.target
-        elsif target_in_s
-          parent_list << edge.source
-        else
-          g.add_edge(edge.source, edge.target)
-        end
-      end
-
-      direct_children = child_list - child_list.flat_map { |x| descendants_of(x).to_a }
-      direct_children.each do |c|
-        g.add_edge(new_vertex, c)
-      end
-
-      direct_parents = parent_list - parent_list.flat_map { |x| ancestors_of(x).to_a }
-      direct_parents.each do |p|
-        g.add_edge(p, new_vertex)
-      end
-
-      Taxonomy.new(g).partition_vertices(ps.drop(1))
+  def hoist_children(child, parents)
+    
+    unless parents.empty?
+      first, rest = parents.first, parents.drop(1)
+      hoist_child(child, first).hoist_children(child, rest)
     else
-      yield(:partitioned, nil, nil, nil, count) if block_given?
       self
     end
-      
+    
+  end
+  
+  def isolate_child(child, parent)
+
+    new_vertex = parent.difference(child)
+
+    g = RGL::DirectedAdjacencyGraph.new
+
+    parent_list = Set.new
+    global_parent_list = Set.new
+    child_list = Set.new
+
+    edges.each do |edge|
+      source_in_s = edge.source == parent
+      target_in_s = edge.target == parent
+      if source_in_s && target_in_s
+        # do nothing
+      elsif source_in_s
+        child_list << edge.target
+      elsif target_in_s
+        parent_list << edge.source
+      else
+        g.add_edge(edge.source, edge.target)
+      end
+    end
+
+    direct_children = child_list - child_list.flat_map { |x| descendants_of(x).to_a }
+    direct_children.each do |c|
+      g.add_edge(new_vertex, c)
+    end
+
+    direct_parents = parent_list - parent_list.flat_map { |x| ancestors_of(x).to_a }
+    direct_parents.each do |p|
+      g.add_edge(p, new_vertex)
+    end
+
+    Taxonomy.new(g)
+
   end
 
   # Recursively merge vertices until the resulting Taxonomy is a tree.
@@ -587,11 +602,11 @@ class Test3Tree < Minitest::Test
     assert_nil @t.multi_parent_child
     
     t1 = @t.excise_vertex(c)
-    assert_equal t1.vertices, @t.vertices - [c]
+    assert_equal Set.new(t1.vertices), Set.new(@t.vertices - [c])
     assert_equal 1, t1.edges.length
     
     t2 = @t.excise_vertices([c])
-    assert_equal t2.vertices, @t.vertices - [c]
+    assert_equal Set.new(t2.vertices), Set.new(@t.vertices - [c])
     assert_equal 1, t2.edges.length
     
     t3 = @t.treeify
@@ -612,6 +627,8 @@ class Test4DiamondTree < Minitest::Test
 
   def test_tree_operations
     a = @vertex_map['a']
+    b = @vertex_map['b']
+    c = @vertex_map['c']
     d = @vertex_map['d']
 
     a_children = Set.new(%w{b c}.map { |k| @vertex_map[k] })
@@ -629,19 +646,61 @@ class Test4DiamondTree < Minitest::Test
     
     assert_equal d, @t.multi_parent_child
 
-    remaining_vertices = @t.vertices - [d]
-    remaining_edges = @t.edges.reject { |e| e.source == d || e.target == d }
+    remaining_vertices = Set.new(@t.vertices - [a])
+    remaining_edges = Set.new(@t.edges.reject { |e| e.source == a || e.target == a })
     
-    t1 = @t.excise_vertex(d)
-    assert_equal t1.vertices, remaining_vertices
-    assert_equal t1.edges, remaining_edges
-    
-    t2 = @t.excise_vertices([d])
-    assert_equal t2.vertices, remaining_vertices
-    assert_equal t2.edges, remaining_edges
+    t = @t.excise_vertex(a)
+    assert_equal remaining_vertices, Set.new(t.vertices)
+    assert_equal remaining_edges, Set.new(t.edges)
 
-    t3 = @t.partition_vertices(d, d_parents)
-    # assert_equal t3, @t
+    t = @t.excise_vertices([a])
+    assert_equal remaining_vertices, Set.new(t.vertices)
+    assert_equal remaining_edges, Set.new(t.edges)
+
+    remaining_vertices = Set.new(@t.vertices - [c])
+    remaining_edges = Set.new(@t.edges.reject { |e| e.source == c || e.target == c })
+    added_edges =Set.new([RGL::Edge::DirectedEdge[a, d]])
+    
+    t = @t.excise_vertex(c)
+    assert_equal remaining_vertices, Set.new(t.vertices)
+    assert_equal remaining_edges.union(added_edges), Set.new(t.edges)
+
+    t = @t.excise_vertices([c])
+    assert_equal remaining_vertices, Set.new(t.vertices)
+    assert_equal remaining_edges.union(added_edges), Set.new(t.edges)
+
+    remaining_vertices = Set.new(@t.vertices - [d])
+    remaining_edges = Set.new(@t.edges.reject { |e| e.source == d || e.target == d })
+    
+    t = @t.excise_vertex(d)
+    assert_equal remaining_vertices, Set.new(t.vertices)
+    assert_equal remaining_edges, Set.new(t.edges)
+    
+    t = @t.excise_vertices([d])
+    assert_equal remaining_vertices, Set.new(t.vertices)
+    assert_equal remaining_edges, Set.new(t.edges)
+
+    remaining_vertices = Set.new(@t.vertices - [c, d])
+    remaining_edges = Set.new(@t.edges.reject { |e| [c, d].include?(e.source) || [c, d].include?(e.target) })
+    
+    t = @t.excise_vertices([c, d])
+    assert_equal remaining_vertices, Set.new(t.vertices)
+    assert_equal remaining_edges, Set.new(t.edges)
+    
+    added_edges = Set.new([RGL::Edge::DirectedEdge[a, d]])
+    
+    t = @t.hoist_child(d, c)
+    assert_equal Set.new(@t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@t.edges).union(added_edges), Set.new(t.edges)
+    
+    t = @t.hoist_children(d, [c])
+    assert_equal Set.new(@t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@t.edges).union(added_edges), Set.new(t.edges)
+    
+    t = @t.hoist_children(d, [b, c])
+    assert_equal Set.new(@t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@t.edges).union(added_edges), Set.new(t.edges)
+    
   end
   
 end
