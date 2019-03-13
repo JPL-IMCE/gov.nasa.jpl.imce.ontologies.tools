@@ -316,6 +316,18 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     end
   end
 
+  def treeify_with_merge(count = 0, &block)
+    if child = multi_parent_child
+      parents = direct_parents_of(child)
+      yield(:merging, self, child, parents, count) if block_given?
+      count += parents.length
+      merge_vertices(parents).treeify_with_merge(count, &block)
+    else
+      yield(:merged, nil, nil, nil, count) if block_given?
+      self
+    end
+  end
+
   # Excise specific vertex.
 
   def excise_vertex(v)
@@ -610,6 +622,8 @@ class TestEmptyTaxonomy < Minitest::Test
 
   def test_tree_operations
     assert_nil @t.multi_parent_child
+    tree = @t.treeify_with_merge
+    assert_equal tree, @t
     tree = @t.treeify_with_bypass_isolate
     assert_equal tree, @t
   end
@@ -628,6 +642,8 @@ class TestSingletonTaxonomy < Minitest::Test
 
   def test_tree_operations
     assert_nil @t.multi_parent_child
+    tree = @t.treeify_with_merge
+    assert_equal tree, @t
     tree = @t.treeify_with_bypass_isolate
     assert_equal tree, @t
   end
@@ -656,8 +672,11 @@ class Test3Tree < Minitest::Test
     assert_equal Set.new(t2.vertices), Set.new(@t.vertices - [c])
     assert_equal 1, t2.edges.length
     
-    t3 = @t.treeify_with_bypass_isolate
+    t3 = @t.treeify_with_merge
     assert_equal t3, @t
+    
+    t4 = @t.treeify_with_bypass_isolate
+    assert_equal t4, @t
   end
   
 end
@@ -751,8 +770,14 @@ class TestDiamondTree < Minitest::Test
     puts t.edges
     
   end
+
+  def test_treeify_with_merge
+
+#    t = @t.treeify_with_merge
+    
+  end
   
-  def test_bypass
+    def test_bypass
     
     ad = DirectedEdge[@a, @d]
     bd = DirectedEdge[@b, @d]
@@ -836,6 +861,12 @@ class TestAsymmetricTree < Minitest::Test
     
     t = @t.merge_vertices([@c, @e])
     puts t.edges
+    
+  end
+  
+  def test_treeify_with_merge
+
+#    t = @t.treeify_with_merge
     
   end
   
