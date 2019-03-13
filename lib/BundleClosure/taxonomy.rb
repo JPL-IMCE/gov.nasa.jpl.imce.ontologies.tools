@@ -416,8 +416,8 @@ class TestComplement < Minitest::Test
   end
 
   def test_complement_to_s
-    assert_equal 'complement(a)', @a1c.to_s
-    assert_equal 'complement(b)', @bc.to_s
+    assert_equal %q{a'}, @a1c.to_s
+    assert_equal %q{b'}, @bc.to_s
   end
   
 end
@@ -441,7 +441,7 @@ class TestDifference < Minitest::Test
   end
 
   def test_difference_to_s
-    assert_equal 'difference(a,b)', @dab1.to_s
+    assert_equal 'a\\b', @dab1.to_s
   end
   
 end
@@ -474,7 +474,7 @@ class TestUnion < Minitest::Test
   end
   
   def test_union_to_s
-    assert_equal 'union(a,b)', @aub2.to_s
+    assert_equal "a\u222ab", @aub2.to_s
   end
   
 end
@@ -507,7 +507,7 @@ class TestIntersection < Minitest::Test
   end
   
   def test_intersection_to_s
-    assert_equal 'intersection(a,b)', @aib1.to_s
+    assert_equal "a\u2229b", @aib1.to_s
   end
   
 end
@@ -620,7 +620,7 @@ class Test3Tree < Minitest::Test
   
 end
 
-class Test4DiamondTree < Minitest::Test
+class TestDiamondTree < Minitest::Test
 
   include ClassExpression
   
@@ -718,8 +718,27 @@ class Test4DiamondTree < Minitest::Test
   end
 
   def test_isolate
-    
   end
   
 end
 
+class Test4DiamondTree < Minitest::Test
+
+  include ClassExpression
+  
+  def setup
+    edges = %w{a b  a c  b e  b f  c g  c h  e i  c i}
+    @vertex_map = edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
+    @t = Taxonomy[*edges.map { |v| @vertex_map[v] }]
+    after_bypass_edges = %w{a b  a c  b e  b f  c g  c h  e i  c i  a i  b i}
+    @after_bypass_t = Taxonomy[*after_bypass_edges.map { |v| @vertex_map[v] }]
+    @c, @e, @i = *%w{c e i}.map { |k| @vertex_map[k] }
+  end
+
+  def test_bypass
+    @new_t = @t.bypass_parents(@i, [@c, @e])
+    assert_equal Set.new(@after_bypass_t.vertices), Set.new(@new_t.vertices)
+    assert_equal Set.new(@after_bypass_t.edges), Set.new(@new_t.edges)
+  end
+  
+end
