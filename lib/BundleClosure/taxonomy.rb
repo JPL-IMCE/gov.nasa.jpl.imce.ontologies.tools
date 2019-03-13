@@ -365,9 +365,18 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     end.select do |g|
       g.length > 1
     end
-
   end
 
+  # Return a hash mapping parents to sibling children.
+  
+  def sibling_map
+    vertices.inject({}) do |m, v|
+      cl = edges.select { |e| e.source == v }.map { |e| e.target }
+      m[v] = cl if cl.length > 1
+      m
+    end
+  end
+  
 end
 
 require 'minitest/autorun'
@@ -755,6 +764,9 @@ class TestDiamondTree < Minitest::Test
     v = Set.new(@t.vertices) - [@b, @c] + [@bdd, @cdd]
     e = Set.new(@t.edges) - [DirectedEdge[@a, @c], DirectedEdge[@c, @d]] + [DirectedEdge[@a, @cdd]]
     assert_equal v, Set.new(t.vertices)
+    t.sibling_map.each do |p, c|
+      puts "#{p} => {" + c.join(',') + '}'
+    end
   end
   
 end
@@ -807,6 +819,9 @@ class TestAsymmetricTree < Minitest::Test
     t = @t.treeify
     assert_equal Set.new(@after_treeify_t.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_t.edges), Set.new(t.edges)
+    t.sibling_map.each do |p, c|
+      puts "#{p} => {" + c.join(',') + '}'
+    end
   end
-
+  
 end
