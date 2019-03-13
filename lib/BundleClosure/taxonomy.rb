@@ -25,6 +25,7 @@ module ClassExpression
     def to_s
       @name
     end
+    alias :to_atom :to_s
     def ==(o)
       @name == o.name
     end
@@ -52,8 +53,9 @@ module ClassExpression
   end
   class Complement < Unary
     def to_s
-      'complement(' + @s.to_s + ')'
+      @s.to_atom + %q{'}
     end
+    alias :to_atom :to_s
     def complement
       @s.dup
     end
@@ -64,8 +66,8 @@ module ClassExpression
       @a = a
       @b = b
     end
-    def to_s
-      '(' + @a.to_s + ',' + @b.to_s + ')'
+    def to_atom
+      '(' + to_s + ')'
     end
     def ==(o)
       [@a, @b] == [o.a, o.b]
@@ -79,7 +81,7 @@ module ClassExpression
   end
   class Difference < Binary
     def to_s
-      'difference' + super
+      @a.to_atom + '\' + @b.to_atom
     end
   end
   class NAry
@@ -87,8 +89,11 @@ module ClassExpression
     def initialize(s)
       @s = s.to_set
     end
-    def to_s
-      '(' + @s.to_a.join(',') + ')'
+    def to_s(c)
+      @s.to_a.join(c)
+    end 
+    def to_atom
+      '(' + to_s + ')'
     end
     def ==(o)
       @s == o.s
@@ -102,7 +107,7 @@ module ClassExpression
   end
   class Union < NAry
     def to_s
-      'union' + super
+      super("\u222A")
     end
     def union(o)
       Union.new(@s.dup << o)
@@ -110,7 +115,7 @@ module ClassExpression
   end
   class Intersection < NAry
     def to_s
-      'intersection' + super
+      super("\u2229")
     end
     def intersection(o)
       Intersection.new(@s.dup << o)
