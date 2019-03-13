@@ -149,7 +149,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   # Find a vertex with multiple parents. Returns nil if none.
   
   def multi_parent_child
-    each_vertex.detect { |v| direct_parents_of(v).length > 1 }
+    each_vertex.detect { |v| parents_of(v).length > 1 }
   end
 
   # Find children of a vertex.
@@ -767,7 +767,8 @@ class TestAsymmetricTree < Minitest::Test
     edges = %w{a b  a c  b d  b e  c f  c g  c i  e h  e i  i j}
     @vertex_map = edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
     @t = Taxonomy[*edges.map { |v| @vertex_map[v] }]
-    @c, @e, @i = *%w{c e i}.map { |k| @vertex_map[k] }
+    @b, @c, @e, @i = *%w{b c e i}.map { |k| @vertex_map[k] }
+    @bdi = @vertex_map['b\\i'] = @b.difference(@i)
     @cdi = @vertex_map['c\\i'] = @c.difference(@i)
     @edi = @vertex_map['e\\i'] = @e.difference(@i)
     
@@ -779,6 +780,9 @@ class TestAsymmetricTree < Minitest::Test
 
     after_bypass_isolate_edges = %w{a b  a c\\i  a i  b d  b i  b e\\i  c\\i f  c\\i g e\\i h  i j}
     @after_bypass_isolate_t = Taxonomy[*after_bypass_isolate_edges.map { |v| @vertex_map[v] }]
+
+    after_treeify_edges = %w{a b\\i  a c\\i  a i  b\\i d  b\\i e\\i  c\\i f  c\\i g  e\\i h  i j}
+    @after_treeify_t = Taxonomy[*after_treeify_edges.map { |v| @vertex_map[v] }]
   end
 
   def test_bypass
@@ -799,4 +803,10 @@ class TestAsymmetricTree < Minitest::Test
     assert_equal Set.new(@after_bypass_isolate_t.edges), Set.new(t.edges)
   end
   
+  def test_treeify
+    t = @t.treeify
+    assert_equal Set.new(@after_treeify_t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_t.edges), Set.new(t.edges)
+  end
+
 end
