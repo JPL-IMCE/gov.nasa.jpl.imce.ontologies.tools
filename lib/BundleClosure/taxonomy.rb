@@ -27,7 +27,7 @@ module ClassExpression
     end
     alias :to_atom :to_s
     def ==(o)
-      @name == o.name
+      self.class == o.class && self.name == o.name
     end
     alias :eql? :==
     def hash
@@ -42,7 +42,7 @@ module ClassExpression
       @s = s
     end
     def ==(o)
-      @s == o.s
+      self.class == o.class && self.s == o.s
     end
     alias :eql? :==
     def hash
@@ -70,7 +70,7 @@ module ClassExpression
       '(' + to_s + ')'
     end
     def ==(o)
-      [@a, @b] == [o.a, o.b]
+      self.class == o.class && [self.a, self.b] == [o.a, o.b]
     end
     alias :eql? :==
     def hash
@@ -96,7 +96,7 @@ module ClassExpression
       '(' + to_s + ')'
     end
     def ==(o)
-      @s == o.s
+      self.class == o.class && self.s == o.s
     end
     alias :eql? :==
     def hash
@@ -231,44 +231,47 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     
   end
   
-  def isolate_child(child, parent)
+  def isolate_child_from_one(child, parent)
 
-    new_vertex = parent.difference(child)
+    unless parents_of(parent).empty?
+      
+      new_vertex = parent.difference(child)
 
-    g = RGL::DirectedAdjacencyGraph.new
+      g = RGL::DirectedAdjacencyGraph.new
 
-    parent_list = Set.new
-    global_parent_list = Set.new
-    child_list = Set.new
+      g.add_vertices(*(vertices - [parent] + [new_vertex]))
 
-    edges.each do |edge|
-      source_in_s = edge.source == parent
-      target_in_s = edge.target == parent
-      if source_in_s && target_in_s
-        # do nothing
-      elsif source_in_s
-        child_list << edge.target
-      elsif target_in_s
-        parent_list << edge.source
-      else
-        g.add_edge(edge.source, edge.target)
+      edges.each do |e|
+        if e.source == parent
+          unless e.target == child
+            g.add_edge(new_vertex, e.target)
+          end
+        elsif e.target == parent
+          g.add_edge(e.source, new_vertex)
+        else
+          g.add_edge(e.source, e.target)
+        end
       end
+      
+      Taxonomy.new(g)
+      
+    else
+      self
     end
-
-    direct_children = child_list - child_list.flat_map { |x| descendants_of(x).to_a }
-    direct_children.each do |c|
-      g.add_edge(new_vertex, c)
-    end
-
-    direct_parents = parent_list - parent_list.flat_map { |x| ancestors_of(x).to_a }
-    direct_parents.each do |p|
-      g.add_edge(p, new_vertex)
-    end
-
-    Taxonomy.new(g)
 
   end
 
+  def isolate_child(child, parents)
+
+    unless parents.empty?
+      first, rest = parents.first, parents.drop(1)
+      isolate_child_from_one(child, first).isolate_child(child, rest)
+    else
+      self
+    end
+     
+  end
+  
   # Recursively merge vertices until the resulting Taxonomy is a tree.
   
   def treeify(count = 0, &block)
@@ -623,6 +626,7 @@ end
 class TestDiamondTree < Minitest::Test
 
   include ClassExpression
+  include RGL::Edge
   
   def setup
     edges = %w{a b  a c  b d  c d}
@@ -633,6 +637,8 @@ class TestDiamondTree < Minitest::Test
     @b = @vertex_map['b']
     @c = @vertex_map['c']
     @d = @vertex_map['d']
+
+    @cdd = @c.difference(@d)
    end
 
   def test_children
@@ -669,7 +675,7 @@ class TestDiamondTree < Minitest::Test
 
     remaining_vertices = Set.new(@t.vertices - [@c])
     remaining_edges = Set.new(@t.edges.reject { |e| e.source == @c || e.target == @c })
-    added_edges =Set.new([RGL::Edge::DirectedEdge[@a, @d]])
+    added_edges =Set.new([DirectedEdge[@a, @d]])
     
     t = @t.excise_vertex(@c)
     assert_equal remaining_vertices, Set.new(t.vertices)
@@ -701,7 +707,7 @@ class TestDiamondTree < Minitest::Test
 
   def test_bypass
     
-    added_edges = Set.new([RGL::Edge::DirectedEdge[@a, @d]])
+    added_edges = Set.new([DirectedEdge[@a, @d]])
     
     t = @t.bypass_parent(@d, @c)
     assert_equal Set.new(@t.vertices), Set.new(t.vertices)
@@ -718,11 +724,27 @@ class TestDiamondTree < Minitest::Test
   end
 
   def test_isolate
+
+    t = @t.isolate_child_from_one(@d, @c)
+    v = Set.new(@t.vertices) - [@c] + [@cdd]
+    e = Set.new(@t.edges) - [DirectedEdge[@a, @c], DirectedEdge[@c, @d]] + [DirectedEdge[@a, @cdd]]
+    assert_equal v, Set.new(t.vertices)
+    assert_equal e, Set.new(t.edges)
+
+    t = @t.isolate_child(@d, [@c])
+    assert_equal v, Set.new(t.vertices)
+    assert_equal e, Set.new(t.edges)
+
+  end
+
+  def test_bypass_isolate
+    t = @t.bypass_parents(@d, [@b, @c]).isolate_child(@d, [@b, @c])
+    puts t.edges
   end
   
 end
 
-class Test4DiamondTree < Minitest::Test
+class TestAsymmetricTree < Minitest::Test
 
   include ClassExpression
   
@@ -736,9 +758,9 @@ class Test4DiamondTree < Minitest::Test
   end
 
   def test_bypass
-    @new_t = @t.bypass_parents(@i, [@c, @e])
-    assert_equal Set.new(@after_bypass_t.vertices), Set.new(@new_t.vertices)
-    assert_equal Set.new(@after_bypass_t.edges), Set.new(@new_t.edges)
+    t = @t.bypass_parents(@i, [@c, @e])
+    assert_equal Set.new(@after_bypass_t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_bypass_t.edges), Set.new(t.edges)
   end
   
 end
