@@ -81,7 +81,7 @@ module ClassExpression
   end
   class Difference < Binary
     def to_s
-      @a.to_atom + '\' + @b.to_atom
+      @a.to_atom + '\\' + @b.to_atom
     end
   end
   class NAry
