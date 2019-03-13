@@ -638,6 +638,7 @@ class TestDiamondTree < Minitest::Test
     @c = @vertex_map['c']
     @d = @vertex_map['d']
 
+    @bdd = @b.difference(@d)
     @cdd = @c.difference(@d)
    end
 
@@ -739,7 +740,9 @@ class TestDiamondTree < Minitest::Test
 
   def test_bypass_isolate
     t = @t.bypass_parents(@d, [@b, @c]).isolate_child(@d, [@b, @c])
-    puts t.edges
+    v = Set.new(@t.vertices) - [@b, @c] + [@bdd, @cdd]
+    e = Set.new(@t.edges) - [DirectedEdge[@a, @c], DirectedEdge[@c, @d]] + [DirectedEdge[@a, @cdd]]
+    assert_equal v, Set.new(t.vertices)
   end
   
 end
@@ -752,15 +755,25 @@ class TestAsymmetricTree < Minitest::Test
     edges = %w{a b  a c  b e  b f  c g  c h  e i  c i}
     @vertex_map = edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
     @t = Taxonomy[*edges.map { |v| @vertex_map[v] }]
+    @c, @e, @i = *%w{c e i}.map { |k| @vertex_map[k] }
+    @cdi = @vertex_map['c\\i'] = @c.difference(@i)
+    @edi = @vertex_map['e\\i'] = @e.difference(@i)
+    
     after_bypass_edges = %w{a b  a c  b e  b f  c g  c h  e i  c i  a i  b i}
     @after_bypass_t = Taxonomy[*after_bypass_edges.map { |v| @vertex_map[v] }]
-    @c, @e, @i = *%w{c e i}.map { |k| @vertex_map[k] }
-  end
+    
+    after_isolate_edges = %w{a b  a c\\i  b e\\i  b f  c\\i g  c\\i h}
+    @after_isolate_t = Taxonomy[*after_isolate_edges.map { |v| @vertex_map[v] }]
+      end
 
   def test_bypass
     t = @t.bypass_parents(@i, [@c, @e])
     assert_equal Set.new(@after_bypass_t.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_bypass_t.edges), Set.new(t.edges)
+
+    t = @t.isolate_child(@i, [@c, @e])
+    assert_equal Set.new(@after_isolate_t.vertices << @i), Set.new(t.vertices)
+    assert_equal Set.new(@after_isolate_t.edges), Set.new(t.edges)
   end
   
 end
