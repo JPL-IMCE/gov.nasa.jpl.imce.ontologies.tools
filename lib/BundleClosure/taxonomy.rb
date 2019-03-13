@@ -210,7 +210,10 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     g = RGL::DirectedAdjacencyGraph.new
 
     g.add_vertices(*self.vertices)
-    g.add_edges(*self.edges)
+
+    edges.each do |e|
+      g.add_edge(e.source, e.target) unless [e.source, e.target] == [parent, child]
+    end
 
     direct_parents_of(parent).each do |gp|
       g.add_edge(gp, child)
@@ -708,19 +711,21 @@ class TestDiamondTree < Minitest::Test
 
   def test_bypass
     
-    added_edges = Set.new([DirectedEdge[@a, @d]])
+    ad = DirectedEdge[@a, @d]
+    bd = DirectedEdge[@b, @d]
+    cd = DirectedEdge[@c, @d]
     
     t = @t.bypass_parent(@d, @c)
     assert_equal Set.new(@t.vertices), Set.new(t.vertices)
-    assert_equal Set.new(@t.edges).union(added_edges), Set.new(t.edges)
+    assert_equal Set.new(@t.edges << ad) - [cd], Set.new(t.edges)
     
     t = @t.bypass_parents(@d, [@c])
     assert_equal Set.new(@t.vertices), Set.new(t.vertices)
-    assert_equal Set.new(@t.edges).union(added_edges), Set.new(t.edges)
+    assert_equal Set.new(@t.edges << ad) - [cd], Set.new(t.edges)
     
     t = @t.bypass_parents(@d, [@b, @c])
     assert_equal Set.new(@t.vertices), Set.new(t.vertices)
-    assert_equal Set.new(@t.edges).union(added_edges), Set.new(t.edges)
+    assert_equal Set.new(@t.edges << ad) - [bd, cd], Set.new(t.edges)
     
   end
 
@@ -752,20 +757,20 @@ class TestAsymmetricTree < Minitest::Test
   include ClassExpression
   
   def setup
-    edges = %w{a b  a c  b e  b f  c g  c h  e i  c i}
+    edges = %w{a b  a c  b d  b e  c f  c g  c i  e h  e i  i j}
     @vertex_map = edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
     @t = Taxonomy[*edges.map { |v| @vertex_map[v] }]
     @c, @e, @i = *%w{c e i}.map { |k| @vertex_map[k] }
     @cdi = @vertex_map['c\\i'] = @c.difference(@i)
     @edi = @vertex_map['e\\i'] = @e.difference(@i)
     
-    after_bypass_edges = %w{a b  a c  b e  b f  c g  c h  e i  c i  a i  b i}
+    after_bypass_edges = %w{a b  a c  a i  b d  b e  b i  c f  c g  e h  i j}
     @after_bypass_t = Taxonomy[*after_bypass_edges.map { |v| @vertex_map[v] }]
     
-    after_isolate_edges = %w{a b  a c\\i  b e\\i  b f  c\\i g  c\\i h}
+    after_isolate_edges = %w{a b  a c\\i  b d  b e\\i  c\\i f  c\\i g  e\\i h  i j}
     @after_isolate_t = Taxonomy[*after_isolate_edges.map { |v| @vertex_map[v] }]
 
-    after_bypass_isolate_edges = %w{a b  a c\\i  b e\\i  b f  c\\i g  c\\i h  a i  b i}
+    after_bypass_isolate_edges = %w{a b  a c\\i  a i  b d  b i  b e\\i  c\\i f  c\\i g e\\i h  i j}
     @after_bypass_isolate_t = Taxonomy[*after_bypass_isolate_edges.map { |v| @vertex_map[v] }]
   end
 
@@ -777,13 +782,13 @@ class TestAsymmetricTree < Minitest::Test
 
   def test_isolate
     t = @t.isolate_child(@i, [@c, @e])
-    assert_equal Set.new(@after_isolate_t.vertices << @i), Set.new(t.vertices)
+    assert_equal Set.new(@after_isolate_t.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_isolate_t.edges), Set.new(t.edges)
   end
 
   def test_bypass_isolate
     t = @t.bypass_parents(@i, [@c, @e]).isolate_child(@i, [@c, @e])
-    assert_equal Set.new(@after_bypass_isolate_t.vertices << @i), Set.new(t.vertices)
+    assert_equal Set.new(@after_bypass_isolate_t.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_bypass_isolate_t.edges), Set.new(t.edges)
   end
   
