@@ -282,7 +282,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
       parents = direct_parents_of(child)
       yield(:merging, self, child, parents, count) if block_given?
       count += parents.length
-      partition_vertices(child, parents).raise_child(child).treeify(count, &block)
+      bypass_parents(child, parents).isolate_child(child, parents).treeify(count, &block)
     else
       yield(:merged, nil, nil, nil, count) if block_given?
       self
@@ -745,6 +745,13 @@ class TestDiamondTree < Minitest::Test
 
   def test_bypass_isolate
     t = @t.bypass_parents(@d, [@b, @c]).isolate_child(@d, [@b, @c])
+    v = Set.new(@t.vertices) - [@b, @c] + [@bdd, @cdd]
+    e = Set.new(@t.edges) - [DirectedEdge[@a, @c], DirectedEdge[@c, @d]] + [DirectedEdge[@a, @cdd]]
+    assert_equal v, Set.new(t.vertices)
+  end
+
+  def test_treeify
+    t = @t.treeify
     v = Set.new(@t.vertices) - [@b, @c] + [@bdd, @cdd]
     e = Set.new(@t.edges) - [DirectedEdge[@a, @c], DirectedEdge[@c, @d]] + [DirectedEdge[@a, @cdd]]
     assert_equal v, Set.new(t.vertices)
