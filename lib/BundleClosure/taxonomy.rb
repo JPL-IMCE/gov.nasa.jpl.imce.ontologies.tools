@@ -86,7 +86,7 @@ module ClassExpression
   end
   class NAry
     include Operators
-    def initialize(s)
+    def initialize(s = [])
       @s = s.to_set
     end
     def to_s(c)
@@ -124,17 +124,7 @@ module ClassExpression
 
 end
 
-# Each vertex of a Taxonomy is a set of class IRIs representing a union.
-
-class Union < Set
-
-  def to_s
-    '{' + to_a.join(',') + '}'
-  end
-  
-end
-
-# A Taxonomy is a directed graph of class unions.
+# A Taxonomy is a directed graph of class expressions.
 
 class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
@@ -203,6 +193,43 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   alias :inner_transitive_reduction :transitive_reduction
   def transitive_reduction
     Taxonomy.new(inner_transitive_reduction)
+  end
+
+  def merge_vertices(s)
+    
+    new_vertex = s.inject(ClassExpression::Union.new){ |m, o| m = m.union(o); m }
+
+    g = RGL::DirectedAdjacencyGraph.new
+    parent_list = Set.new
+    child_list = Set.new
+
+    g.add_vertices(Set.new(vertices) - s + [new_vertex])
+    
+    edges.each do |edge|
+      source_in_s = s.include?(edge.source)
+      target_in_s = s.include?(edge.target)
+      if source_in_s && target_in_s
+        # do nothing
+      elsif source_in_s
+        child_list << edge.target
+      elsif target_in_s
+        parent_list << edge.source
+      else
+        g.add_edge(edge.source, edge.target)
+      end
+    end
+    
+    direct_parents = parent_list - parent_list.flat_map { |p| ancestors_of(p) }
+    direct_children = child_list - child_list.flat_map { |c| descendants_of(c) }
+
+    direct_parents.each do |p|
+      g.add_edge(p, new_vertex)
+    end
+    direct_children.each do |c|
+      g.add_edge(new_vertex, c)
+    end
+
+    Taxonomy.new(g)
   end
 
   def bypass_parent(child, parent)
@@ -277,12 +304,12 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   
   # Recursively merge vertices until the resulting Taxonomy is a tree.
   
-  def treeify(count = 0, &block)
+  def treeify_with_bypass_isolate(count = 0, &block)
     if child = multi_parent_child
       parents = direct_parents_of(child)
       yield(:merging, self, child, parents, count) if block_given?
       count += parents.length
-      bypass_parents(child, parents).isolate_child(child, parents).treeify(count, &block)
+      bypass_parents(child, parents).isolate_child(child, parents).treeify_with_bypass_isolate(count, &block)
     else
       yield(:merged, nil, nil, nil, count) if block_given?
       self
@@ -583,7 +610,7 @@ class TestEmptyTaxonomy < Minitest::Test
 
   def test_tree_operations
     assert_nil @t.multi_parent_child
-    tree = @t.treeify
+    tree = @t.treeify_with_bypass_isolate
     assert_equal tree, @t
   end
   
@@ -601,7 +628,7 @@ class TestSingletonTaxonomy < Minitest::Test
 
   def test_tree_operations
     assert_nil @t.multi_parent_child
-    tree = @t.treeify
+    tree = @t.treeify_with_bypass_isolate
     assert_equal tree, @t
   end
   
@@ -629,7 +656,7 @@ class Test3Tree < Minitest::Test
     assert_equal Set.new(t2.vertices), Set.new(@t.vertices - [c])
     assert_equal 1, t2.edges.length
     
-    t3 = @t.treeify
+    t3 = @t.treeify_with_bypass_isolate
     assert_equal t3, @t
   end
   
@@ -718,6 +745,13 @@ class TestDiamondTree < Minitest::Test
 
   end
 
+  def test_merge
+
+    t = @t.merge_vertices([@b, @c])
+    puts t.edges
+    
+  end
+  
   def test_bypass
     
     ad = DirectedEdge[@a, @d]
@@ -753,20 +787,21 @@ class TestDiamondTree < Minitest::Test
   end
 
   def test_bypass_isolate
+    
     t = @t.bypass_parents(@d, [@b, @c]).isolate_child(@d, [@b, @c])
     v = Set.new(@t.vertices) - [@b, @c] + [@bdd, @cdd]
     e = Set.new(@t.edges) - [DirectedEdge[@a, @c], DirectedEdge[@c, @d]] + [DirectedEdge[@a, @cdd]]
     assert_equal v, Set.new(t.vertices)
   end
+  
 
-  def test_treeify
-    t = @t.treeify
+  def test_treeify_with_bypass_isolate
+    
+    t = @t.treeify_with_bypass_isolate
     v = Set.new(@t.vertices) - [@b, @c] + [@bdd, @cdd]
     e = Set.new(@t.edges) - [DirectedEdge[@a, @c], DirectedEdge[@c, @d]] + [DirectedEdge[@a, @cdd]]
     assert_equal v, Set.new(t.vertices)
-    t.sibling_map.each do |p, c|
-      puts "#{p} => {" + c.join(',') + '}'
-    end
+    
   end
   
 end
@@ -797,31 +832,43 @@ class TestAsymmetricTree < Minitest::Test
     @after_treeify_t = Taxonomy[*after_treeify_edges.map { |v| @vertex_map[v] }]
   end
 
+  def test_merge
+    
+    t = @t.merge_vertices([@c, @e])
+    puts t.edges
+    
+  end
+  
   def test_bypass
+    
     t = @t.bypass_parents(@i, [@c, @e])
     assert_equal Set.new(@after_bypass_t.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_bypass_t.edges), Set.new(t.edges)
+    
   end
 
   def test_isolate
+    
     t = @t.isolate_child(@i, [@c, @e])
     assert_equal Set.new(@after_isolate_t.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_isolate_t.edges), Set.new(t.edges)
+    
   end
 
   def test_bypass_isolate
+    
     t = @t.bypass_parents(@i, [@c, @e]).isolate_child(@i, [@c, @e])
     assert_equal Set.new(@after_bypass_isolate_t.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_bypass_isolate_t.edges), Set.new(t.edges)
+    
   end
   
-  def test_treeify
-    t = @t.treeify
+  def test_treeify_with_bypass_isolate
+    
+    t = @t.treeify_with_bypass_isolate
     assert_equal Set.new(@after_treeify_t.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_t.edges), Set.new(t.edges)
-    t.sibling_map.each do |p, c|
-      puts "#{p} => {" + c.join(',') + '}'
-    end
+
   end
   
 end
