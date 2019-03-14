@@ -218,9 +218,9 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
         g.add_edge(edge.source, edge.target)
       end
     end
-    
-    direct_parents = parent_list - parent_list.flat_map { |p| ancestors_of(p) }
-    direct_children = child_list - child_list.flat_map { |c| descendants_of(c) }
+
+    direct_parents = parent_list - parent_list.flat_map { |p| ancestors_of(p).to_a }
+    direct_children = child_list - child_list.flat_map { |c| descendants_of(c).to_a }
 
     direct_parents.each do |p|
       g.add_edge(p, new_vertex)
@@ -773,7 +773,7 @@ class TestDiamondTree < Minitest::Test
 
   def test_treeify_with_merge
 
-#    t = @t.treeify_with_merge
+    t = @t.treeify_with_merge
     
   end
   
@@ -866,7 +866,7 @@ class TestAsymmetricTree < Minitest::Test
   
   def test_treeify_with_merge
 
-#    t = @t.treeify_with_merge
+    t = @t.treeify_with_merge
     
   end
   
