@@ -767,14 +767,17 @@ class TestDiamondTree < Minitest::Test
   def test_merge
 
     t = @t.merge_vertices([@b, @c])
-    puts t.edges
     
   end
 
   def test_treeify_with_merge
 
     t = @t.treeify_with_merge
-    
+    puts t.edges
+    t.sibling_map do |p, sl|
+      puts "#{p} => #{sl.join(' ')}"
+    end
+ 
   end
   
     def test_bypass
@@ -826,6 +829,9 @@ class TestDiamondTree < Minitest::Test
     v = Set.new(@t.vertices) - [@b, @c] + [@bdd, @cdd]
     e = Set.new(@t.edges) - [DirectedEdge[@a, @c], DirectedEdge[@c, @d]] + [DirectedEdge[@a, @cdd]]
     assert_equal v, Set.new(t.vertices)
+    t.sibling_map.each do |p, sl|
+      puts "#{p} => #{sl.join(' ')}"
+    end
     
   end
   
@@ -860,13 +866,16 @@ class TestAsymmetricTree < Minitest::Test
   def test_merge
     
     t = @t.merge_vertices([@c, @e])
-    puts t.edges
     
   end
   
   def test_treeify_with_merge
 
     t = @t.treeify_with_merge
+    puts t.edges
+    t.sibling_map.each do |p, sl|
+      puts "#{p} => #{sl.join(' ')}"
+    end
     
   end
   
@@ -899,6 +908,9 @@ class TestAsymmetricTree < Minitest::Test
     t = @t.treeify_with_bypass_isolate
     assert_equal Set.new(@after_treeify_t.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_t.edges), Set.new(t.edges)
+    t.sibling_map.each do |p, sl|
+      puts "#{p} => #{sl.join(' ')}"
+    end
 
   end
   
