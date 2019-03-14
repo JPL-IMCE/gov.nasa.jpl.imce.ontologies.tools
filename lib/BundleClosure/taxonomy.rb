@@ -859,6 +859,50 @@ class TestDiamondTree < Minitest::Test
   
 end
 
+class Test8SymmetricTree < Minitest::Test
+
+  include ClassExpression
+  
+  def setup
+    edges = %w{a b  a c  b d  b e  c f  c g  d h  g h}
+    @vertex_map = edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
+    @t = Taxonomy[*edges.map { |v| @vertex_map[v] }]
+    @b, @c, @d, @e, @f, @g, @h = *%w{b c d e f g h}.map { |k| @vertex_map[k] }
+    @buc = @vertex_map['buc'] = @b.union(@c)
+    @dug = @vertex_map['dug'] = @d.union(@g)
+    @bdh = @vertex_map['b\\h'] = @b.difference(@h)
+    @cdh = @vertex_map['c\\h'] = @c.difference(@h)
+    @ddh = @vertex_map['d\\h'] = @d.difference(@h)
+    @gdh = @vertex_map['g\\h'] = @g.difference(@h)
+
+    after_treeify_with_merge_edges = %w{a buc  buc dug  buc e  buc f  dug h}
+    @after_treeify_with_merge_t = Taxonomy[*after_treeify_with_merge_edges.map { |v| @vertex_map[v] }]
+    @after_treeify_with_merge_map = { @buc => Set.new([@e, @dug, @f]) }
+
+    after_treeify_with_bi_edges = %w{a b\\h  a c\\h  a h  b\\h d\\h  b\\h e  c\\h f  c\\h g\\h}
+    @after_treeify_with_bi_t = Taxonomy[*after_treeify_with_bi_edges.map { |v| @vertex_map[v] }]
+  end
+
+  def test_treeify_with_merge
+    t = @t.treeify_with_merge
+    assert_equal Set.new(@after_treeify_with_merge_t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_merge_t.edges), Set.new(t.edges)
+  end
+
+  def test_sibling_map_with_merge
+    map = @after_treeify_with_merge_t.sibling_map
+    assert_equal @after_treeify_with_merge_map, map
+  end
+
+  
+  def test_treeify_with_bypass_isolate
+    t = @t.treeify_with_bypass_isolate
+    assert_equal Set.new(@after_treeify_with_bi_t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_bi_t.edges), Set.new(t.edges)
+  end
+  
+end
+
 class TestAsymmetricTree < Minitest::Test
 
   include ClassExpression
@@ -868,9 +912,13 @@ class TestAsymmetricTree < Minitest::Test
     @vertex_map = edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
     @t = Taxonomy[*edges.map { |v| @vertex_map[v] }]
     @b, @c, @e, @i = *%w{b c e i}.map { |k| @vertex_map[k] }
+    @cue = @vertex_map['cue'] = @c.union(@e)
     @bdi = @vertex_map['b\\i'] = @b.difference(@i)
     @cdi = @vertex_map['c\\i'] = @c.difference(@i)
     @edi = @vertex_map['e\\i'] = @e.difference(@i)
+
+    after_merge_edges = %w{a b  b d  b cue  i j  cue f  cue g  cue i  cue h}
+    @after_merge_t = Taxonomy[*after_merge_edges.map { |v| @vertex_map[v] }]
     
     after_bypass_edges = %w{a b  a c  a i  b d  b e  b i  c f  c g  e h  i j}
     @after_bypass_t = Taxonomy[*after_bypass_edges.map { |v| @vertex_map[v] }]
@@ -881,22 +929,23 @@ class TestAsymmetricTree < Minitest::Test
     after_bypass_isolate_edges = %w{a b  a c\\i  a i  b d  b i  b e\\i  c\\i f  c\\i g e\\i h  i j}
     @after_bypass_isolate_t = Taxonomy[*after_bypass_isolate_edges.map { |v| @vertex_map[v] }]
 
-    after_treeify_edges = %w{a b\\i  a c\\i  a i  b\\i d  b\\i e\\i  c\\i f  c\\i g  e\\i h  i j}
-    @after_treeify_t = Taxonomy[*after_treeify_edges.map { |v| @vertex_map[v] }]
+    after_treeify_with_bi_edges = %w{a b\\i  a c\\i  a i  b\\i d  b\\i e\\i  c\\i f  c\\i g  e\\i h  i j}
+    @after_treeify_with_bi_t = Taxonomy[*after_treeify_with_bi_edges.map { |v| @vertex_map[v] }]
   end
 
   def test_merge
     
     t = @t.merge_vertices([@c, @e])
+    assert_equal Set.new(@after_merge_t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_merge_t.edges), Set.new(t.edges)
     
   end
   
   def test_treeify_with_merge
 
     t = @t.treeify_with_merge
-    # t.sibling_map.each do |p, sl|
-    #   puts "m #{p} => #{sl.join(' ')}"
-    # end
+    assert_equal Set.new(@after_merge_t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_merge_t.edges), Set.new(t.edges)
     
   end
   
@@ -927,11 +976,8 @@ class TestAsymmetricTree < Minitest::Test
   def test_treeify_with_bypass_isolate
     
     t = @t.treeify_with_bypass_isolate
-    assert_equal Set.new(@after_treeify_t.vertices), Set.new(t.vertices)
-    assert_equal Set.new(@after_treeify_t.edges), Set.new(t.edges)
-    # t.sibling_map.each do |p, sl|
-    #   puts "b #{p} => #{sl.join(' ')}"
-    # end
+    assert_equal Set.new(@after_treeify_with_bi_t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_bi_t.edges), Set.new(t.edges)
 
   end
   
