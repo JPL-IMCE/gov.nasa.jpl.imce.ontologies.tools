@@ -413,7 +413,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   def sibling_map
     vertices.inject({}) do |m, v|
       cl = edges.select { |e| e.source == v }.map { |e| e.target }
-      m[v] = cl if cl.length > 1
+      m[v] = Set.new(cl) if cl.length > 1
       m
     end
   end
@@ -787,8 +787,15 @@ class TestDiamondTree < Minitest::Test
     assert_equal Set.new([a_buc, buc_d]), Set.new(t.edges)
  
   end
+
+  def test_sibling_map_with_merge
+
+    d = @t.treeify_with_merge.sibling_map
+    assert_empty d
+    
+  end
   
-    def test_bypass
+  def test_bypass
     
     ad = DirectedEdge[@a, @d]
     bd = DirectedEdge[@b, @d]
@@ -826,8 +833,9 @@ class TestDiamondTree < Minitest::Test
     
     t = @t.bypass_parents(@d, [@b, @c]).isolate_child(@d, [@b, @c])
     v = Set.new(@t.vertices) - [@b, @c] + [@bdd, @cdd]
-    e = Set.new(@t.edges) - [DirectedEdge[@a, @c], DirectedEdge[@c, @d]] + [DirectedEdge[@a, @cdd]]
+    e = Set.new([DirectedEdge[@a, @bdd], DirectedEdge[@a, @cdd]] + [DirectedEdge[@a, @d]])
     assert_equal v, Set.new(t.vertices)
+    assert_equal e, Set.new(t.edges)
   end
   
 
@@ -835,11 +843,17 @@ class TestDiamondTree < Minitest::Test
     
     t = @t.treeify_with_bypass_isolate
     v = Set.new(@t.vertices) - [@b, @c] + [@bdd, @cdd]
-    e = Set.new(@t.edges) - [DirectedEdge[@a, @c], DirectedEdge[@c, @d]] + [DirectedEdge[@a, @cdd]]
+    e = Set.new([DirectedEdge[@a, @bdd], DirectedEdge[@a, @cdd]] + [DirectedEdge[@a, @d]])
     assert_equal v, Set.new(t.vertices)
-    # t.sibling_map.each do |p, sl|
-    #   puts "b #{p} => #{sl.join(' ')}"
-    # end
+    assert_equal e, Set.new(t.edges)
+    
+  end
+  
+  def test_sibling_map_with_bypass_isolate
+
+    d = @t.treeify_with_bypass_isolate.sibling_map
+    map = { @a => Set.new([ @bdd, @cdd, @d ]) }
+    assert_equal map, d
     
   end
   
