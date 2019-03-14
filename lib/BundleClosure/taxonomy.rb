@@ -202,8 +202,8 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     g = RGL::DirectedAdjacencyGraph.new
     parent_list = Set.new
     child_list = Set.new
-
-    g.add_vertices(Set.new(vertices) - s + [new_vertex])
+    
+    g.add_vertices(*(Set.new(vertices) - s + [new_vertex]))
     
     edges.each do |edge|
       source_in_s = s.include?(edge.source)
@@ -302,28 +302,30 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
      
   end
   
-  # Recursively merge vertices until the resulting Taxonomy is a tree.
+  # Recursively bypass and isolate vertices until the resulting Taxonomy is a tree.
   
   def treeify_with_bypass_isolate(count = 0, &block)
     if child = multi_parent_child
       parents = direct_parents_of(child)
-      yield(:merging, self, child, parents, count) if block_given?
+      yield(:treeify_in_progress, self, child, parents, count) if block_given?
       count += parents.length
       bypass_parents(child, parents).isolate_child(child, parents).treeify_with_bypass_isolate(count, &block)
     else
-      yield(:merged, nil, nil, nil, count) if block_given?
+      yield(:treeify_done, nil, nil, nil, count) if block_given?
       self
     end
   end
 
+  # Recursively merge vertices until the resulting Taxonomy is a tree.
+
   def treeify_with_merge(count = 0, &block)
     if child = multi_parent_child
       parents = direct_parents_of(child)
-      yield(:merging, self, child, parents, count) if block_given?
+      yield(:treeify_in_progress, self, child, parents, count) if block_given?
       count += parents.length
       merge_vertices(parents).treeify_with_merge(count, &block)
     else
-      yield(:merged, nil, nil, nil, count) if block_given?
+      yield(:treeify_done, nil, nil, nil, count) if block_given?
       self
     end
   end
@@ -698,6 +700,8 @@ class TestDiamondTree < Minitest::Test
 
     @bdd = @b.difference(@d)
     @cdd = @c.difference(@d)
+
+    @buc = @b.union(@c)
    end
 
   def test_children
@@ -767,16 +771,20 @@ class TestDiamondTree < Minitest::Test
   def test_merge
 
     t = @t.merge_vertices([@b, @c])
+    a_buc = DirectedEdge[@a, @buc]
+    buc_d = DirectedEdge[@buc, @d]
+    assert_equal Set.new([@a, @buc, @d]), Set.new(t.vertices)
+    assert_equal Set.new([a_buc, buc_d]), Set.new(t.edges)
     
   end
 
   def test_treeify_with_merge
 
     t = @t.treeify_with_merge
-    puts t.edges
-    t.sibling_map do |p, sl|
-      puts "m #{p} => #{sl.join(' ')}"
-    end
+    a_buc = DirectedEdge[@a, @buc]
+    buc_d = DirectedEdge[@buc, @d]
+    assert_equal Set.new([@a, @buc, @d]), Set.new(t.vertices)
+    assert_equal Set.new([a_buc, buc_d]), Set.new(t.edges)
  
   end
   
@@ -829,9 +837,9 @@ class TestDiamondTree < Minitest::Test
     v = Set.new(@t.vertices) - [@b, @c] + [@bdd, @cdd]
     e = Set.new(@t.edges) - [DirectedEdge[@a, @c], DirectedEdge[@c, @d]] + [DirectedEdge[@a, @cdd]]
     assert_equal v, Set.new(t.vertices)
-    t.sibling_map.each do |p, sl|
-      puts "b #{p} => #{sl.join(' ')}"
-    end
+    # t.sibling_map.each do |p, sl|
+    #   puts "b #{p} => #{sl.join(' ')}"
+    # end
     
   end
   
@@ -872,10 +880,9 @@ class TestAsymmetricTree < Minitest::Test
   def test_treeify_with_merge
 
     t = @t.treeify_with_merge
-    puts t.edges
-    t.sibling_map.each do |p, sl|
-      puts "m #{p} => #{sl.join(' ')}"
-    end
+    # t.sibling_map.each do |p, sl|
+    #   puts "m #{p} => #{sl.join(' ')}"
+    # end
     
   end
   
@@ -908,9 +915,9 @@ class TestAsymmetricTree < Minitest::Test
     t = @t.treeify_with_bypass_isolate
     assert_equal Set.new(@after_treeify_t.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_t.edges), Set.new(t.edges)
-    t.sibling_map.each do |p, sl|
-      puts "b #{p} => #{sl.join(' ')}"
-    end
+    # t.sibling_map.each do |p, sl|
+    #   puts "b #{p} => #{sl.join(' ')}"
+    # end
 
   end
   
