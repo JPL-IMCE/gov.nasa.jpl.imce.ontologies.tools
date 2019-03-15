@@ -15,6 +15,7 @@
 #++
 
 require 'logger'
+require 'logger/application'
 
 unless Logger::Application.respond_to?(:logger)
   class Logger::Application

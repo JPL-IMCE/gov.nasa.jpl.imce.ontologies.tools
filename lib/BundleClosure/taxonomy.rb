@@ -307,11 +307,11 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   def treeify_with_bypass_isolate(count = 0, &block)
     if child = multi_parent_child
       parents = direct_parents_of(child)
-      yield(:treeify_in_progress, self, child, parents, count) if block_given?
+      yield(:treeifying, self, child, parents, count) if block_given?
       count += parents.length
       bypass_parents(child, parents).isolate_child(child, parents).treeify_with_bypass_isolate(count, &block)
     else
-      yield(:treeify_done, nil, nil, nil, count) if block_given?
+      yield(:treeified, nil, nil, nil, count) if block_given?
       self
     end
   end
@@ -321,11 +321,11 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   def treeify_with_merge(count = 0, &block)
     if child = multi_parent_child
       parents = direct_parents_of(child)
-      yield(:treeify_in_progress, self, child, parents, count) if block_given?
+      yield(:treeifying, self, child, parents, count) if block_given?
       count += parents.length
       merge_vertices(parents).treeify_with_merge(count, &block)
     else
-      yield(:treeify_done, nil, nil, nil, count) if block_given?
+      yield(:treeified, nil, nil, nil, count) if block_given?
       self
     end
   end
