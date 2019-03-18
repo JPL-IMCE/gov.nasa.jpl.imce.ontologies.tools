@@ -318,8 +318,12 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   def isolate_child(child, parents)
 
-    unless parents.empty?
-      first, rest = parents.first, parents.drop(1)
+    warn "ancestors: #{ancestors_of(child).to_a.join(' ')}"
+    warn "parents: #{parents.to_a.join(' ')}"
+    pl = ancestors_of(child).intersection(parents)
+warn "pl: #{pl.to_a.join(' ')}"
+    unless pl.empty?
+      first, rest = pl.first, pl.drop(1)
       isolate_child_from_one(child, first).isolate_child(child, rest)
     else
       self
@@ -329,14 +333,14 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   
   # Recursively bypass and isolate vertices until the resulting Taxonomy is a tree.
   
-  def treeify_with_bypass_isolate(count = 0, &block)
+  def treeify_with_bypass_reduce_isolate(count = 0, &block)
     if child = multi_parent_child
       parents = direct_parents_of(child)
       yield(:treeifying, self, child, parents, count) if block_given?
       count += parents.length
       bp = bypass_parents(child, parents)
       rd = bp.reduce_child(child)
-      rd.isolate_child(child, parents_of(child)).treeify_with_bypass_isolate(count, &block)
+      rd.isolate_child(child, parents).treeify_with_bypass_reduce_isolate(count, &block)
     else
       yield(:treeified, nil, nil, nil, count) if block_given?
       self
@@ -652,7 +656,7 @@ class TestEmptyTaxonomy < Minitest::Test
     assert_nil @t.multi_parent_child
     tree = @t.treeify_with_merge
     assert_equal tree, @t
-    tree = @t.treeify_with_bypass_isolate
+    tree = @t.treeify_with_bypass_reduce_isolate
     assert_equal tree, @t
   end
   
@@ -672,7 +676,7 @@ class TestSingletonTaxonomy < Minitest::Test
     assert_nil @t.multi_parent_child
     tree = @t.treeify_with_merge
     assert_equal tree, @t
-    tree = @t.treeify_with_bypass_isolate
+    tree = @t.treeify_with_bypass_reduce_isolate
     assert_equal tree, @t
   end
   
@@ -703,7 +707,7 @@ class Test3Tree < Minitest::Test
     t3 = @t.treeify_with_merge
     assert_equal t3, @t
     
-    t4 = @t.treeify_with_bypass_isolate
+    t4 = @t.treeify_with_bypass_reduce_isolate
     assert_equal t4, @t
   end
   
@@ -842,29 +846,30 @@ class TestDiamondTree < Minitest::Test
   end
 
   def test_reduce
-    t1 = @t.bypass_parents(@d, [@b, @c])
-    t2 = t1.reduce_child(@d)
-    assert_equal Set.new(t1.vertices), Set.new(t2.vertices)
-    assert_equal Set.new(t1.edges), Set.new(t2.edges)
+    t = @t.reduce_child(@d)
+    assert_equal Set.new(@t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@t.edges), Set.new(t.edges)
   end
   
   def test_isolate
 
     t = @t.isolate_child_from_one(@d, @c)
-    v = Set.new(@t.vertices) - [@c] + [@cdd]
+    v = Set.new(@t.vertices) - Set.new([@c]) + Set.new([@cdd])
     e = Set.new(@t.edges) - [DirectedEdge[@a, @c], DirectedEdge[@c, @d]] + [DirectedEdge[@a, @cdd]]
     assert_equal v, Set.new(t.vertices)
     assert_equal e, Set.new(t.edges)
 
+warn '<<<<'
     t = @t.isolate_child(@d, [@c])
+warn '>>>>'
     assert_equal v, Set.new(t.vertices)
     assert_equal e, Set.new(t.edges)
 
   end
 
-  def test_bypass_isolate
+  def test_bypass_reduce_isolate
     
-    t = @t.bypass_parents(@d, [@b, @c]).isolate_child(@d, [@b, @c])
+    t = @t.bypass_parents(@d, [@b, @c]).reduce_child(@d).isolate_child(@d, [@b, @c])
     v = Set.new(@t.vertices) - [@b, @c] + [@bdd, @cdd]
     e = Set.new([DirectedEdge[@a, @bdd], DirectedEdge[@a, @cdd]] + [DirectedEdge[@a, @d]])
     assert_equal v, Set.new(t.vertices)
@@ -872,9 +877,9 @@ class TestDiamondTree < Minitest::Test
   end
   
 
-  def test_treeify_with_bypass_isolate
+  def test_treeify_with_bypass_reduce_isolate
     
-    t = @t.treeify_with_bypass_isolate
+    t = @t.treeify_with_bypass_reduce_isolate
     v = Set.new(@t.vertices) - [@b, @c] + [@bdd, @cdd]
     e = Set.new([DirectedEdge[@a, @bdd], DirectedEdge[@a, @cdd]] + [DirectedEdge[@a, @d]])
     assert_equal v, Set.new(t.vertices)
@@ -882,9 +887,9 @@ class TestDiamondTree < Minitest::Test
     
   end
   
-  def test_sibling_map_with_bypass_isolate
+  def test_sibling_map_with_bypass_reduce_isolate
 
-    d = @t.treeify_with_bypass_isolate.sibling_map
+    d = @t.treeify_with_bypass_reduce_isolate.sibling_map
     map = { @a => Set.new([ @bdd, @cdd, @d ]) }
     assert_equal map, d
     
@@ -900,7 +905,7 @@ class Test8SymmetricTree < Minitest::Test
     edges = %w{a b  a c  b d  b e  c f  c g  d h  g h}
     @vertex_map = edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
     @t = Taxonomy[*edges.map { |v| @vertex_map[v] }]
-    @b, @c, @d, @e, @f, @g, @h = *%w{b c d e f g h}.map { |k| @vertex_map[k] }
+    @a, @b, @c, @d, @e, @f, @g, @h = *%w{a b c d e f g h}.map { |k| @vertex_map[k] }
     @buc = @vertex_map['buc'] = @b.union(@c)
     @dug = @vertex_map['dug'] = @d.union(@g)
     @bdh = @vertex_map['b\\h'] = @b.difference(@h)
@@ -912,8 +917,9 @@ class Test8SymmetricTree < Minitest::Test
     @after_treeify_with_merge_t = Taxonomy[*after_treeify_with_merge_edges.map { |v| @vertex_map[v] }]
     @after_treeify_with_merge_map = { @buc => Set.new([@e, @dug, @f]) }
 
-    after_treeify_with_bi_edges = %w{a b\\h  a c\\h  a h  b\\h d\\h  b\\h e  c\\h f  c\\h g\\h}
-    @after_treeify_with_bi_t = Taxonomy[*after_treeify_with_bi_edges.map { |v| @vertex_map[v] }]
+    after_treeify_with_bypass_reduce_isolate_edges = %w{a b\\h  a c\\h  a h  b\\h d\\h  b\\h e  c\\h f  c\\h g\\h}
+    @after_treeify_with_bypass_reduce_isolate_t = Taxonomy[*after_treeify_with_bypass_reduce_isolate_edges.map { |v| @vertex_map[v] }]
+    @after_treeify_with_bypass_reduce_isolate_map = { @a => Set.new([@bdh, @cdh, @h]), @bdh => Set.new([@ddh, @e]), @cdh => Set.new([@f, @gdh]) }
   end
 
   def test_treeify_with_merge
@@ -927,12 +933,17 @@ class Test8SymmetricTree < Minitest::Test
     assert_equal @after_treeify_with_merge_map, map
   end
 
-  def test_treeify_with_bypass_isolate
-    t = @t.treeify_with_bypass_isolate
-    assert_equal Set.new(@after_treeify_with_bi_t.vertices), Set.new(t.vertices)
-    assert_equal Set.new(@after_treeify_with_bi_t.edges), Set.new(t.edges)
+  def test_treeify_with_bypass_reduce_isolate
+    t = @t.treeify_with_bypass_reduce_isolate
+    assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_t.edges), Set.new(t.edges)
   end
   
+  def test_sibling_map_with_bypass_reduce_isolate
+    map = @after_treeify_with_bypass_reduce_isolate_t.sibling_map
+    assert_equal @after_treeify_with_bypass_reduce_isolate_map, map
+  end
+
 end
 
 class TestAsymmetricTree < Minitest::Test
@@ -958,11 +969,11 @@ class TestAsymmetricTree < Minitest::Test
     after_isolate_edges = %w{a b  a c\\i  b d  b e\\i  c\\i f  c\\i g  e\\i h  i j}
     @after_isolate_t = Taxonomy[*after_isolate_edges.map { |v| @vertex_map[v] }]
 
-    after_bypass_isolate_edges = %w{a b  a c\\i  a i  b d  b i  b e\\i  c\\i f  c\\i g e\\i h  i j}
-    @after_bypass_isolate_t = Taxonomy[*after_bypass_isolate_edges.map { |v| @vertex_map[v] }]
+    after_bypass_reduce_isolate_edges = %w{a b  a c\\i  a i  b d  b i  b e\\i  c\\i f  c\\i g e\\i h  i j}
+    @after_bypass_reduce_isolate_t = Taxonomy[*after_bypass_reduce_isolate_edges.map { |v| @vertex_map[v] }]
 
-    after_treeify_with_bi_edges = %w{a b\\i  a c\\i  a i  b\\i d  b\\i e\\i  c\\i f  c\\i g  e\\i h  i j}
-    @after_treeify_with_bi_t = Taxonomy[*after_treeify_with_bi_edges.map { |v| @vertex_map[v] }]
+    after_treeify_with_bypass_reduce_isolate_edges = %w{a b\\i  a c  a i  b\\i d  b\\i e\\i  c f  c g  e\\i h  i j}
+    @after_treeify_with_bypass_reduce_isolate_t = Taxonomy[*after_treeify_with_bypass_reduce_isolate_edges.map { |v| @vertex_map[v] }]
   end
 
   def test_acyclic?
@@ -993,6 +1004,12 @@ class TestAsymmetricTree < Minitest::Test
     
   end
 
+  def test_bypass_reduce
+    
+    t = @t.bypass_parents(@i, [@c, @e]).reduce_child(@i)
+
+  end
+  
   def test_isolate
     
     t = @t.isolate_child(@i, [@c, @e])
@@ -1001,22 +1018,22 @@ class TestAsymmetricTree < Minitest::Test
     
   end
 
-  def test_bypass_isolate
+  def test_bypass_reduce_isolate
     
     t = @t.bypass_parents(@i, [@c, @e]).isolate_child(@i, [@c, @e])
-    assert_equal Set.new(@after_bypass_isolate_t.vertices), Set.new(t.vertices)
-    assert_equal Set.new(@after_bypass_isolate_t.edges), Set.new(t.edges)
+    assert_equal Set.new(@after_bypass_reduce_isolate_t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_bypass_reduce_isolate_t.edges), Set.new(t.edges)
     
   end
   
-  def test_treeify_with_bypass_isolate
+  def test_treeify_with_bypass_reduce_isolate
     
-    t = @t.treeify_with_bypass_isolate
-    v1 = Set.new(@after_treeify_with_bi_t.vertices.map { |v| v.to_s })
+    t = @t.treeify_with_bypass_reduce_isolate
+    v1 = Set.new(@after_treeify_with_bypass_reduce_isolate_t.vertices.map { |v| v.to_s })
     v2 = Set.new(t.vertices.map { |v| v.to_s })
     assert_equal v1, v2
-    assert_equal Set.new(@after_treeify_with_bi_t.vertices), Set.new(t.vertices)
-    assert_equal Set.new(@after_treeify_with_bi_t.edges), Set.new(t.edges)
+    assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_t.edges), Set.new(t.edges)
 
   end
   
