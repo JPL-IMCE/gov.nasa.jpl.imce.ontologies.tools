@@ -79,9 +79,9 @@ class CloseBundleApplication < OWLAPIApplication
     option_parser.on('--concrete "stem1 stem2 ... " ', '') do |v|
       @options.backbone_stems[:concrete] = v.split(/\s+/)
     end
-    @options.method = :bypass_isolate
+    @options.algorithm = :bypass_isolate
     option_parser.on('--merge', 'use weaker merge algorithm') do
-      @options.method = :merge
+      @options.algorithm = :merge
     end
 
     super
@@ -255,7 +255,7 @@ class CloseBundleApplication < OWLAPIApplication
             end.map do |sc|
               sc.asOWLClass.getIRI.toString
             end.each do |sub_iri|
-              sub_set = (klass_set[sub_iri] ||= Union.new([sub_iri]))
+              sub_set = (klass_set[sub_iri] ||= ClassExpression::Union.new([sub_iri]))
               log(DEBUG, "#{sub_iri} subclass of #{klass_iri}")
               taxonomy_stage0.add_edge(klass_set[klass_iri], sub_set)
             end
@@ -281,7 +281,7 @@ class CloseBundleApplication < OWLAPIApplication
             Regexp.new('\A' + @options.backbone_iri + '[^#]*#' + s + '\z')
           end
           bb_classes = taxonomy_stage1.vertices.select do |v|
-            pats.any? { |p| v.first =~ p }
+            pats.any? { |p| v.to_s =~ p }
           end
           all_classes[type] = bb_classes.flat_map do |c|
             taxonomy_stage1.descendants_of(c)
@@ -313,8 +313,7 @@ class CloseBundleApplication < OWLAPIApplication
         taxonomy_stage3 = taxonomy_stage2.excise_pattern(pat) do |msg, klass, done|
           case msg
           when :excising
-            ks = '[' + klass.to_a.join(',') + ']'
-            log(Logger::DEBUG, "excise #{ks}, #{done} done")
+            log(Logger::DEBUG, "excise #{klass}, #{done} done")
           when :excised
             log(Logger::INFO, "excised #{done} backbone classes")
           end
@@ -333,13 +332,13 @@ class CloseBundleApplication < OWLAPIApplication
       # Treeify class taxonomy.
 
       log(Logger::INFO, 'treeify class taxonomy')
-      treeify = @options.method == :merge ? :treeify_using_merge : :treeify_using_bypass_isolate
-      tree = taxonomy_stage4.send(treeify) do |msg, tree, child, parents, done|
+      treeify = (@options.algorithm == :merge ? :treeify_with_merge : :treeify_with_bypass_isolate)
+      tree = taxonomy_stage4.send(treeify, 0) do |msg, tree, child, parents, done|
         case msg
         when :treeifying
-          log(Logger::DEBUG, "processed #{parents.length} parents of #{child.to_a.join(',') }")
+          log(Logger::DEBUG, "processed #{parents.length} parents of #{child}")
           parents.each do |p|
-            log(Logger::DEBUG, "parent: #{p.to_a.join(',') }")
+            log(Logger::DEBUG, "parent: #{p}")
           end
         when :treeified
           log(Logger::INFO, "processed #{done} vertices")

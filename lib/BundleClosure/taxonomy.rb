@@ -1,4 +1,5 @@
 require 'rgl/adjacency'
+require 'rgl/topsort'
 require 'rgl/transitivity'
 require 'delegate'
 
@@ -32,6 +33,12 @@ module ClassExpression
     alias :eql? :==
     def hash
       @name.hash
+    end
+    def intersection(o)
+      (o == self) ? self : super(o)
+    end
+    def union(o)
+      (o == self) ? self : super(o)
     end
     protected
     attr_reader :name
@@ -260,6 +267,24 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     end
     
   end
+
+  def reduce_child(child)
+
+    g = RGL::DirectedAdjacencyGraph.new
+
+    g.add_vertices(*self.vertices)
+
+    edges.each do |e|
+      g.add_edge(e.source, e.target) unless e.target == child
+    end
+
+    direct_parents_of(child).each do |p|
+      g.add_edge(p, child)
+    end
+
+    Taxonomy.new(g)
+    
+  end
   
   def isolate_child_from_one(child, parent)
 
@@ -309,7 +334,9 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
       parents = direct_parents_of(child)
       yield(:treeifying, self, child, parents, count) if block_given?
       count += parents.length
-      bypass_parents(child, parents).isolate_child(child, parents).treeify_with_bypass_isolate(count, &block)
+      bp = bypass_parents(child, parents)
+      rd = bp.reduce_child(child)
+      rd.isolate_child(child, parents_of(child)).treeify_with_bypass_isolate(count, &block)
     else
       yield(:treeified, nil, nil, nil, count) if block_given?
       self
@@ -372,7 +399,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   # Excise all vertices that include a match to a given pattern.
 
   def excise_pattern(pattern, count = 0, &block)
-    if m = vertices.detect { |v| v.any? { |x| x =~ pattern } }
+    if m = vertices.detect { |v| v.to_s =~ pattern }
       count += 1
       yield :excising, m, count if block_given?
       excise_vertex(m).excise_pattern(pattern, count, &block)
@@ -422,10 +449,7 @@ end
 
 require 'minitest/autorun'
 
-class TestTaxonomy < Minitest::Test
-end
-
-class TestSingleton < TestTaxonomy
+class TestSingleton < Minitest::Test
 
   include ClassExpression
   
@@ -447,7 +471,7 @@ class TestSingleton < TestTaxonomy
   
 end
 
-class TestComplement < TestTaxonomy
+class TestComplement < Minitest::Test
 
   include ClassExpression
   
@@ -480,7 +504,7 @@ class TestComplement < TestTaxonomy
   
 end
 
-class TestDifference < TestTaxonomy
+class TestDifference < Minitest::Test
 
   include ClassExpression
   
@@ -504,7 +528,7 @@ class TestDifference < TestTaxonomy
   
 end
 
-class TestUnion < TestTaxonomy
+class TestUnion < Minitest::Test
 
   include ClassExpression
   
@@ -537,7 +561,7 @@ class TestUnion < TestTaxonomy
   
 end
 
-class TestIntersection < TestTaxonomy
+class TestIntersection < Minitest::Test
 
   include ClassExpression
   
@@ -570,7 +594,7 @@ class TestIntersection < TestTaxonomy
   
 end
 
-class TestOperators < TestTaxonomy
+class TestOperators < Minitest::Test
 
   include ClassExpression
   
@@ -616,7 +640,7 @@ class TestOperators < TestTaxonomy
   
 end
 
-class TestEmptyTaxonomy < TestTaxonomy
+class TestEmptyTaxonomy < Minitest::Test
 
   include ClassExpression
   
@@ -634,7 +658,7 @@ class TestEmptyTaxonomy < TestTaxonomy
   
 end
 
-class TestSingletonTaxonomy < TestTaxonomy
+class TestSingletonTaxonomy < Minitest::Test
 
   include ClassExpression
   
@@ -654,7 +678,7 @@ class TestSingletonTaxonomy < TestTaxonomy
   
 end
 
-class Test3Tree < TestTaxonomy
+class Test3Tree < Minitest::Test
 
   include ClassExpression
   
@@ -685,7 +709,7 @@ class Test3Tree < TestTaxonomy
   
 end
 
-class TestDiamondTree < TestTaxonomy
+class TestDiamondTree < Minitest::Test
 
   include ClassExpression
   include RGL::Edge
@@ -817,6 +841,13 @@ class TestDiamondTree < TestTaxonomy
     
   end
 
+  def test_reduce
+    t1 = @t.bypass_parents(@d, [@b, @c])
+    t2 = t1.reduce_child(@d)
+    assert_equal Set.new(t1.vertices), Set.new(t2.vertices)
+    assert_equal Set.new(t1.edges), Set.new(t2.edges)
+  end
+  
   def test_isolate
 
     t = @t.isolate_child_from_one(@d, @c)
@@ -861,7 +892,7 @@ class TestDiamondTree < TestTaxonomy
   
 end
 
-class Test8SymmetricTree < TestTaxonomy
+class Test8SymmetricTree < Minitest::Test
 
   include ClassExpression
   
@@ -896,7 +927,6 @@ class Test8SymmetricTree < TestTaxonomy
     assert_equal @after_treeify_with_merge_map, map
   end
 
-  
   def test_treeify_with_bypass_isolate
     t = @t.treeify_with_bypass_isolate
     assert_equal Set.new(@after_treeify_with_bi_t.vertices), Set.new(t.vertices)
@@ -905,7 +935,7 @@ class Test8SymmetricTree < TestTaxonomy
   
 end
 
-class TestAsymmetricTree < TestTaxonomy
+class TestAsymmetricTree < Minitest::Test
 
   include ClassExpression
   
@@ -935,6 +965,10 @@ class TestAsymmetricTree < TestTaxonomy
     @after_treeify_with_bi_t = Taxonomy[*after_treeify_with_bi_edges.map { |v| @vertex_map[v] }]
   end
 
+  def test_acyclic?
+    assert @t.acyclic?
+  end
+  
   def test_merge
     
     t = @t.merge_vertices([@c, @e])
@@ -978,6 +1012,9 @@ class TestAsymmetricTree < TestTaxonomy
   def test_treeify_with_bypass_isolate
     
     t = @t.treeify_with_bypass_isolate
+    v1 = Set.new(@after_treeify_with_bi_t.vertices.map { |v| v.to_s })
+    v2 = Set.new(t.vertices.map { |v| v.to_s })
+    assert_equal v1, v2
     assert_equal Set.new(@after_treeify_with_bi_t.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_bi_t.edges), Set.new(t.edges)
 
