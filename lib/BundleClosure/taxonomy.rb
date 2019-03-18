@@ -422,8 +422,10 @@ end
 
 require 'minitest/autorun'
 
+class TestTaxonomy < Minitest::Test
+end
 
-class TestSingleton < Minitest::Test
+class TestSingleton < TestTaxonomy
 
   include ClassExpression
   
@@ -445,7 +447,7 @@ class TestSingleton < Minitest::Test
   
 end
 
-class TestComplement < Minitest::Test
+class TestComplement < TestTaxonomy
 
   include ClassExpression
   
@@ -478,7 +480,7 @@ class TestComplement < Minitest::Test
   
 end
 
-class TestDifference < Minitest::Test
+class TestDifference < TestTaxonomy
 
   include ClassExpression
   
@@ -502,7 +504,7 @@ class TestDifference < Minitest::Test
   
 end
 
-class TestUnion < Minitest::Test
+class TestUnion < TestTaxonomy
 
   include ClassExpression
   
@@ -535,7 +537,7 @@ class TestUnion < Minitest::Test
   
 end
 
-class TestIntersection < Minitest::Test
+class TestIntersection < TestTaxonomy
 
   include ClassExpression
   
@@ -568,7 +570,7 @@ class TestIntersection < Minitest::Test
   
 end
 
-class TestOperators < Minitest::Test
+class TestOperators < TestTaxonomy
 
   include ClassExpression
   
@@ -614,7 +616,7 @@ class TestOperators < Minitest::Test
   
 end
 
-class TestEmptyTaxonomy < Minitest::Test
+class TestEmptyTaxonomy < TestTaxonomy
 
   include ClassExpression
   
@@ -632,7 +634,7 @@ class TestEmptyTaxonomy < Minitest::Test
   
 end
 
-class TestSingletonTaxonomy < Minitest::Test
+class TestSingletonTaxonomy < TestTaxonomy
 
   include ClassExpression
   
@@ -652,7 +654,7 @@ class TestSingletonTaxonomy < Minitest::Test
   
 end
 
-class Test3Tree < Minitest::Test
+class Test3Tree < TestTaxonomy
 
   include ClassExpression
   
@@ -683,7 +685,7 @@ class Test3Tree < Minitest::Test
   
 end
 
-class TestDiamondTree < Minitest::Test
+class TestDiamondTree < TestTaxonomy
 
   include ClassExpression
   include RGL::Edge
@@ -859,7 +861,7 @@ class TestDiamondTree < Minitest::Test
   
 end
 
-class Test8SymmetricTree < Minitest::Test
+class Test8SymmetricTree < TestTaxonomy
 
   include ClassExpression
   
@@ -903,7 +905,7 @@ class Test8SymmetricTree < Minitest::Test
   
 end
 
-class TestAsymmetricTree < Minitest::Test
+class TestAsymmetricTree < TestTaxonomy
 
   include ClassExpression
   
