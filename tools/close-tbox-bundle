@@ -357,7 +357,7 @@ class CloseBundleApplication < OWLAPIApplication
       log(Logger::INFO, 'create disjointness axioms')
       sibling_map.each do |parent, sibs|
         expression = sibs.inject(java.util.HashSet.new) do |h, s|
-          h << get_owl_class_expression(s)
+          h << s.to_owl_class_expression
           h
         end
         axioms << factory.getOWLDisjointClassesAxiom(expression)
@@ -398,52 +398,6 @@ class CloseBundleApplication < OWLAPIApplication
           
   end
 
-  # Create an OWL class expresion from a ClassExpression.
-  
-  def create_owl_class_expression(expression, factory)
-    case expression
-    when Singleton
-      factory.getOWLClass(IRI.create(expression.name))
-    when Complement
-      s = create_owl_class_expression(expression.s)
-      factory.getOWLObjectComplementOf(s))
-    when Difference
-      s = create_owl_class_expression(expression.a)
-      m = create_owl_class_expression(expression.b)
-      factory.getOWLObjectIntersectionOf(s, getOWLObjectComplementOf(m))
-    when NAry
-      list = java.util.HashSet.new
-      expression.s.each do |e|
-        list << create_owl_class_expression(e, factory)
-      end
-      case expression
-      when Intersection
-        factory.getObjectIntersectionOf(list)
-      when Union
-        factory.getObjectUnionOf(list)
-      end
-    end
-  end
-  
-  # Create an OWL Class or a union of Classes from a list.
-  
-  def class_expression(disjoint_set, factory)
-    result = java.util.HashSet.new
-    disjoint_set.each do |union_list|
-      case union_list.length
-      when 1
-        result << factory.getOWLClass(IRI.create(union_list.first.to_s))
-      else
-        union_hash = union_list.inject(java.util.HashSet.new) do |m, c|
-          m << factory.getOWLClass(IRI.create(c.to_s))
-          m
-        end
-        result << factory.getOWLObjectUnionOf(union_hash)
-      end
-    end
-    result
-  end
-  
 end
 
 exit(CloseBundleApplication.new(APPLICATION_NAME).start)

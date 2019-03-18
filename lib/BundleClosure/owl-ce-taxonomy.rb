@@ -33,7 +33,7 @@ module ClassExpression
   class NAry
 
     def to_expression_list(factory)
-      expression.s.inject(java.util.HashSet.new) do |l, e|
+      s.inject(java.util.HashSet.new) do |l, e|
         l << e.to_owl_class_expression(factory)
         l
       end
@@ -44,7 +44,7 @@ module ClassExpression
   class Intersection
 
     def to_owl_class_expression(factory)
-      factory.getObjectIntersectionOf(s.to_expression_list(factory))
+      factory.getOWLObjectIntersectionOf(to_expression_list(factory))
     end
     
   end
@@ -52,7 +52,7 @@ module ClassExpression
   class Union
 
     def to_owl_class_expression(factory)
-      factory.getObjectUnionOf(s.to_expression_list(factory))
+      factory.getOWLObjectUnionOf(to_expression_list(factory))
     end
     
   end
@@ -128,3 +128,58 @@ class TestDifferenceOwlCE < Minitest::Test
   end
 
 end
+
+class TestIntersectionOwlCE < Minitest::Test
+
+  include ClassExpression
+
+  def setup
+    @factory = OWLDataFactoryImpl.new
+    @aname = 'a'
+    @bname = 'b'
+    @cname = 'c'
+    @aibicc = Singleton.new(@aname).
+                intersection(Singleton.new(@bname)).
+                intersection(Singleton.new(@cname))
+  end
+
+  def test_owl_class_expression
+    ce = @aibicc.to_owl_class_expression(@factory)
+    assert_kind_of org.semanticweb.owlapi.model.OWLObjectIntersectionOf, ce
+    ops = ce.getOperands
+    ops.each do |op|
+      assert_kind_of org.semanticweb.owlapi.model.OWLClass, op
+    end
+    names = Set.new(ops.map { |op| op.getIRI.toString })
+    assert_equal Set.new([@aname, @bname, @cname]), names
+  end
+
+end
+
+class TestUnionOwlCE < Minitest::Test
+
+  include ClassExpression
+
+  def setup
+    @factory = OWLDataFactoryImpl.new
+    @aname = 'a'
+    @bname = 'b'
+    @cname = 'c'
+    @aibicc = Singleton.new(@aname).
+                union(Singleton.new(@bname)).
+                union(Singleton.new(@cname))
+  end
+
+  def test_owl_class_expression
+    ce = @aibicc.to_owl_class_expression(@factory)
+    assert_kind_of org.semanticweb.owlapi.model.OWLObjectUnionOf, ce
+    ops = ce.getOperands
+    ops.each do |op|
+      assert_kind_of org.semanticweb.owlapi.model.OWLClass, op
+    end
+    names = Set.new(ops.map { |op| op.getIRI.toString })
+    assert_equal Set.new([@aname, @bname, @cname]), names
+  end
+
+end
+
