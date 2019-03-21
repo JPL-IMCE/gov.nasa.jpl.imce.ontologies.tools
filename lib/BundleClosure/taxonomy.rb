@@ -318,12 +318,9 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   def isolate_child(child, parents)
 
-    warn "ancestors: #{ancestors_of(child).to_a.join(' ')}"
-    warn "parents: #{parents.to_a.join(' ')}"
-    pl = ancestors_of(child).intersection(parents)
-warn "pl: #{pl.to_a.join(' ')}"
-    unless pl.empty?
-      first, rest = pl.first, pl.drop(1)
+    candidates = Set.new(parents_of(child).flat_map { |p| descendants_of(p).to_a }).intersection(parents)
+    unless candidates.empty?
+      first, rest = candidates.first, candidates.drop(1)
       isolate_child_from_one(child, first).isolate_child(child, rest)
     else
       self
@@ -723,20 +720,26 @@ class TestDiamondTree < Minitest::Test
     @vertex_map = initial_edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
     @initial_tree = Taxonomy[*initial_edges.map { |v| @vertex_map[v] }]
 
-    after_bypass_edges = %w{a b  a c  a d}
-    @after_bypass_tree = Taxonomy[*after_bypass_edges.map { |v| @vertex_map[v] }]
-
-    @after_bypass_reduce_tree = @after_bypass_tree
-    
     @a = @vertex_map['a']
     @b = @vertex_map['b']
     @c = @vertex_map['c']
     @d = @vertex_map['d']
 
-    @bdd = @b.difference(@d)
-    @cdd = @c.difference(@d)
+    @bdd = @vertex_map['b\\d'] = @b.difference(@d)
+    @cdd = @vertex_map['c\\d'] = @c.difference(@d)
 
     @buc = @b.union(@c)
+
+    after_bypass_edges = %w{a b  a c  a d}
+    @after_bypass_tree = Taxonomy[*after_bypass_edges.map { |v| @vertex_map[v] }]
+
+    @after_bypass_reduce_tree = @after_bypass_tree
+
+    after_bypass_reduce_isolate_c_edges = %w{a b  a c\\d  a d}
+    @after_bypass_reduce_isolate_c_tree = Taxonomy[*after_bypass_reduce_isolate_c_edges.map { |v| @vertex_map[v] }]
+    
+    after_bypass_reduce_isolate_edges = %w{a b\\d  a c\\d  a d}
+    @after_bypass_reduce_isolate_tree = Taxonomy[*after_bypass_reduce_isolate_edges.map { |v| @vertex_map[v] }]
    end
 
   def test_children
@@ -856,19 +859,15 @@ class TestDiamondTree < Minitest::Test
     assert_equal Set.new(@after_bypass_reduce_tree.edges), Set.new(t.edges)
   end
   
-  def xtest_isolate
+  def test_isolate # HERE
 
-    t = @initial_tree.isolate_child_from_one(@d, @c)
-    v = Set.new(@initial_tree.vertices) - Set.new([@c]) + Set.new([@cdd])
-    e = Set.new(@initial_tree.edges) - [DirectedEdge[@a, @c], DirectedEdge[@c, @d]] + [DirectedEdge[@a, @cdd]]
-    assert_equal v, Set.new(t.vertices)
-    assert_equal e, Set.new(t.edges)
+    t = @after_bypass_reduce_tree.isolate_child_from_one(@d, @c)
+    assert_equal Set.new(@after_bypass_reduce_isolate_c_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_bypass_reduce_isolate_c_tree.edges), Set.new(t.edges)
 
-warn '<<<<'
-    t = @initial_tree.isolate_child(@d, [@c])
-warn '>>>>'
-    assert_equal v, Set.new(t.vertices)
-    assert_equal e, Set.new(t.edges)
+    t = @after_bypass_reduce_tree.isolate_child(@d, [@b, @c])
+    assert_equal Set.new(@after_bypass_reduce_isolate_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
 
   end
 
