@@ -728,7 +728,10 @@ class TestDiamondTree < Minitest::Test
     @bdd = @vertex_map['b\\d'] = @b.difference(@d)
     @cdd = @vertex_map['c\\d'] = @c.difference(@d)
 
-    @buc = @b.union(@c)
+    @buc = @vertex_map['buc'] = @b.union(@c)
+
+    after_merge_edges = %w{a buc  buc d}
+    @after_merge_tree = Taxonomy[*after_merge_edges.map { |v| @vertex_map[v] }]
 
     after_bypass_edges = %w{a b  a c  a d}
     @after_bypass_tree = Taxonomy[*after_bypass_edges.map { |v| @vertex_map[v] }]
@@ -809,20 +812,16 @@ class TestDiamondTree < Minitest::Test
   def test_merge
 
     t = @initial_tree.merge_vertices([@b, @c])
-    a_buc = DirectedEdge[@a, @buc]
-    buc_d = DirectedEdge[@buc, @d]
-    assert_equal Set.new([@a, @buc, @d]), Set.new(t.vertices)
-    assert_equal Set.new([a_buc, buc_d]), Set.new(t.edges)
+    assert_equal Set.new(@after_merge_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_merge_tree.edges), Set.new(t.edges)
     
   end
 
   def test_treeify_with_merge
 
     t = @initial_tree.treeify_with_merge
-    a_buc = DirectedEdge[@a, @buc]
-    buc_d = DirectedEdge[@buc, @d]
-    assert_equal Set.new([@a, @buc, @d]), Set.new(t.vertices)
-    assert_equal Set.new([a_buc, buc_d]), Set.new(t.edges)
+    assert_equal Set.new(@after_merge_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_merge_tree.edges), Set.new(t.edges)
  
   end
 
@@ -854,12 +853,14 @@ class TestDiamondTree < Minitest::Test
   end
 
   def test_reduce
+    
     t = @after_bypass_tree.reduce_child(@d)
     assert_equal Set.new(@after_bypass_reduce_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_bypass_reduce_tree.edges), Set.new(t.edges)
+    
   end
   
-  def test_isolate # HERE
+  def test_isolate
 
     t = @after_bypass_reduce_tree.isolate_child_from_one(@d, @c)
     assert_equal Set.new(@after_bypass_reduce_isolate_c_tree.vertices), Set.new(t.vertices)
@@ -871,27 +872,23 @@ class TestDiamondTree < Minitest::Test
 
   end
 
-  def xtest_bypass_reduce_isolate
+  def test_bypass_reduce_isolate
     
     t = @initial_tree.bypass_parents(@d, [@b, @c]).reduce_child(@d).isolate_child(@d, [@b, @c])
-    v = Set.new(@initial_tree.vertices) - [@b, @c] + [@bdd, @cdd]
-    e = Set.new([DirectedEdge[@a, @bdd], DirectedEdge[@a, @cdd]] + [DirectedEdge[@a, @d]])
-    assert_equal v, Set.new(t.vertices)
-    assert_equal e, Set.new(t.edges)
+    assert_equal Set.new(@after_bypass_reduce_isolate_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
   end
   
 
-  def xtest_treeify_with_bypass_reduce_isolate
+  def test_treeify_with_bypass_reduce_isolate
     
     t = @initial_tree.treeify_with_bypass_reduce_isolate
-    v = Set.new(@initial_tree.vertices) - [@b, @c] + [@bdd, @cdd]
-    e = Set.new([DirectedEdge[@a, @bdd], DirectedEdge[@a, @cdd]] + [DirectedEdge[@a, @d]])
-    assert_equal v, Set.new(t.vertices)
-    assert_equal e, Set.new(t.edges)
+    assert_equal Set.new(@after_bypass_reduce_isolate_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
     
   end
   
-  def xtest_sibling_map_with_bypass_reduce_isolate
+  def test_sibling_map_with_bypass_reduce_isolate
 
     d = @initial_tree.treeify_with_bypass_reduce_isolate.sibling_map
     map = { @a => Set.new([ @bdd, @cdd, @d ]) }
