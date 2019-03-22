@@ -332,16 +332,14 @@ class CloseBundleApplication < OWLAPIApplication
       # Treeify class taxonomy.
 
       log(Logger::INFO, 'treeify class taxonomy')
-      treeify = (@options.algorithm == :merge ? :treeify_with_merge : :treeify_with_bypass_isolate)
+      treeify = (@options.algorithm == :merge ? :treeify_with_merge : :treeify_with_bypass_reduce_isolate)
       tree = taxonomy_stage4.send(treeify, 0) do |msg, tree, child, parents, done|
+        log(Logger::DEBUG, "processed #{done} vertices")
         case msg
         when :treeifying
-          log(Logger::DEBUG, "processed #{parents.length} parents of #{child}")
-          parents.each do |p|
-            log(Logger::DEBUG, "parent: #{p}")
-          end
+          log(Logger::DEBUG, "processing #{parents.length} parents of #{child}")
         when :treeified
-          log(Logger::INFO, "processed #{done} vertices")
+          log(Logger::INFO, "treeify complete after processing #{done} vertices")
         end
       end
       raise 'merged tree is cyclic' unless tree.acyclic?

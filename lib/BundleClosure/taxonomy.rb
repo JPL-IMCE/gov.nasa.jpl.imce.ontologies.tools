@@ -332,7 +332,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   
   def treeify_with_bypass_reduce_isolate(count = 0, &block)
     if child = multi_parent_child
-      parents = direct_parents_of(child)
+      parents = parents_of(child)
       yield(:treeifying, self, child, parents, count) if block_given?
       count += parents.length
       bp = bypass_parents(child, parents)
@@ -348,7 +348,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   def treeify_with_merge(count = 0, &block)
     if child = multi_parent_child
-      parents = direct_parents_of(child)
+      parents = parents_of(child)
       yield(:treeifying, self, child, parents, count) if block_given?
       count += parents.length
       merge_vertices(parents).treeify_with_merge(count, &block)
