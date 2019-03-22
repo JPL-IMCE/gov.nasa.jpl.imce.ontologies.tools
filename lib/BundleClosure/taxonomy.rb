@@ -898,14 +898,15 @@ class TestDiamondTree < Minitest::Test
   
 end
 
-class Test8SymmetricTree #< Minitest::Test
+class Test8SymmetricTree < Minitest::Test
 
   include ClassExpression
   
   def setup
-    edges = %w{a b  a c  b d  b e  c f  c g  d h  g h}
-    @vertex_map = edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
-    @t = Taxonomy[*edges.map { |v| @vertex_map[v] }]
+    initial_edges = %w{a b  a c  b d  b e  c f  c g  d h  g h}
+    @vertex_map = initial_edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
+    @initial_tree = Taxonomy[*initial_edges.map { |v| @vertex_map[v] }]
+
     @a, @b, @c, @d, @e, @f, @g, @h = *%w{a b c d e f g h}.map { |k| @vertex_map[k] }
     @buc = @vertex_map['buc'] = @b.union(@c)
     @dug = @vertex_map['dug'] = @d.union(@g)
@@ -914,28 +915,58 @@ class Test8SymmetricTree #< Minitest::Test
     @ddh = @vertex_map['d\\h'] = @d.difference(@h)
     @gdh = @vertex_map['g\\h'] = @g.difference(@h)
 
+    after_merge_edges = %w{a b  a c  b dug  b e  c dug  c f  dug h}
+    @after_merge_tree = Taxonomy[*after_merge_edges.map { |v| @vertex_map[v] }]
+
     after_treeify_with_merge_edges = %w{a buc  buc dug  buc e  buc f  dug h}
-    @after_treeify_with_merge_t = Taxonomy[*after_treeify_with_merge_edges.map { |v| @vertex_map[v] }]
+    @after_treeify_with_merge_tree = Taxonomy[*after_treeify_with_merge_edges.map { |v| @vertex_map[v] }]
     @after_treeify_with_merge_map = { @buc => Set.new([@e, @dug, @f]) }
+
+    after_bypass_edges = %w{a b  a c  b d  b e  b h  c f  c g  c h}
+    @after_bypass_tree = Taxonomy[*after_bypass_edges.map { |v| @vertex_map[v] }]
+
+    @after_bypass_reduce_tree = @after_bypass_tree
 
     after_treeify_with_bypass_reduce_isolate_edges = %w{a b\\h  a c\\h  a h  b\\h d\\h  b\\h e  c\\h f  c\\h g\\h}
     @after_treeify_with_bypass_reduce_isolate_t = Taxonomy[*after_treeify_with_bypass_reduce_isolate_edges.map { |v| @vertex_map[v] }]
     @after_treeify_with_bypass_reduce_isolate_map = { @a => Set.new([@bdh, @cdh, @h]), @bdh => Set.new([@ddh, @e]), @cdh => Set.new([@f, @gdh]) }
   end
 
+  def test_merge 
+    t = @initial_tree.merge_vertices([@d, @g])
+    assert_equal Set.new(@after_merge_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_merge_tree.edges), Set.new(t.edges)
+  end
+  
   def test_treeify_with_merge
-    t = @t.treeify_with_merge
-    assert_equal Set.new(@after_treeify_with_merge_t.vertices), Set.new(t.vertices)
-    assert_equal Set.new(@after_treeify_with_merge_t.edges), Set.new(t.edges)
+    t = @initial_tree.treeify_with_merge
+    assert_equal Set.new(@after_treeify_with_merge_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_merge_tree.edges), Set.new(t.edges)
   end
 
   def test_sibling_map_with_merge
-    map = @after_treeify_with_merge_t.sibling_map
+    map = @after_treeify_with_merge_tree.sibling_map
     assert_equal @after_treeify_with_merge_map, map
   end
 
+  def test_bypass
+    t = @initial_tree.bypass_parents(@h, [@d, @g])
+    assert_equal Set.new(@after_bypass_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_bypass_tree.edges), Set.new(t.edges)
+  end
+  
+  def test_reduce
+    t = @after_bypass_tree.reduce_child(@h)
+    assert_equal Set.new(@after_bypass_reduce_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_bypass_reduce_tree.edges), Set.new(t.edges)
+  end
+
+  def test_isolate
+    assert false, "isolate"
+  end
+  
   def test_treeify_with_bypass_reduce_isolate
-    t = @t.treeify_with_bypass_reduce_isolate
+    t = @initial_tree.treeify_with_bypass_reduce_isolate
     assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_t.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_t.edges), Set.new(t.edges)
   end
