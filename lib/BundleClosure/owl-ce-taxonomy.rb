@@ -8,16 +8,20 @@ java_import 'org.semanticweb.owlapi.model.ClassExpressionType'
 module ClassExpression
 
   class Singleton
+    
     def to_owl_class_expression(factory)
       factory.getOWLClass(IRI.create(name))
     end
+    
   end
 
   class Complement
+    
     def to_owl_class_expression(factory)
       op = s.to_owl_class_expression(factory)
       factory.getOWLObjectComplementOf(op)
     end
+    
   end
 
   class Difference

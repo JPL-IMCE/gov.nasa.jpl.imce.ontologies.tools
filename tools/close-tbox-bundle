@@ -24,7 +24,7 @@
 # such that any two classes that do not have an explicit intersection are disjoint.
 
 require 'OWLAPIApplication'
-require 'taxonomy'
+require 'owl-ce-taxonomy'
 
 java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
 java_import 'org.coode.xml.XMLWriterPreferences'
@@ -79,9 +79,12 @@ class CloseBundleApplication < OWLAPIApplication
     option_parser.on('--concrete "stem1 stem2 ... " ', '') do |v|
       @options.backbone_stems[:concrete] = v.split(/\s+/)
     end
-    @options.algorithm = :bypass_isolate
+    @options.algorithm = :bypass_reduce_isolate
     option_parser.on('--merge', 'use weaker merge algorithm') do
       @options.algorithm = :merge
+    end
+    option_parser.on('--bypass-reduce-isolate', 'use stronger bypass-reduce-isolate algorithm') do
+      @options.algorithm = :bypass_reduce_isolate
     end
 
     super
@@ -255,7 +258,7 @@ class CloseBundleApplication < OWLAPIApplication
             end.map do |sc|
               sc.asOWLClass.getIRI.toString
             end.each do |sub_iri|
-              sub_set = (klass_set[sub_iri] ||= ClassExpression::Union.new([sub_iri]))
+              sub_set = (klass_set[sub_iri] ||= ClassExpression::Singleton.new(sub_iri))
               log(DEBUG, "#{sub_iri} subclass of #{klass_iri}")
               taxonomy_stage0.add_edge(klass_set[klass_iri], sub_set)
             end
@@ -268,7 +271,8 @@ class CloseBundleApplication < OWLAPIApplication
 
       log(Logger::INFO, 'root tree at OWL:Thing')
       thing = factory.getOWLClass('owl:Thing', format)
-      taxonomy_stage1 = taxonomy_stage0.root_at(ClassExpression::Singleton.new(thing))
+      thing_iri = thing.getIRI.toString
+      taxonomy_stage1 = taxonomy_stage0.root_at(ClassExpression::Singleton.new(thing_iri))
       raise 'rooted class taxonomy is cyclic' unless taxonomy_stage1.acyclic?
 
       # Find all aspects (non-concrete classes).
@@ -284,10 +288,10 @@ class CloseBundleApplication < OWLAPIApplication
             pats.any? { |p| v.to_s =~ p }
           end
           all_classes[type] = bb_classes.flat_map do |c|
-            taxonomy_stage1.descendants_of(c)
+            taxonomy_stage1.descendants_of(c).to_a
           end
         end
-        aspects = all_classes[:abstract] - all_classes[:concrete]
+        aspects = Set.new(all_classes[:abstract]) - Set.new(all_classes[:concrete])
 
         # Excise aspects.
 
@@ -295,8 +299,7 @@ class CloseBundleApplication < OWLAPIApplication
         taxonomy_stage2 = taxonomy_stage1.excise_vertices(aspects) do |msg, klass, done|
           case msg
           when :excising
-            ks = '[' + klass.to_a.join(',') + ']'
-            log(Logger::DEBUG, "excise #{ks}, #{done} done")
+            log(Logger::DEBUG, "excise #{klass}, #{done} done")
           when :excised
             log(Logger::INFO, "excised #{done} aspects")
           end
@@ -353,8 +356,10 @@ class CloseBundleApplication < OWLAPIApplication
 
       log(Logger::INFO, 'create disjointness axioms')
       sibling_map.each do |parent, sibs|
+        log(Logger::DEBUG, "children of #{parent}")
         expression = sibs.inject(java.util.HashSet.new) do |h, s|
-          h << s.to_owl_class_expression
+          log(Logger::DEBUG, "class expression for #{s}")
+          h << s.to_owl_class_expression(factory)
           h
         end
         axioms << factory.getOWLDisjointClassesAxiom(expression)
