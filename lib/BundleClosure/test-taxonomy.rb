@@ -544,7 +544,7 @@ class TestAsymmetricTree < Minitest::Test
     @vertex_map = initial_edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
     @initial_tree = Taxonomy[*initial_edges.map { |v| @vertex_map[v] }]
     
-    @b, @c, @e, @i = *%w{b c e i}.map { |k| @vertex_map[k] }
+    @a, @b, @c, @d, @e, @f, @g, @h, @i = *%w{a b c d e f g h i}.map { |k| @vertex_map[k] }
     @cue = @vertex_map['cue'] = @c.union(@e)
     @bdi = @vertex_map['b\\i'] = @b.difference(@i)
     @cdi = @vertex_map['c\\i'] = @c.difference(@i)
@@ -554,6 +554,11 @@ class TestAsymmetricTree < Minitest::Test
     @after_merge_tree = Taxonomy[*after_merge_edges.map { |v| @vertex_map[v] }]
 
     @after_treeify_with_merge_tree = @after_merge_tree
+    
+    @after_treeify_with_merge_map = {
+      @b => Set.new([@cue, @d]),
+      @cue => Set.new([@f, @g, @h, @i])
+    }
     
     after_bypass_edges = %w{a b  a c  a i  b d  b e  b i  c f  c g  e h  i j}
     @after_bypass_tree = Taxonomy[*after_bypass_edges.map { |v| @vertex_map[v] }]
@@ -565,6 +570,12 @@ class TestAsymmetricTree < Minitest::Test
     @after_bypass_reduce_isolate_tree = Taxonomy[*after_bypass_reduce_isolate_edges.map { |v| @vertex_map[v] }]
 
     @after_treeify_with_bypass_reduce_isolate_tree = @after_bypass_reduce_isolate_tree
+
+    @after_treeify_with_bypass_reduce_isolate_map = {
+      @a => Set.new([@b, @c]),
+      @b => Set.new([@d, @edi, @i]),
+      @c => Set.new([@f, @g])
+    }
     
   end
 
@@ -586,6 +597,13 @@ class TestAsymmetricTree < Minitest::Test
     assert_equal Set.new(@after_treeify_with_merge_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_merge_tree.edges), Set.new(t.edges)
     
+  end
+
+  def test_sibling_map_with_merge
+
+    m = @after_treeify_with_merge_tree.sibling_map
+    assert_equal(@after_treeify_with_merge_map, m)
+
   end
   
   def test_bypass
@@ -618,6 +636,11 @@ class TestAsymmetricTree < Minitest::Test
     assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
 
+  end
+
+  def test_sibling_map_with_bypass_reduce_isolate
+    m = @after_bypass_reduce_isolate_tree.sibling_map
+    assert_equal @after_treeify_with_bypass_reduce_isolate_map, m
   end
   
 end
