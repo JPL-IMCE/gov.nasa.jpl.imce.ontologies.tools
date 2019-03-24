@@ -566,15 +566,15 @@ class TestAsymmetricTree < Minitest::Test
     after_bypass_reduce_edges = %w{a b  a c  b d  b e  b i  c f  c g  e h  i j}
     @after_bypass_reduce_tree = Taxonomy[*after_bypass_reduce_edges.map { |v| @vertex_map[v] }]
     
-    after_bypass_reduce_isolate_edges = %w{a b  a c  b d  b i  b e\\i  c f  c g  e\\i h  i j}
+    after_bypass_reduce_isolate_edges = %w{a b  a c\\i  b d  b i  b e\\i  c\\i f  c\\i g  e\\i h  i j}
     @after_bypass_reduce_isolate_tree = Taxonomy[*after_bypass_reduce_isolate_edges.map { |v| @vertex_map[v] }]
 
     @after_treeify_with_bypass_reduce_isolate_tree = @after_bypass_reduce_isolate_tree
 
     @after_treeify_with_bypass_reduce_isolate_map = {
-      @a => Set.new([@b, @c]),
+      @a => Set.new([@b, @cdi]),
       @b => Set.new([@d, @edi, @i]),
-      @c => Set.new([@f, @g])
+      @cdi => Set.new([@f, @g])
     }
     
   end

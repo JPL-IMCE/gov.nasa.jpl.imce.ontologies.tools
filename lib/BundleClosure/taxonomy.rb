@@ -318,9 +318,8 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   def isolate_child(child, parents)
 
-    candidates = Set.new(parents_of(child).flat_map { |p| descendants_of(p).to_a }).intersection(parents)
-    unless candidates.empty?
-      first, rest = candidates.first, candidates.drop(1)
+    unless parents.empty?
+      first, rest = parents.first, parents.drop(1)
       isolate_child_from_one(child, first).isolate_child(child, rest)
     else
       self
