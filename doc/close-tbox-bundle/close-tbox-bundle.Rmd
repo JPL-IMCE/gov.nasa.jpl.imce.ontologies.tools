@@ -1,0 +1,60 @@
+---
+title: "Two Algorithms for Taxonomy Disjointness Maintenance"
+author: "J S Jenkins"
+output: html_notebook
+---
+# Introduction
+
+One of the key features of the Semantic Web (and its formal foundations in Description Logic) is the so-called _open-world semantics_, which means simply that any unasserted fact may be true or false. The real world is open in just this way, although we rarely think about. If I do not assert that I am an alumnus of UCLA, then (at least logically) I might or might not be.
+
+Open-world semantics do not apply in traditional database applications. If my name does not appear in the table of customers, then an application is justified in concluding I am not (yet) a customer.
+
+Neither open- nor closed-world semantics are correct, per se. Each has its appropriate uses, and it is important to be aware of the semantics in effect and draw proper conclusions.
+
+One aspect of open-world semantics that is sometimes surprising to people familiar with object-oriented software development has to do with implicit _disjointness_. If, for example, in Java, we declare classes as follows:
+
+```
+// Java
+public class Vehicle {}
+public class Person {}
+```
+
+we naturally expect that an object may be a `Vehicle` or it may be a `Person`, but it cannot be both. That is, the sets of objects of type `Vehicle` and `Person` are _disjoint_. Formally, two sets are disjoint if their intersection is empty.
+
+If instead, however, we want to declare classes that are not disjoint because one is a subclass of the other, Java requires us to declare the relation explicitly:
+
+```
+// Java
+public class Vehicle {}
+public class Car extends Vehicle {}
+```
+
+The situation with OWL and the Semantic Web is somewhat different. If we declare OWL classes
+
+```
+# OWL
+Declaration(Class(Vehicle))
+Declaration(Class(Person))
+Declaration(Class(Car))
+```
+
+and assert nothing further, then any pair of classes may have a nonempty intersection. To assert the the situation from the Java example, we must add two axioms:
+
+```
+# OWL
+DisjointClasses(Vehicle Person)
+SubClassOf(Car Vehicle)
+```
+
+Note that we do not need to assert `DisjointClasses(Car Person)`; that fact follows from the definition of disjointness; a DL reasoner will infer it.
+
+```{r}
+source("bundle-closure.R")
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+

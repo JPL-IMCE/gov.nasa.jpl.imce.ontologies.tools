@@ -1,4 +1,4 @@
-library(igraph)
+dummy <- library(igraph)
 
 plot_tree <- function(tree, layout=layout_as_tree) {
   plot(tree, layout=layout, vertex.shape = "none", vertex.label.family="sans",
