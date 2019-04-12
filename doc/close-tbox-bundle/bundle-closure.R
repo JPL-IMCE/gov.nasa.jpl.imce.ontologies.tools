@@ -104,4 +104,18 @@ asym_after_bypass_reduce_isolate_layout <- asym_after_bypass_reduce_layout
 asym_after_bypass_reduce_isolate_map <- map_from_tree(asym_after_bypass_reduce_isolate_tree)
 asym_after_bypass_reduce_isolate_disjoints <- disjoint_classes_axioms(asym_after_bypass_reduce_isolate_map)
 
-
+uplr_edges <- c(
+  "t", "u",
+  "t", "d",
+  "t", "l",
+  "t", "r",
+  "u", "ul",
+  "u", "ur",
+  "d", "dl",
+  "d", "dr",
+  "l", "ul",
+  "l", "dl",
+  "r", "ur",
+  "r", "dr"
+)
+uplr_tree <- make_directed_graph(uplr_edges)

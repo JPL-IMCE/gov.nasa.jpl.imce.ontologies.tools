@@ -97,6 +97,7 @@ class TestUnion < Minitest::Test
   end
 
   def test_union_equality
+    assert_equal @a, @a.union(@a)
     assert_equal @aub1, @aub2
     assert_equal @aub1, @bua
     refute_equal @aub1, @auc
@@ -106,6 +107,13 @@ class TestUnion < Minitest::Test
     assert_equal @aub1.union(@c), @aubuc
     assert_equal @bua.union(@c), @aubuc
     assert_equal @a.union(@b).union(@c), @aubuc
+    assert_equal @a.union(@b).union(@c), @a.union(@c).union(@b)
+    assert_equal @a.union(@b).union(@c), @b.union(@a).union(@c)
+    assert_equal @a.union(@b).union(@c), @b.union(@c).union(@a)
+    assert_equal @a.union(@b).union(@c), @c.union(@a).union(@b)
+    assert_equal @a.union(@b).union(@c), @c.union(@b).union(@a)
+    assert_equal @a.union(@b.union(@c)), (@a.union(@b)).union(@c)
+    assert_equal @c.union(@bua), @aubuc
   end
   
   def test_union_to_s
@@ -130,6 +138,7 @@ class TestIntersection < Minitest::Test
   end
 
   def test_intersection_equality
+    assert_equal @a, @a.intersection(@a)
     assert_equal @aib1, @aib2
     assert_equal @aib1, @bia
     refute_equal @aib1, @aic
@@ -139,6 +148,14 @@ class TestIntersection < Minitest::Test
     assert_equal @aib1.intersection(@c), @aibic
     assert_equal @bia.intersection(@c), @aibic
     assert_equal @a.intersection(@b).intersection(@c), @aibic
+    assert_equal @c.intersection(@bia), @aibic
+    assert_equal @a.intersection(@b).intersection(@c), @a.intersection(@c).intersection(@b)
+    assert_equal @a.intersection(@b).intersection(@c), @b.intersection(@a).intersection(@c)
+    assert_equal @a.intersection(@b).intersection(@c), @b.intersection(@c).intersection(@a)
+    assert_equal @a.intersection(@b).intersection(@c), @c.intersection(@a).intersection(@b)
+    assert_equal @a.intersection(@b).intersection(@c), @c.intersection(@b).intersection(@a)
+    assert_equal @a.intersection(@b.intersection(@c)), (@a.intersection(@b)).intersection(@c)
+    assert_equal @c.intersection(@bia), @aibic
   end
   
   def test_intersection_to_s
@@ -641,6 +658,31 @@ class TestAsymmetricTree < Minitest::Test
   def test_sibling_map_with_bypass_reduce_isolate
     m = @after_bypass_reduce_isolate_tree.sibling_map
     assert_equal @after_treeify_with_bypass_reduce_isolate_map, m
+  end
+  
+end
+
+class TestUpDownLeftRightTree < Minitest::Test
+
+  include ClassExpression
+  
+  def setup
+    initial_edges = %w{ t u  t d  t l  t r  u ul  u ur  d dl  d dr  l ul  l dl  r ur  r dr }
+    @vertex_map = initial_edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
+    @initial_tree = Taxonomy[*initial_edges.map { |v| @vertex_map[v] }]
+    @u, @d, @l, @r = %w{ u d l r}.map { |k| @vertex_map[k] }
+    @uudulur = @vertex_map['uudulur'] = @u.union(@d).union(@l).union(@r)
+
+    after_merge_edges = %w{ t uudulur  uudulur ul  uudulur ur uudulur dl  uudulur dr }
+    @after_merge_tree = Taxonomy[*after_merge_edges.map { |v| @vertex_map[v] }]
+  end
+
+  def test_treeify_with_merge
+    t = @initial_tree.treeify_with_merge
+    warn t.vertices.map { |v| v.to_s }.join(',')
+    warn @after_merge_tree.vertices.map { |v| v.to_s }.join(',')
+    warn @uudulur.to_s
+    assert_equal Set.new(@after_merge_tree.vertices), Set.new(t.vertices)
   end
   
 end

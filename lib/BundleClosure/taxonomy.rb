@@ -35,10 +35,12 @@ module ClassExpression
       @name.hash
     end
     def intersection(o)
-      (o == self) ? self : super(o)
+      self == o ? self :
+        Intersection === o ? o.intersection(self) : super(o)
     end
     def union(o)
-      (o == self) ? self : super(o)
+      self == o ? self :
+        Union === o ? o.union(self) : super(o)
     end
     protected
     attr_reader :name
