@@ -679,10 +679,8 @@ class TestUpDownLeftRightTree < Minitest::Test
 
   def test_treeify_with_merge
     t = @initial_tree.treeify_with_merge
-    warn t.vertices.map { |v| v.to_s }.join(',')
-    warn @after_merge_tree.vertices.map { |v| v.to_s }.join(',')
-    warn @uudulur.to_s
     assert_equal Set.new(@after_merge_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_merge_tree.edges), Set.new(t.edges)
   end
   
 end

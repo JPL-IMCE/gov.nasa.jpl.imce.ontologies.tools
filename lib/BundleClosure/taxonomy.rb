@@ -205,8 +205,9 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   end
 
   def merge_vertices(s)
-    
-    new_vertex = s.inject(ClassExpression::Union.new){ |m, o| m = m.union(o); m }
+
+    first, rest = s.first, s.drop(1)
+    new_vertex = rest.inject(first) { |m, o| m.union(o) }
 
     g = RGL::DirectedAdjacencyGraph.new
     parent_list = Set.new
