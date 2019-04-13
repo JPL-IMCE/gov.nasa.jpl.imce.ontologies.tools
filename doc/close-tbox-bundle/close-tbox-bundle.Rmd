@@ -59,5 +59,6 @@ Note that we do not need to assert `DisjointClasses(Car Person)`; that fact foll
 
 ```{r}
 source("bundle-closure.R")
+plot(asym_after_merge_tree)
 ```
 

@@ -49,7 +49,11 @@ asym_layout[c(3,6,7),2] <- asym_layout[c(3,6,7),2] - .5
 asym_edges <- append(asym_initial_edges, c("c", "i"))
 asym_tree <- make_directed_graph(asym_edges)
 
-cue <-paste("c", "\U222A", "e", sep="")
+union <- function(s) {
+  paste(s, collapse="\U222A")
+}
+
+cue <- union(c("c", "e"))
 asym_after_merge_edges <- c(
   "a", "b", "b", "d", "b", cue, "i", "j", cue, "f", cue, "g", cue, "i", cue, "h"
 )
@@ -104,7 +108,7 @@ asym_after_bypass_reduce_isolate_layout <- asym_after_bypass_reduce_layout
 asym_after_bypass_reduce_isolate_map <- map_from_tree(asym_after_bypass_reduce_isolate_tree)
 asym_after_bypass_reduce_isolate_disjoints <- disjoint_classes_axioms(asym_after_bypass_reduce_isolate_map)
 
-uplr_edges <- c(
+udlr_edges <- c(
   "t", "u",
   "t", "d",
   "t", "l",
@@ -118,4 +122,29 @@ uplr_edges <- c(
   "r", "ur",
   "r", "dr"
 )
-uplr_tree <- make_directed_graph(uplr_edges)
+udlr_tree <- make_directed_graph(udlr_edges)
+
+uudulur <- union(c("u", "d", "l", "r"))
+udlr_after_merge_edges <- c(
+  "t", uudulur,
+  uudulur, "ul",
+  uudulur, "dl",
+  uudulur, "ur",
+  uudulur, "dr"
+)
+udlr_after_merge_tree = make_directed_graph(udlr_after_merge_edges)
+
+diff_union <- function(a, b) {
+  paste(a, paste("(", union(b), ")", sep=""), sep="\\")
+}
+udlr_after_bypass_reduce_isolate_edges <- c(
+  "t", "ul",
+  "t", "ur",
+  "t", "dl",
+  "t", "dr",
+  "t", diff_union("u", c("ul", "ur")),
+  "t", diff_union("d", c("dl", "dr")),
+  "t", diff_union("l", c("ul", "dl")),
+  "t", diff_union("r", c("ur", "dr"))
+)
+udlr_after_bypass_reduce_isolate_tree = make_directed_graph(udlr_after_bypass_reduce_isolate_edges)
