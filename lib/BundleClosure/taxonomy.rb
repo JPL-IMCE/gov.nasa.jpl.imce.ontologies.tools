@@ -92,6 +92,9 @@ module ClassExpression
     def to_s
       @a.to_atom + '\\' + @b.to_atom
     end
+    def difference(o)
+      Difference.new(@a.dup, @b.union(o))
+    end
   end
   class NAry
     include Operators

@@ -680,7 +680,17 @@ class TestUpDownLeftRightTree < Minitest::Test
       @uudulur => Set.new([@ul, @ur, @dl, @dr])
     }
 
-    after_treeify_with_bypass_reduce_isolate_edges = []
+    @vertex_map['umuluur'] = @vertex_map['u'].difference(@vertex_map['ul'].union(@vertex_map['ur']))
+    @vertex_map['dmdludr'] = @vertex_map['d'].difference(@vertex_map['dl'].union(@vertex_map['dr']))
+    @vertex_map['lmuludl'] = @vertex_map['l'].difference(@vertex_map['ul'].union(@vertex_map['dl']))
+    @vertex_map['rmurudr'] = @vertex_map['r'].difference(@vertex_map['ur'].union(@vertex_map['dr']))
+    after_treeify_with_bypass_reduce_isolate_edges = %w{ t ul  t ur  t dl  t dr } +
+                                                     [
+                                                       't', 'umuluur',
+                                                       't', 'dmdludr',
+                                                       't', 'lmuludl',
+                                                       't', 'rmurudr'
+                                                     ]
     @after_treeify_with_bypass_reduce_isolate_tree = Taxonomy[*after_treeify_with_bypass_reduce_isolate_edges.map { |v| @vertex_map[v] }]
 
   end
@@ -698,7 +708,6 @@ class TestUpDownLeftRightTree < Minitest::Test
 
   def test_treeify_with_bypass_reduce_isolate
     t = @initial_tree.treeify_with_bypass_reduce_isolate
-    warn t.edges.to_s
     assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
   end
