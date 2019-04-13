@@ -693,6 +693,10 @@ class TestUpDownLeftRightTree < Minitest::Test
                                                      ]
     @after_treeify_with_bypass_reduce_isolate_tree = Taxonomy[*after_treeify_with_bypass_reduce_isolate_edges.map { |v| @vertex_map[v] }]
 
+    @after_treeify_with_bypass_reduce_isolate_map = {
+      @t => Set.new(@after_treeify_with_bypass_reduce_isolate_tree.vertices.reject { |v| v == @t })
+    }
+
   end
 
   def test_treeify_with_merge
@@ -712,4 +716,9 @@ class TestUpDownLeftRightTree < Minitest::Test
     assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
   end
 
+  def test_sibling_map_with_bypass_reduce_isolate
+    m = @after_treeify_with_bypass_reduce_isolate_tree.sibling_map
+    assert_equal @after_treeify_with_bypass_reduce_isolate_map, m
+  end
+  
 end
