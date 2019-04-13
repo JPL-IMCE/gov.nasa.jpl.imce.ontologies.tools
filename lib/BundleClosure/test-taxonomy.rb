@@ -670,17 +670,37 @@ class TestUpDownLeftRightTree < Minitest::Test
     initial_edges = %w{ t u  t d  t l  t r  u ul  u ur  d dl  d dr  l ul  l dl  r ur  r dr }
     @vertex_map = initial_edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
     @initial_tree = Taxonomy[*initial_edges.map { |v| @vertex_map[v] }]
-    @u, @d, @l, @r = %w{ u d l r}.map { |k| @vertex_map[k] }
+    @t, @u, @d, @l, @r, @ul, @ur, @dl, @dr = %w{ t u d l r ul ur dl dr}.map { |k| @vertex_map[k] }
     @uudulur = @vertex_map['uudulur'] = @u.union(@d).union(@l).union(@r)
 
-    after_merge_edges = %w{ t uudulur  uudulur ul  uudulur ur uudulur dl  uudulur dr }
-    @after_merge_tree = Taxonomy[*after_merge_edges.map { |v| @vertex_map[v] }]
+    after_treeify_with_merge_edges = %w{ t uudulur  uudulur ul  uudulur ur uudulur dl  uudulur dr }
+    @after_treeify_with_merge_tree = Taxonomy[*after_treeify_with_merge_edges.map { |v| @vertex_map[v] }]
+
+    @after_treeify_with_merge_map = {
+      @uudulur => Set.new([@ul, @ur, @dl, @dr])
+    }
+
+    after_treeify_with_bypass_reduce_isolate_edges = []
+    @after_treeify_with_bypass_reduce_isolate_tree = Taxonomy[*after_treeify_with_bypass_reduce_isolate_edges.map { |v| @vertex_map[v] }]
+
   end
 
   def test_treeify_with_merge
     t = @initial_tree.treeify_with_merge
-    assert_equal Set.new(@after_merge_tree.vertices), Set.new(t.vertices)
-    assert_equal Set.new(@after_merge_tree.edges), Set.new(t.edges)
+    assert_equal Set.new(@after_treeify_with_merge_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_merge_tree.edges), Set.new(t.edges)
   end
   
+  def test_sibling_map_with_merge
+    m = @after_treeify_with_merge_tree.sibling_map
+    assert_equal(@after_treeify_with_merge_map, m)
+  end
+
+  def test_treeify_with_bypass_reduce_isolate
+    t = @initial_tree.treeify_with_bypass_reduce_isolate
+    warn t.edges.to_s
+    assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
+  end
+
 end
