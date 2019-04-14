@@ -12,10 +12,12 @@ module ClassExpression
       Difference.new(self.dup, s)
     end
     def union(s)
-      Union.new([self.dup, s])
+      self == s ? self :
+        Union.new([self.dup, s])
     end
     def intersection(s)
-      Intersection.new([self.dup, s])
+      self == s ? self :
+        Intersection.new([self.dup, s])
     end
   end
   class Singleton
@@ -35,12 +37,10 @@ module ClassExpression
       @name.hash
     end
     def intersection(o)
-      self == o ? self :
-        Intersection === o ? o.intersection(self) : super(o)
+      Intersection === o ? o.intersection(self) : super(o)
     end
     def union(o)
-      self == o ? self :
-        Union === o ? o.union(self) : super(o)
+      Union === o ? o.union(self) : super(o)
     end
     protected
     attr_reader :name
