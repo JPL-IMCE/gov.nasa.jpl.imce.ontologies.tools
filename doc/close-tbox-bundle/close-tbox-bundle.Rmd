@@ -55,13 +55,32 @@ Note that we do not need to assert `DisjointClasses(Car Person)`; that fact foll
 
 # Two Algorithms
 
+```{r message=FALSE, warning=FALSE}
+source("bundle-closure.R")
+```
+
+## Example Cases
+
+### Simple Diamond
+
+```{r}
+plot_tree(diam_tree, diam_layout)
+```
+
+### Asymmetric
+
+```{r}
+plot_tree(asym_tree, asym_layout)
+```
+
+### Up-Down-Left-Right
+
+```{r}
+plot_tree(udlr_tree, udlr_layout)
+```
+
 ## Merge
 
 ## Bypass-Reduce-Isolate
 
-
-```{r message=FALSE, warning=FALSE}
-source("bundle-closure.R")
-plot_tree(asym_after_merge_tree)
-```
 

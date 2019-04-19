@@ -108,7 +108,7 @@ asym_after_bypass_reduce_isolate_layout <- asym_after_bypass_reduce_layout
 asym_after_bypass_reduce_isolate_map <- map_from_tree(asym_after_bypass_reduce_isolate_tree)
 asym_after_bypass_reduce_isolate_disjoints <- disjoint_classes_axioms(asym_after_bypass_reduce_isolate_map)
 
-udlr_edges <- c(
+udlr_initial_edges <- c(
   "t", "u",
   "t", "d",
   "t", "l",
@@ -123,6 +123,17 @@ udlr_edges <- c(
   "r", "dr"
 )
 udlr_tree <- make_directed_graph(udlr_edges)
+udlr_layout <- matrix(c(
+  0, 2,
+  -2, 1,
+  -1, 1,
+  1, 1,
+  2, 1,
+  -2, 0,
+  -1, 0,
+  1, 0,
+  2, 0
+), ncol=2, byrow=TRUE)
 
 uudulur <- union(c("u", "d", "l", "r"))
 udlr_after_merge_edges <- c(
