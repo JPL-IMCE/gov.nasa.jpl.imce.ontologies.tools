@@ -162,11 +162,11 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   # Find descendants of a vertex.
   
-  def descendants_of(v, key = Random.rand(1000))
+  def descendants_of(v)
     if (c = children_of(v)).empty?
       Set.new
     else
-      Set.new(c + c.flat_map { |x| descendants_of(x, key).to_a })
+      Set.new(c + c.flat_map { |x| descendants_of(x).to_a })
     end
   end
 
@@ -185,11 +185,11 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   # Find ancestors of a vertex.
   
-  def ancestors_of(v, key = Random.rand(1000))
+  def ancestors_of(v)
     if (p = parents_of(v)).empty?
       Set.new
     else
-      Set.new(p + p.flat_map { |x| ancestors_of(x, key).to_a })
+      Set.new(p + p.flat_map { |x| ancestors_of(x).to_a })
     end
   end
 
