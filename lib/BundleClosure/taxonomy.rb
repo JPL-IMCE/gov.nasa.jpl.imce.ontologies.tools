@@ -335,14 +335,14 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   
   # Recursively bypass and isolate vertices until the resulting Taxonomy is a tree.
   
-  def treeify_with_bypass_reduce_isolate(count = 0, &block)
+  def r_treeify_with_bypass_reduce_isolate(count = 0, &block)
     if child = multi_parent_child
       parents = parents_of(child)
       yield(:treeifying, self, child, parents, count) if block_given?
       count += parents.length
       bp = bypass_parents(child, parents)
       rd = bp.reduce_child(child)
-      rd.isolate_child(child, parents).treeify_with_bypass_reduce_isolate(count, &block)
+      rd.isolate_child(child, parents).r_treeify_with_bypass_reduce_isolate(count, &block)
     else
       yield(:treeified, nil, nil, nil, count) if block_given?
       self
@@ -351,12 +351,12 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   # Recursively merge vertices until the resulting Taxonomy is a tree.
 
-  def treeify_with_merge(count = 0, &block)
+  def r_treeify_with_merge(count = 0, &block)
     if child = multi_parent_child
       parents = parents_of(child)
       yield(:treeifying, self, child, parents, count) if block_given?
       count += parents.length
-      merge_vertices(parents).treeify_with_merge(count, &block)
+      merge_vertices(parents).r_treeify_with_merge(count, &block)
     else
       yield(:treeified, nil, nil, nil, count) if block_given?
       self
@@ -388,27 +388,27 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     Taxonomy.new(g)
   end
 
-  # Excise a set of vertices.
+  # Recursively excise a set of vertices.
 
-  def excise_vertices(s, count = 0, &block)
+  def r_excise_vertices(s, count = 0, &block)
     unless s.empty?
       count += 1
       first, rest = s.first, s.drop(1)
       yield :excising, first, count if block_given?
-      excise_vertex(first).excise_vertices(rest, count, &block)
+      excise_vertex(first).r_excise_vertices(rest, count, &block)
     else
       yield :excised, nil, count if block_given?
       self
     end
   end
   
-  # Excise all vertices that include a match to a given pattern.
+  # Recursively excise all vertices that include a match to a given pattern.
 
-  def excise_pattern(pattern, count = 0, &block)
+  def r_excise_pattern(pattern, count = 0, &block)
     if m = vertices.detect { |v| v.to_s =~ pattern }
       count += 1
       yield :excising, m, count if block_given?
-      excise_vertex(m).excise_pattern(pattern, count, &block)
+      excise_vertex(m).r_excise_pattern(pattern, count, &block)
     else
       yield :excised, nil, count if block_given?
       self
