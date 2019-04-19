@@ -124,15 +124,15 @@ udlr_initial_edges <- c(
 )
 udlr_tree <- make_directed_graph(udlr_edges)
 udlr_layout <- matrix(c(
-  0, 2,
+   0, 2,
   -2, 1,
   -1, 1,
-  1, 1,
-  2, 1,
+   1, 1,
+   2, 1,
   -2, 0,
   -1, 0,
-  1, 0,
-  2, 0
+   1, 0,
+   2, 0
 ), ncol=2, byrow=TRUE)
 
 uudulur <- union(c("u", "d", "l", "r"))
