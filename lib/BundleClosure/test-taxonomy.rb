@@ -224,6 +224,8 @@ class TestEmptyTaxonomy < Minitest::Test
     assert_equal tree, @t
     tree = @t.r_treeify_with_bypass_reduce_isolate
     assert_equal tree, @t
+    tree = @t.treeify_with_bypass_reduce_isolate
+    assert_equal tree, @t
   end
   
 end
@@ -243,6 +245,8 @@ class TestSingletonTaxonomy < Minitest::Test
     tree = @t.r_treeify_with_merge
     assert_equal tree, @t
     tree = @t.r_treeify_with_bypass_reduce_isolate
+    assert_equal tree, @t
+    tree = @t.treeify_with_bypass_reduce_isolate
     assert_equal tree, @t
   end
   
@@ -275,6 +279,9 @@ class Test3Tree < Minitest::Test
     
     t4 = @t.r_treeify_with_bypass_reduce_isolate
     assert_equal t4, @t
+
+    t5 = @t.treeify_with_bypass_reduce_isolate
+    assert_equal t5, @t
   end
   
 end
@@ -455,11 +462,19 @@ class TestDiamondTree < Minitest::Test
     assert_equal Set.new(@after_bypass_reduce_isolate_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
     
+    t = @initial_tree.treeify_with_bypass_reduce_isolate
+    assert_equal Set.new(@after_bypass_reduce_isolate_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
+    
   end
   
   def test_sibling_map_with_bypass_reduce_isolate
 
     d = @initial_tree.r_treeify_with_bypass_reduce_isolate.sibling_map
+    map = { @a => Set.new([ @bdd, @cdd, @d ]) }
+    assert_equal map, d
+    
+    d = @initial_tree.treeify_with_bypass_reduce_isolate.sibling_map
     map = { @a => Set.new([ @bdd, @cdd, @d ]) }
     assert_equal map, d
     
@@ -541,6 +556,10 @@ class Test8SymmetricTree < Minitest::Test
   
   def test_treeify_with_bypass_reduce_isolate
     t = @initial_tree.r_treeify_with_bypass_reduce_isolate
+    assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_t.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_t.edges), Set.new(t.edges)
+
+    t = @initial_tree.treeify_with_bypass_reduce_isolate
     assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_t.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_t.edges), Set.new(t.edges)
   end
@@ -653,6 +672,10 @@ class TestAsymmetricTree < Minitest::Test
     assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
 
+    t = @initial_tree.treeify_with_bypass_reduce_isolate
+    assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
+
   end
 
   def test_sibling_map_with_bypass_reduce_isolate
@@ -712,6 +735,10 @@ class TestUpDownLeftRightTree < Minitest::Test
 
   def test_treeify_with_bypass_reduce_isolate
     t = @initial_tree.r_treeify_with_bypass_reduce_isolate
+    assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
+
+    t = @initial_tree.treeify_with_bypass_reduce_isolate
     assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
   end

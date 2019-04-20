@@ -349,6 +349,22 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     end
   end
 
+  # Iteratively bypass and isolate vertices until the resulting Taxonomy is a tree.
+  
+  def treeify_with_bypass_reduce_isolate(count = 0, &block)
+    t = self
+    while child = t.multi_parent_child
+      parents = t.parents_of(child)
+      yield(:treeifying, t, child, parents, count) if block_given?
+      count += parents.length
+      bp = t.bypass_parents(child, parents)
+      rd = bp.reduce_child(child)
+      t = rd.isolate_child(child, parents)
+    end
+    yield(:treeified, nil, nil, nil, count) if block_given?
+    t
+  end
+
   # Recursively merge vertices until the resulting Taxonomy is a tree.
 
   def r_treeify_with_merge(count = 0, &block)
