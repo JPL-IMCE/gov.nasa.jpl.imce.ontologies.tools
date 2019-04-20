@@ -379,6 +379,20 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     end
   end
 
+  # Iteratively merge vertices until the resulting Taxonomy is a tree.
+
+  def treeify_with_merge(count = 0, &block)
+    t = self
+    while child = t.multi_parent_child
+      parents = t.parents_of(child)
+      yield(:treeifying, t, child, parents, count) if block_given?
+      count += parents.length
+      t = t.merge_vertices(parents)
+    end
+    yield(:treeified, nil, nil, nil, count) if block_given?
+    t
+  end
+
   # Excise specific vertex.
 
   def excise_vertex(v)

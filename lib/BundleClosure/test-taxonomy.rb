@@ -222,6 +222,8 @@ class TestEmptyTaxonomy < Minitest::Test
     assert_nil @t.multi_parent_child
     tree = @t.r_treeify_with_merge
     assert_equal tree, @t
+    tree = @t.treeify_with_merge
+    assert_equal tree, @t
     tree = @t.r_treeify_with_bypass_reduce_isolate
     assert_equal tree, @t
     tree = @t.treeify_with_bypass_reduce_isolate
@@ -243,6 +245,8 @@ class TestSingletonTaxonomy < Minitest::Test
   def test_tree_operations
     assert_nil @t.multi_parent_child
     tree = @t.r_treeify_with_merge
+    assert_equal tree, @t
+    tree = @t.treeify_with_merge
     assert_equal tree, @t
     tree = @t.r_treeify_with_bypass_reduce_isolate
     assert_equal tree, @t
@@ -277,11 +281,14 @@ class Test3Tree < Minitest::Test
     t3 = @t.r_treeify_with_merge
     assert_equal t3, @t
     
-    t4 = @t.r_treeify_with_bypass_reduce_isolate
+    t4 = @t.treeify_with_merge
     assert_equal t4, @t
-
-    t5 = @t.treeify_with_bypass_reduce_isolate
+    
+    t5 = @t.r_treeify_with_bypass_reduce_isolate
     assert_equal t5, @t
+
+    t6 = @t.treeify_with_bypass_reduce_isolate
+    assert_equal t6, @t
   end
   
 end
@@ -396,6 +403,10 @@ class TestDiamondTree < Minitest::Test
   def test_treeify_with_merge
 
     t = @initial_tree.r_treeify_with_merge
+    assert_equal Set.new(@after_merge_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_merge_tree.edges), Set.new(t.edges)
+ 
+    t = @initial_tree.treeify_with_merge
     assert_equal Set.new(@after_merge_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_merge_tree.edges), Set.new(t.edges)
  
@@ -529,6 +540,10 @@ class Test8SymmetricTree < Minitest::Test
     t = @initial_tree.r_treeify_with_merge
     assert_equal Set.new(@after_treeify_with_merge_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_merge_tree.edges), Set.new(t.edges)
+
+    t = @initial_tree.treeify_with_merge
+    assert_equal Set.new(@after_treeify_with_merge_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_merge_tree.edges), Set.new(t.edges)
   end
 
   def test_sibling_map_with_merge
@@ -633,6 +648,10 @@ class TestAsymmetricTree < Minitest::Test
     assert_equal Set.new(@after_treeify_with_merge_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_merge_tree.edges), Set.new(t.edges)
     
+    t = @initial_tree.treeify_with_merge
+    assert_equal Set.new(@after_treeify_with_merge_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_merge_tree.edges), Set.new(t.edges)
+    
   end
 
   def test_sibling_map_with_merge
@@ -724,6 +743,10 @@ class TestUpDownLeftRightTree < Minitest::Test
 
   def test_treeify_with_merge
     t = @initial_tree.r_treeify_with_merge
+    assert_equal Set.new(@after_treeify_with_merge_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@after_treeify_with_merge_tree.edges), Set.new(t.edges)
+
+    t = @initial_tree.treeify_with_merge
     assert_equal Set.new(@after_treeify_with_merge_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_merge_tree.edges), Set.new(t.edges)
   end
