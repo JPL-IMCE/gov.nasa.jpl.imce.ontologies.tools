@@ -86,6 +86,10 @@ class CloseBundleApplication < OWLAPIApplication
     option_parser.on('--bypass-reduce-isolate', 'use stronger bypass-reduce-isolate algorithm') do
       @options.algorithm = :bypass_reduce_isolate
     end
+    @options.recursive = false
+    option_parser.on('--recursive', 'use recursive (functional) implementation') do
+      @options.recursive = true
+    end
 
     super
     
@@ -115,6 +119,18 @@ class CloseBundleApplication < OWLAPIApplication
         log(FATAL, '--concrete specified but not --abstract')
         return 1
       end
+    end
+    
+    # Select implementation methods
+
+    if @options.recursive
+      excise_vertices_method = :r_excise_vertices
+      excise_pattern_method = :r_excise_pattern
+      treeify_method = @options.algorithm == :merge ? :r_treeify_with_merge : :r_treeify_with_bypass_reduce_isolate
+    else
+      excise_vertices_method = :excise_vertices
+      excise_pattern_method = :excise_pattern
+      treeify_method = @options.algorithm == :merge ? :treeify_with_merge : :treeify_with_bypass_reduce_isolate
     end
     
     # Axiom storage.
@@ -296,7 +312,7 @@ class CloseBundleApplication < OWLAPIApplication
         # Excise aspects.
 
         log(Logger::INFO, "excise #{aspects.length} aspects")
-        taxonomy_stage2 = taxonomy_stage1.r_excise_vertices(aspects) do |msg, klass, done|
+        taxonomy_stage2 = taxonomy_stage1.send(excise_vertices_method, aspects) do |msg, klass, done|
           case msg
           when :excising
             log(Logger::DEBUG, "excise #{klass}, #{done} done")
@@ -313,7 +329,7 @@ class CloseBundleApplication < OWLAPIApplication
 
       if pat = @options.excise_pattern
         log(Logger::INFO, 'excise backbone classes')
-        taxonomy_stage3 = taxonomy_stage2.r_excise_pattern(pat) do |msg, klass, done|
+        taxonomy_stage3 = taxonomy_stage2.send(excise_pattern_method, pat) do |msg, klass, done|
           case msg
           when :excising
             log(Logger::DEBUG, "excise #{klass}, #{done} done")
@@ -335,8 +351,7 @@ class CloseBundleApplication < OWLAPIApplication
       # Treeify class taxonomy.
 
       log(Logger::INFO, 'treeify class taxonomy')
-      treeify = (@options.algorithm == :merge ? :r_treeify_with_merge : :r_treeify_with_bypass_reduce_isolate)
-      tree = taxonomy_stage4.send(treeify, 0) do |msg, tree, child, parents, done|
+      tree = taxonomy_stage4.send(treeify_method, 0) do |msg, tree, child, parents, done|
         log(Logger::DEBUG, "processed #{done} vertices")
         case msg
         when :treeifying

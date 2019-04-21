@@ -263,14 +263,28 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     
   end
 
-  def bypass_parents(child, parents)
+  # Recursively bypass parents.
+  
+  def r_bypass_parents(child, parents)
     
     unless parents.empty?
       first, rest = parents.first, parents.drop(1)
-      bypass_parent(child, first).bypass_parents(child, rest)
+      bypass_parent(child, first).r_bypass_parents(child, rest)
     else
       self
     end
+    
+  end
+
+  # Iteratively bypass parents.
+  
+  def bypass_parents(child, parents)
+    
+    t = self
+    parents.each do |parent|
+      t = t.bypass_parent(child, parent)
+    end
+    t
     
   end
 
@@ -322,14 +336,28 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   end
 
-  def isolate_child(child, parents)
+  # Recursively isolate child.
+  
+  def r_isolate_child(child, parents)
 
     unless parents.empty?
       first, rest = parents.first, parents.drop(1)
-      isolate_child_from_one(child, first).isolate_child(child, rest)
+      isolate_child_from_one(child, first).r_isolate_child(child, rest)
     else
       self
     end
+     
+  end
+  
+  # Iteratively isolate child.
+  
+  def isolate_child(child, parents)
+
+    t = self
+    parents.each do |parent|
+      t = t.isolate_child_from_one(child, parent)
+    end
+    t
      
   end
   
@@ -340,9 +368,9 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
       parents = parents_of(child)
       yield(:treeifying, self, child, parents, count) if block_given?
       count += parents.length
-      bp = bypass_parents(child, parents)
+      bp = r_bypass_parents(child, parents)
       rd = bp.reduce_child(child)
-      rd.isolate_child(child, parents).r_treeify_with_bypass_reduce_isolate(count, &block)
+      rd.r_isolate_child(child, parents).r_treeify_with_bypass_reduce_isolate(count, &block)
     else
       yield(:treeified, nil, nil, nil, count) if block_given?
       self
@@ -432,6 +460,19 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     end
   end
   
+  # Iteratively excise a set of vertices.
+
+  def excise_vertices(s, count = 0, &block)
+    t = self
+    s.each do |vertex|
+      count += 1
+      yield :excising, vertex, count if block_given?
+      t = t.excise_vertex(vertex)
+    end
+    yield :excised, nil, count if block_given?
+    t
+  end
+  
   # Recursively excise all vertices that include a match to a given pattern.
 
   def r_excise_pattern(pattern, count = 0, &block)
@@ -443,6 +484,19 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
       yield :excised, nil, count if block_given?
       self
     end
+  end
+  
+  # Iteratively excise all vertices that include a match to a given pattern.
+
+  def excise_pattern(pattern, count = 0, &block)
+    t = self
+    while m = t.vertices.detect { |v| v.to_s =~ pattern }
+      count += 1
+      yield :excising, m, count if block_given?
+      t = t.excise_vertex(m)
+    end
+    yield :excised, nil, count if block_given?
+    t
   end
   
   # Create a new Taxonomy rooted at the specified element.
