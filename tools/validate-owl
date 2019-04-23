@@ -59,9 +59,11 @@ class ValidateOwlApplication < PelletApplication
   end
   
   def validate_iris(iris, tests, logger)
-    
+
+    java_import java.util.Properties
     java_import org.semanticweb.owlapi.apibinding.OWLManager
     java_import com.clarkparsia.pellet.owlapiv3.PelletReasonerFactory
+    java_import org.mindswap.pellet.PelletOptions
     java_import com.clarkparsia.owlapi.explanation.GlassBoxExplanation
     java_import org.semanticweb.owlapi.io.StringDocumentTarget
     java_import org.semanticweb.owlapi.util.SimpleRenderer
@@ -144,6 +146,12 @@ class ValidateOwlApplication < PelletApplication
     reasoner = reasoner_factory.createReasoner(collection_ontology)
     raise "couldn't create reasoner" unless reasoner
 
+    # Enable Unique Name Assumption.
+
+    properties = PelletOptions.setOptions(Properties.new)
+    properties.setProperty("USE_UNIQUE_NAME_ASSUMPTION", "true")
+    PelletOptions.setOptions(properties)
+    
     # Create GlassBoxExplanation.
     
     logger.log(Logger::DEBUG, 'create glass box explanation')

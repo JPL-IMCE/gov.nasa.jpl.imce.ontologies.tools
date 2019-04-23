@@ -122,7 +122,7 @@ module ClassExpression
       super("\u222A")
     end
     def union(o)
-      Union.new(@s.dup << o)
+      Union.new(@s.dup + (Union === o ? o.s : [o]))
     end
   end
   class Intersection < NAry
@@ -130,7 +130,7 @@ module ClassExpression
       super("\u2229")
     end
     def intersection(o)
-      Intersection.new(@s.dup << o)
+      Intersection.new(@s.dup + (Intersection === o ? o.s : [o]))
     end
   end
 
@@ -208,7 +208,6 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   end
 
   def merge_vertices(s)
-
     first, rest = s.first, s.drop(1)
     new_vertex = rest.inject(first) { |m, o| m.union(o) }
 
@@ -224,25 +223,35 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
       if source_in_s && target_in_s
         # do nothing
       elsif source_in_s
-        child_list << edge.target
+#        child_list << edge.target
+        g.add_edge(new_vertex, edge.target)
       elsif target_in_s
-        parent_list << edge.source
-      else
+#        parent_list << edge.source
+        g.add_edge(edge.source, new_vertex)
+     else
         g.add_edge(edge.source, edge.target)
       end
     end
+    raise 'merging tree is cyclic' unless g.acyclic?
 
-    direct_parents = parent_list - parent_list.flat_map { |p| ancestors_of(p).to_a }
-    direct_children = child_list - child_list.flat_map { |c| descendants_of(c).to_a }
+#     warn "p in"
+#     direct_parents = parent_list - parent_list.flat_map { |p| ancestors_of(p).to_a }
+#     warn "p out"
+#     warn "c in"
+#     direct_children = child_list - child_list.flat_map { |c| descendants_of(c).to_a }
+#     warn "c out"
 
-    direct_parents.each do |p|
-      g.add_edge(p, new_vertex)
-    end
-    direct_children.each do |c|
-      g.add_edge(new_vertex, c)
-    end
+#     direct_parents.each do |p|
+#       g.add_edge(p, new_vertex)
+#     end
+#     raise 'merging tree is cyclic' unless g.acyclic?
+#     direct_children.each do |c|
+# warn "add edge(#{new_vertex.to_s}, #{c.to_s})"
+#       g.add_edge(new_vertex, c)
+#     raise 'merging tree is cyclic' unless g.acyclic?
+#     end
 
-    Taxonomy.new(g)
+    Taxonomy.new(g.transitive_reduction)
   end
 
   def bypass_parent(child, parent)

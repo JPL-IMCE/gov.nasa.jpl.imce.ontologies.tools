@@ -132,6 +132,7 @@ class CloseBundleApplication < OWLAPIApplication
       excise_pattern_method = :excise_pattern
       treeify_method = @options.algorithm == :merge ? :treeify_with_merge : :treeify_with_bypass_reduce_isolate
     end
+    log(INFO, "treeify_method: #{treeify_method}")
     
     # Axiom storage.
     
