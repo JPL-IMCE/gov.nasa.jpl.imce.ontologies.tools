@@ -204,6 +204,20 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   end
 
   def merge_vertices(s)
+
+    s_ancestors = s.map { |v| ancestors_of(v).to_a }
+    common_ancestors = s_ancestors.inject(Set.new(s_ancestors.first)) { |m, o| m.intersection(o) }
+    warn "common_ancestors {#{common_ancestors.map { |a| a.to_s }.join(',')}}"
+    other_ancestors = s_ancestors.flatten - common_ancestors.to_a
+    warn "other_ancestors {#{other_ancestors.map { |a| a.to_s }.join(',')}}"
+    merge_set = Set.new(s) + other_ancestors
+    warn "merge_set {#{merge_set.map { |s| s.to_s }.join(',')}}"
+    union_set = merge_set - merge_set.flat_map { |s| descendants_of(s).to_a }
+    warn "union_set {#{union_set.map { |s| s.to_s }.join(',')}}"
+    union_set_children = union_set.flat_map { |s| children_of(s).to_a }
+    warn "union_set_children {#{union_set_children.map { |s| s.to_s }.join(',')}}"
+    union_set_direct_children = union_set_children - union_set_children.flat_map { |s| descendants_of(s).to_a }
+    warn "union_set_direct_children {#{union_set_direct_children.map { |s| s.to_s }.join(',')}}"
     
     first, rest = s.first, s.drop(1)
     new_vertex = rest.inject(first) { |m, o| m.union(o) }
