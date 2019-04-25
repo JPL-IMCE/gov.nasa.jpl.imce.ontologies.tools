@@ -214,36 +214,35 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     warn "merge_set {#{merge_set.map { |s| s.to_s }.join(',')}}"
     union_set = merge_set - merge_set.flat_map { |s| descendants_of(s).to_a }
     warn "union_set {#{union_set.map { |s| s.to_s }.join(',')}}"
-    union_set_children = union_set.flat_map { |s| children_of(s).to_a }
+    union_set_children = Set.new(union_set.flat_map { |s| children_of(s).to_a })
     warn "union_set_children {#{union_set_children.map { |s| s.to_s }.join(',')}}"
     union_set_direct_children = union_set_children - union_set_children.flat_map { |s| descendants_of(s).to_a }
     warn "union_set_direct_children {#{union_set_direct_children.map { |s| s.to_s }.join(',')}}"
     
-    first, rest = s.first, s.drop(1)
-    new_vertex = rest.inject(first) { |m, o| m.union(o) }
+    new_vertex = union_set.drop(1).inject(union_set.first) { |m, o| m.union(o) }
 
     g = RGL::DirectedAdjacencyGraph.new
-    parent_list = Set.new
-    child_list = Set.new
     
-    g.add_vertices(*(Set.new(vertices) - s + [new_vertex]))
+    g.add_vertices(*(Set.new(vertices) - union_set + [new_vertex]))
     
     edges.each do |edge|
       source_in_s = s.include?(edge.source)
       target_in_s = s.include?(edge.target)
-      if source_in_s && target_in_s
-        # do nothing
-      elsif source_in_s
-        g.add_edge(new_vertex, edge.target)
-      elsif target_in_s
-        g.add_edge(edge.source, new_vertex)
-     else
+      if !source_in_s && !target_in_s
         g.add_edge(edge.source, edge.target)
       end
     end
+
+    common_ancestors.each do |ca|
+      g.add_edge(ca, new_vertex)
+    end
+    union_set_children.each do |c|
+      g.add_edge(new_vertex, c)
+    end
+    
     raise 'merging tree is cyclic' unless g.acyclic?
 
-    Taxonomy.new(g.transitive_reduction)
+    Taxonomy.new(g)
     
   end
 
