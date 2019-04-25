@@ -636,7 +636,6 @@ class TestAsymmetricTree < Minitest::Test
   
   def test_merge
 
-warn "asym merge"    
     t = @initial_tree.merge_vertices([@c, @e])
     assert_equal Set.new(@after_merge_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_merge_tree.edges), Set.new(t.edges)
@@ -645,7 +644,6 @@ warn "asym merge"
   
   def test_treeify_with_merge
 
-warn "asym treeify"
     t = @initial_tree.r_treeify_with_merge
     assert_equal Set.new(@after_treeify_with_merge_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_merge_tree.edges), Set.new(t.edges)

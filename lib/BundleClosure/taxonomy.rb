@@ -203,29 +203,26 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     Taxonomy.new(inner_transitive_reduction)
   end
 
+  # Merge the highest non-common ancestors of a set of parents.
+  
   def merge_vertices(s)
 
     s_ancestors = s.map { |v| ancestors_of(v).to_a }
     common_ancestors = s_ancestors.inject(Set.new(s_ancestors.first)) { |m, o| m.intersection(o) }
-    warn "common_ancestors {#{common_ancestors.map { |a| a.to_s }.join(',')}}"
     leaf_common_ancestors = common_ancestors - common_ancestors.flat_map { |a| ancestors_of(a).to_a }
-    warn "leaf_common_ancestors {#{leaf_common_ancestors.map { |a| a.to_s }.join(',')}}"
     other_ancestors = s_ancestors.flatten - common_ancestors.to_a
-    warn "other_ancestors {#{other_ancestors.map { |a| a.to_s }.join(',')}}"
     merge_set = Set.new(s) + other_ancestors
-    warn "merge_set {#{merge_set.map { |s| s.to_s }.join(',')}}"
     union_set = merge_set - merge_set.flat_map { |s| descendants_of(s).to_a }
-    warn "union_set {#{union_set.map { |s| s.to_s }.join(',')}}"
     union_set_children = Set.new(union_set.flat_map { |s| children_of(s).to_a })
-    warn "union_set_children {#{union_set_children.map { |s| s.to_s }.join(',')}}"
     union_set_direct_children = union_set_children - union_set_children.flat_map { |s| descendants_of(s).to_a }
-    warn "union_set_direct_children {#{union_set_direct_children.map { |s| s.to_s }.join(',')}}"
     
     new_vertex = union_set.drop(1).inject(union_set.first) { |m, o| m.union(o) }
 
     g = RGL::DirectedAdjacencyGraph.new
     
     g.add_vertices(*(Set.new(vertices) - union_set + [new_vertex]))
+
+    # Copy edges not connected to the union set.
     
     edges.each do |edge|
       source_in_union = union_set.include?(edge.source)
@@ -235,15 +232,17 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
       end
     end
 
+    # Create edges from leaf common ancestors to new vertex.
+    
     leaf_common_ancestors.each do |ca|
       g.add_edge(ca, new_vertex)
     end
+
+    # Create edges from new vertex to directy children of union set.
+    
     union_set_direct_children.each do |c|
       g.add_edge(new_vertex, c)
     end
-
-    warn g.edges
-    raise 'merging tree is cyclic' unless g.acyclic?
 
     Taxonomy.new(g)
     
