@@ -208,6 +208,8 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     s_ancestors = s.map { |v| ancestors_of(v).to_a }
     common_ancestors = s_ancestors.inject(Set.new(s_ancestors.first)) { |m, o| m.intersection(o) }
     warn "common_ancestors {#{common_ancestors.map { |a| a.to_s }.join(',')}}"
+    leaf_common_ancestors = common_ancestors - common_ancestors.flat_map { |a| ancestors_of(a).to_a }
+    warn "leaf_common_ancestors {#{leaf_common_ancestors.map { |a| a.to_s }.join(',')}}"
     other_ancestors = s_ancestors.flatten - common_ancestors.to_a
     warn "other_ancestors {#{other_ancestors.map { |a| a.to_s }.join(',')}}"
     merge_set = Set.new(s) + other_ancestors
@@ -226,20 +228,21 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
     g.add_vertices(*(Set.new(vertices) - union_set + [new_vertex]))
     
     edges.each do |edge|
-      source_in_s = s.include?(edge.source)
-      target_in_s = s.include?(edge.target)
-      if !source_in_s && !target_in_s
+      source_in_union = union_set.include?(edge.source)
+      target_in_union = union_set.include?(edge.target)
+      if !source_in_union && !target_in_union
         g.add_edge(edge.source, edge.target)
       end
     end
 
-    common_ancestors.each do |ca|
+    leaf_common_ancestors.each do |ca|
       g.add_edge(ca, new_vertex)
     end
-    union_set_children.each do |c|
+    union_set_direct_children.each do |c|
       g.add_edge(new_vertex, c)
     end
-    
+
+    warn g.edges
     raise 'merging tree is cyclic' unless g.acyclic?
 
     Taxonomy.new(g)

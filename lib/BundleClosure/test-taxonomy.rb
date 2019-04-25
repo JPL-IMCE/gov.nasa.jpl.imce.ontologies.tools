@@ -530,13 +530,15 @@ class Test8SymmetricTree < Minitest::Test
     @after_treeify_with_bypass_reduce_isolate_map = { @a => Set.new([@bdh, @cdh, @h]), @bdh => Set.new([@ddh, @e]), @cdh => Set.new([@f, @gdh]) }
   end
 
-  def test_merge 
+  def test_merge
+    warn "8sym merge"
     t = @initial_tree.merge_vertices([@d, @g])
     assert_equal Set.new(@after_merge_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_merge_tree.edges), Set.new(t.edges)
   end
   
   def test_treeify_with_merge
+    warn "8sym treeify"
     t = @initial_tree.r_treeify_with_merge
     assert_equal Set.new(@after_treeify_with_merge_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_merge_tree.edges), Set.new(t.edges)
