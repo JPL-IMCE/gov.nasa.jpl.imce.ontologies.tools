@@ -510,7 +510,7 @@ class Test8SymmetricTree < Minitest::Test
     @ddh = @vertex_map['d\\h'] = @d.difference(@h)
     @gdh = @vertex_map['g\\h'] = @g.difference(@h)
 
-    after_merge_edges = %w{a b  a c  b dug  b e  c dug  c f  dug h}
+    after_merge_edges = %w{a buc  buc d  buc e  buc f  buc g  d h  g h}
     @after_merge_tree = Taxonomy[*after_merge_edges.map { |v| @vertex_map[v] }]
 
     after_treeify_with_merge_edges = %w{a buc  buc dug  buc e  buc f  dug h}
@@ -531,14 +531,12 @@ class Test8SymmetricTree < Minitest::Test
   end
 
   def test_merge
-    warn "8sym merge"
     t = @initial_tree.merge_vertices([@d, @g])
     assert_equal Set.new(@after_merge_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_merge_tree.edges), Set.new(t.edges)
   end
   
   def test_treeify_with_merge
-    warn "8sym treeify"
     t = @initial_tree.r_treeify_with_merge
     assert_equal Set.new(@after_treeify_with_merge_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_merge_tree.edges), Set.new(t.edges)
@@ -598,19 +596,19 @@ class TestAsymmetricTree < Minitest::Test
     @initial_tree = Taxonomy[*initial_edges.map { |v| @vertex_map[v] }]
     
     @a, @b, @c, @d, @e, @f, @g, @h, @i = *%w{a b c d e f g h i}.map { |k| @vertex_map[k] }
-    @cue = @vertex_map['cue'] = @c.union(@e)
+    @buc = @vertex_map['buc'] = @b.union(@c)
     @bdi = @vertex_map['b\\i'] = @b.difference(@i)
     @cdi = @vertex_map['c\\i'] = @c.difference(@i)
     @edi = @vertex_map['e\\i'] = @e.difference(@i)
 
-    after_merge_edges = %w{a b  b d  b cue  i j  cue f  cue g  cue i  cue h}
+    after_merge_edges = %w{a buc  buc d  buc e  buc f  buc g  e h  e i  i j}
     @after_merge_tree = Taxonomy[*after_merge_edges.map { |v| @vertex_map[v] }]
 
     @after_treeify_with_merge_tree = @after_merge_tree
     
     @after_treeify_with_merge_map = {
-      @b => Set.new([@cue, @d]),
-      @cue => Set.new([@f, @g, @h, @i])
+      @buc => Set.new([@d, @e, @f, @g]),
+      @e => Set.new([@h, @i])
     }
     
     after_bypass_edges = %w{a b  a c  a i  b d  b e  b i  c f  c g  e h  i j}
@@ -637,7 +635,8 @@ class TestAsymmetricTree < Minitest::Test
   end
   
   def test_merge
-    
+
+warn "asym merge"    
     t = @initial_tree.merge_vertices([@c, @e])
     assert_equal Set.new(@after_merge_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_merge_tree.edges), Set.new(t.edges)
@@ -646,6 +645,7 @@ class TestAsymmetricTree < Minitest::Test
   
   def test_treeify_with_merge
 
+warn "asym treeify"
     t = @initial_tree.r_treeify_with_merge
     assert_equal Set.new(@after_treeify_with_merge_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_treeify_with_merge_tree.edges), Set.new(t.edges)
