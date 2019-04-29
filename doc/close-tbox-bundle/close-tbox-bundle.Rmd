@@ -67,6 +67,13 @@ source("bundle-closure.R")
 plot_tree(diam_tree, diam_layout)
 ```
 
+
+### Symmetric 8
+
+```{r}
+plot_tree(sym8_tree, sym8_layout)
+```
+
 ### Asymmetric
 
 ```{r}
@@ -81,6 +88,26 @@ plot_tree(udlr_tree, udlr_layout)
 
 ## Merge
 
+### Simple Diamond
+
+```{r}
+plot_tree(diam_after_merge_tree)
+```
+
 ## Bypass-Reduce-Isolate
 
+### Simple Diamond
 
+```{r}
+plot_tree(diam_after_bypass_reduce_isolate_tree)
+```
+
+# The General Procedure
+
+1. Excise Pure Aspects
+1. Excise Backbone Classes
+1. Treeify
+1. Find Sibling Classes
+1. Assert Disjointness
+
+# Prototype Implementation

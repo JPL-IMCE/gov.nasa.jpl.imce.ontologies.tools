@@ -498,36 +498,36 @@ class Test8SymmetricTree < Minitest::Test
   include ClassExpression
   
   def setup
-    initial_edges = %w{a b  a c  b d  b e  c f  c g  d h  g h}
+    initial_edges = %w{a b  a c  b d  b e  c f  c g  e h  f h}
     @vertex_map = initial_edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
     @initial_tree = Taxonomy[*initial_edges.map { |v| @vertex_map[v] }]
 
     @a, @b, @c, @d, @e, @f, @g, @h = *%w{a b c d e f g h}.map { |k| @vertex_map[k] }
     @buc = @vertex_map['buc'] = @b.union(@c)
-    @dug = @vertex_map['dug'] = @d.union(@g)
+    @euf = @vertex_map['euf'] = @e.union(@f)
     @bdh = @vertex_map['b\\h'] = @b.difference(@h)
     @cdh = @vertex_map['c\\h'] = @c.difference(@h)
-    @ddh = @vertex_map['d\\h'] = @d.difference(@h)
-    @gdh = @vertex_map['g\\h'] = @g.difference(@h)
+    @edh = @vertex_map['e\\h'] = @e.difference(@h)
+    @fdh = @vertex_map['f\\h'] = @f.difference(@h)
 
-    after_merge_edges = %w{a buc  buc d  buc e  buc f  buc g  d h  g h}
+    after_merge_edges = %w{a buc  buc d  buc e  buc f  buc g  e h  f h}
     @after_merge_tree = Taxonomy[*after_merge_edges.map { |v| @vertex_map[v] }]
 
-    after_treeify_with_merge_edges = %w{a buc  buc dug  buc e  buc f  dug h}
+    after_treeify_with_merge_edges = %w{a buc  buc d  buc euf  buc g  euf h}
     @after_treeify_with_merge_tree = Taxonomy[*after_treeify_with_merge_edges.map { |v| @vertex_map[v] }]
-    @after_treeify_with_merge_map = { @buc => Set.new([@e, @dug, @f]) }
+    @after_treeify_with_merge_map = { @buc => Set.new([@d, @euf, @g]) }
 
     after_bypass_edges = %w{a b  a c  b d  b e  b h  c f  c g  c h}
     @after_bypass_tree = Taxonomy[*after_bypass_edges.map { |v| @vertex_map[v] }]
 
     @after_bypass_reduce_tree = @after_bypass_tree
 
-    after_bypass_reduce_isolate_edges = %w{a b  a c  b d\\h  b e  b h  c f  c g\\h  c h}
+    after_bypass_reduce_isolate_edges = %w{a b  a c  b d  b e\\h  b h  c f\\h  c g  c h}
     @after_bypass_reduce_isolate_tree = Taxonomy[*after_bypass_reduce_isolate_edges.map { |v| @vertex_map[v] }]
 
-    after_treeify_with_bypass_reduce_isolate_edges = %w{a b\\h  a c\\h  a h  b\\h d\\h  b\\h e  c\\h f  c\\h g\\h}
+    after_treeify_with_bypass_reduce_isolate_edges = %w{a b\\h  a c\\h  a h  b\\h d  b\\h e\\h  c\\h f\\h  c\\h g}
     @after_treeify_with_bypass_reduce_isolate_t = Taxonomy[*after_treeify_with_bypass_reduce_isolate_edges.map { |v| @vertex_map[v] }]
-    @after_treeify_with_bypass_reduce_isolate_map = { @a => Set.new([@bdh, @cdh, @h]), @bdh => Set.new([@ddh, @e]), @cdh => Set.new([@f, @gdh]) }
+    @after_treeify_with_bypass_reduce_isolate_map = { @a => Set.new([@bdh, @cdh, @h]), @bdh => Set.new([@d, @edh]), @cdh => Set.new([@fdh, @g]) }
   end
 
   def test_merge
@@ -552,7 +552,7 @@ class Test8SymmetricTree < Minitest::Test
   end
 
   def test_bypass
-    t = @initial_tree.bypass_parents(@h, [@d, @g])
+    t = @initial_tree.bypass_parents(@h, [@e, @f])
     assert_equal Set.new(@after_bypass_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_bypass_tree.edges), Set.new(t.edges)
   end
@@ -564,7 +564,7 @@ class Test8SymmetricTree < Minitest::Test
   end
 
   def test_isolate
-    t = @after_bypass_reduce_tree.isolate_child(@h, [@d, @g])
+    t = @after_bypass_reduce_tree.isolate_child(@h, [@e, @f])
     assert_equal Set.new(@after_bypass_reduce_isolate_tree.vertices), Set.new(t.vertices)
     assert_equal Set.new(@after_bypass_reduce_isolate_tree.edges), Set.new(t.edges)
   end
