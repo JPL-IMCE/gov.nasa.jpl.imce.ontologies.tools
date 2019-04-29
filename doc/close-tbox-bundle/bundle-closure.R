@@ -1,8 +1,8 @@
 library(igraph)
 
 plot_tree <- function(tree, layout=layout_as_tree) {
-  plot(tree, layout=layout, vertex.shape = "none", vertex.label.family="sans",
-       edge.arrow.mode=0, edge.width=2)
+  plot.igraph(tree, layout=layout, vertex.shape = "none", vertex.label.family="sans",
+       edge.arrow.mode=0, edge.width=2, asp=0)
 }
 
 disjoint_classes_axioms <- function(l) {
@@ -144,6 +144,7 @@ udlr_after_merge_edges <- c(
   uudulur, "dr"
 )
 udlr_after_merge_tree = make_directed_graph(udlr_after_merge_edges)
+udlr_after_merge_layout = layout_as_tree(udlr_after_merge_tree)
 
 diff_union <- function(a, b) {
   paste(a, paste("(", union(b), ")", sep=""), sep="\\")
@@ -159,6 +160,8 @@ udlr_after_bypass_reduce_isolate_edges <- c(
   "t", diff_union("r", c("ur", "dr"))
 )
 udlr_after_bypass_reduce_isolate_tree = make_directed_graph(udlr_after_bypass_reduce_isolate_edges)
+udlr_after_bypass_reduce_isolate_layout = layout_as_tree(udlr_after_bypass_reduce_isolate_tree)
+udlr_after_bypass_reduce_isolate_layout[,1] <- udlr_after_bypass_reduce_isolate_layout[,1] * 3
 
 sym8_edges <- c("a", "b", "a", "c", "b", "d", "b", "e", "c", "f", "c", "g", "e", "h", "f", "h")
 sym8_tree <- make_directed_graph(sym8_edges)
@@ -175,11 +178,11 @@ sym8_after_treeify_using_merge_edges <- c("a", buc, buc, "d", buc, euf, buc, "g"
 sym8_after_treeify_using_merge_tree <- make_directed_graph(sym8_after_treeify_using_merge_edges)
 sym8_after_treeify_using_merge_layout <- layout_as_tree(sym8_after_treeify_using_merge_tree)
 
-sym8_after_bypass_reduce_isolate_edges <- c("a", "b", "a", "c", "b", "d\\h", "b", "e", "b", "h", "c", "f", "c", "g\\h", "c", "h")
+sym8_after_bypass_reduce_isolate_edges <- c("a", "b", "a", "c", "b", "d", "b", "e\\h", "b", "h", "c", "f\\h", "c", "g", "c", "h")
 sym8_after_bypass_reduce_isolate_tree <- make_directed_graph(sym8_after_bypass_reduce_isolate_edges)
 sym8_after_bypass_reduce_isolate_layout <- layout_as_tree(sym8_after_bypass_reduce_isolate_tree)
 
-sym8_after_treeify_using_bypass_reduce_isolate_edges <- c("a", "b\\h", "a", "h", "a", "c\\h", "b\\h", "d\\h", "b\\h", "e", "c\\h", "f", "c\\h", "g\\h")
+sym8_after_treeify_using_bypass_reduce_isolate_edges <- c("a", "b\\h", "a", "h", "a", "c\\h", "b\\h", "d", "b\\h", "e\\h", "c\\h", "f\\h", "c\\h", "g")
 sym8_after_treeify_using_bypass_reduce_isolate_tree <- make_directed_graph(sym8_after_treeify_using_bypass_reduce_isolate_edges)
 sym8_after_treeify_using_bypass_reduce_isolate_layout <- layout_as_tree(sym8_after_treeify_using_bypass_reduce_isolate_tree)
 

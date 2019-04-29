@@ -53,6 +53,7 @@ Note that we do not need to assert `DisjointClasses(Car Person)`; that fact foll
 
 # Disjointness Maintenance
 
+The general problem of disjointness maintenance is the augmentation of a taxonomy with disjointness axioms 
 # Two Algorithms
 
 ```{r message=FALSE, warning=FALSE}
@@ -94,12 +95,48 @@ plot_tree(udlr_tree, udlr_layout)
 plot_tree(diam_after_merge_tree)
 ```
 
+### Symmetric 8
+
+```{r}
+plot_tree(sym8_after_treeify_using_merge_tree, sym8_after_treeify_using_merge_layout)
+```
+
+### Asymmmetric
+
+```{r}
+plot_tree(asym_after_merge_tree)
+```
+
+### Up-Down-Left-Right
+
+```{r}
+plot_tree(udlr_after_merge_tree, udlr_after_merge_layout)
+```
+
 ## Bypass-Reduce-Isolate
 
 ### Simple Diamond
 
 ```{r}
 plot_tree(diam_after_bypass_reduce_isolate_tree)
+```
+
+### Symmetric 8
+ 
+```{r}
+plot_tree(sym8_after_treeify_using_bypass_reduce_isolate_tree, sym8_after_treeify_using_bypass_reduce_isolate_layout)
+```
+
+### Asymmetric
+
+```{r}
+plot_tree(asym_after_bypass_reduce_isolate_tree, asym_after_bypass_reduce_isolate_layout)
+```
+
+### Up-Down-Left-Right
+
+```{r}
+plot_tree(udlr_after_bypass_reduce_isolate_tree, udlr_after_bypass_reduce_isolate_layout)
 ```
 
 # The General Procedure
