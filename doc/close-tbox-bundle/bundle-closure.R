@@ -163,6 +163,10 @@ udlr_after_bypass_reduce_isolate_tree = make_directed_graph(udlr_after_bypass_re
 udlr_after_bypass_reduce_isolate_layout = layout_as_tree(udlr_after_bypass_reduce_isolate_tree)
 udlr_after_bypass_reduce_isolate_layout[,1] <- udlr_after_bypass_reduce_isolate_layout[,1] * 3
 
+sym7_edges <- c("a", "b", "a", "c", "b", "d", "b", "e", "c", "f", "c", "g")
+sym7_tree <- make_directed_graph(sym7_edges)
+sym7_layout <- layout_as_tree(sym7_tree)
+
 sym8_edges <- c("a", "b", "a", "c", "b", "d", "b", "e", "c", "f", "c", "g", "e", "h", "f", "h")
 sym8_tree <- make_directed_graph(sym8_edges)
 sym8_layout <- layout_as_tree(sym8_tree)
