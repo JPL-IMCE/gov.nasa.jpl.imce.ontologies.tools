@@ -143,6 +143,7 @@ plot_tree(udlr_after_bypass_reduce_isolate_tree, udlr_after_bypass_reduce_isolat
 
 1. Excise Pure Aspects
 1. Excise Backbone Classes
+1. Perform Transitive Reduction
 1. Treeify
 1. Find Sibling Classes
 1. Assert Disjointness

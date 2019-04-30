@@ -493,6 +493,57 @@ class TestDiamondTree < Minitest::Test
   
 end
 
+class Test7SymmetricTree < Minitest::Test
+
+  include ClassExpression
+  
+  def setup
+    initial_edges = %w{a b  a c  b d  b e  c f  c g}
+    @vertex_map = initial_edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
+    @initial_tree = Taxonomy[*initial_edges.map { |v| @vertex_map[v] }]
+
+    @a, @b, @c, @d, @e, @f, @g = *%w{a b c d e f g}.map { |k| @vertex_map[k] }
+
+    @sibling_map = {
+      @a => Set.new([@b, @c]),
+      @b => Set.new([@d, @e]),
+      @c => Set.new([@f, @g])
+    }
+    
+  end
+
+  def test_treeify_with_merge
+    t = @initial_tree.r_treeify_with_merge
+    assert_equal Set.new(@initial_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@initial_tree.edges), Set.new(t.edges)
+
+    t = @initial_tree.treeify_with_merge
+    assert_equal Set.new(@initial_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@initial_tree.edges), Set.new(t.edges)
+  end
+
+  def test_sibling_map_with_merge
+    map = @initial_tree.sibling_map
+    assert_equal @sibling_map, map
+  end
+
+  def test_treeify_with_bypass_reduce_isolate
+    t = @initial_tree.r_treeify_with_bypass_reduce_isolate
+    assert_equal Set.new(@initial_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@initial_tree.edges), Set.new(t.edges)
+
+    t = @initial_tree.treeify_with_bypass_reduce_isolate
+    assert_equal Set.new(@initial_tree.vertices), Set.new(t.vertices)
+    assert_equal Set.new(@initial_tree.edges), Set.new(t.edges)
+  end
+  
+  def test_sibling_map_with_bypass_reduce_isolate
+    map = @initial_tree.sibling_map
+    assert_equal @sibling_map, map
+  end
+
+end
+
 class Test8SymmetricTree < Minitest::Test
 
   include ClassExpression
