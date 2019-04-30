@@ -1,6 +1,7 @@
 ---
 title: "Two Algorithms for Taxonomy Disjointness Maintenance"
 author: "J S Jenkins"
+date: 2019-05-03
 output:
   html_document:
     df_print: paged
