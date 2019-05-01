@@ -498,16 +498,17 @@ class Test7SymmetricTree < Minitest::Test
   include ClassExpression
   
   def setup
-    initial_edges = %w{a b  a c  b d  b e  c f  c g}
+    initial_edges = %w{a b  a c  b d  b e  c f  c g  e h  e i}
     @vertex_map = initial_edges.uniq.inject({}) { |h, k| h[k] = Singleton.new(k); h }
     @initial_tree = Taxonomy[*initial_edges.map { |v| @vertex_map[v] }]
 
-    @a, @b, @c, @d, @e, @f, @g = *%w{a b c d e f g}.map { |k| @vertex_map[k] }
+    @a, @b, @c, @d, @e, @f, @g, @h, @i = *%w{a b c d e f g h i}.map { |k| @vertex_map[k] }
 
     @sibling_map = {
       @a => Set.new([@b, @c]),
       @b => Set.new([@d, @e]),
-      @c => Set.new([@f, @g])
+      @c => Set.new([@f, @g]),
+      @e => Set.new([@h, @i])
     }
     
   end

@@ -72,6 +72,41 @@ source("bundle-closure.R")
 
 ## The Simplest Case
 
+Consider the case of a taxonomy that is a _directed rooted tree_ in the graph-theoretic sense. A _tree_ is an undirected
+graph that is connected and acyclic. (An equivalent formulation is that there is exactly one path between any two vertices.)
+A _directed tree_ is a tree in which the edges are directed, and a _rooted tree_ is a directed tree in which a single vertex is
+designated the _root_. For this discussion we will take edge direction to be from subclass to superclass; the root vertex corresponds
+to `owl:Thing`.
+```{r}
+plot_tree(sym7_tree, sym7_layout)
+```
+
+It is easy to show that declaring all sibling subclasses of any common superclass disjoint satisfies the disjointness policy. We prove it
+in two steps:
+
+1. *Necessity*: Any two sibling subclasses 
+_A_ and _B_ of a common superclass cannot share a common subclass. If a common subclass existed, there would be two
+paths to the root from it: one through _A_ and one through _B_. Every tree contains exactly one path between any pair of vertices,
+so a common subclass cannot exist.
+
+1. *Sufficiency*: If two classes _A_ and _B_ do not share a common subclass, then neither one is a subclass of the other. Consequently,
+the path from _A_ to the root contains at least one edge not in the path from _B_ to the root and vice versa. Therefore, there must
+exist some vertex _C_ (perhaps the root) where the paths from _A_ to the root and from _B_ to the root converge. That is, there must exists sibling
+subclasses _C<sub>A</sub>_ and _C<sub>B</sub>_ such that _A_ is a subclass of _C<sub>A</sub>_ and _B_ is a subclass of _C<sub>B</sub>_.
+
+The disjointness algorithm for a tree is therefore simple:
+
+1. Traverse the tree
+2. Declare the sibling subclasses of each parent class disjoint
+
+For our example problem, the result is
+```
+DisjointClasses( b c )
+DisjointClasses( d e )
+DisjointClasses( f g )
+DisjointClasses( h i )
+```
+
 # Two Algorithms
 
 ## Example Cases

@@ -2,7 +2,7 @@ library(igraph)
 
 plot_tree <- function(tree, layout=layout_as_tree) {
   plot.igraph(tree, layout=layout, vertex.shape = "none", vertex.label.family="sans",
-       edge.arrow.mode=0, edge.width=2, asp=0)
+       edge.arrow.mode=1, edge.arrow.size=.7, edge.width=2, asp=0)
 }
 
 disjoint_classes_axioms <- function(l) {
@@ -163,7 +163,7 @@ udlr_after_bypass_reduce_isolate_tree = make_directed_graph(udlr_after_bypass_re
 udlr_after_bypass_reduce_isolate_layout = layout_as_tree(udlr_after_bypass_reduce_isolate_tree)
 udlr_after_bypass_reduce_isolate_layout[,1] <- udlr_after_bypass_reduce_isolate_layout[,1] * 3
 
-sym7_edges <- c("a", "b", "a", "c", "b", "d", "b", "e", "c", "f", "c", "g")
+sym7_edges <- c("a", "b", "a", "c", "b", "d", "b", "e", "c", "f", "c", "g", "e", "h", "e", "i")
 sym7_tree <- make_directed_graph(sym7_edges)
 sym7_layout <- layout_as_tree(sym7_tree)
 
