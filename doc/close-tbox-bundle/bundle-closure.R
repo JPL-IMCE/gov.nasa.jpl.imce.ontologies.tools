@@ -29,7 +29,7 @@ diam_after_merge_tree <- make_directed_graph(diam_after_merge_edges)
 diam_after_merge_map <- map_from_tree(diam_after_merge_tree)
 diam_after_merge_disjoints <- disjoint_classes_axioms(diam_after_merge_map)
 
-diam_after_bypass_reduce_isolate_edges <- c("a", "b\\d", "a", "c\\d", "a", "d")
+diam_after_bypass_reduce_isolate_edges <- c("a", "b\\d", "a", "d", "a", "c\\d")
 diam_after_bypass_reduce_isolate_tree <- make_directed_graph(diam_after_bypass_reduce_isolate_edges)
 diam_after_bypass_reduce_isolate_map <- map_from_tree(diam_after_bypass_reduce_isolate_tree)
 diam_after_bypass_reduce_isolate_disjoints <- disjoint_classes_axioms(diam_after_bypass_reduce_isolate_map)

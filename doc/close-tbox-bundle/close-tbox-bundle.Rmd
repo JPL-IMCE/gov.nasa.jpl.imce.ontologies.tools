@@ -107,11 +107,29 @@ DisjointClasses( f g )
 DisjointClasses( h i )
 ```
 
+## The General Case
+
+In the general case, we cannot assume the taxonomy is a tree. There may be explicitly-asserted common subclasses, and these invalidate the
+assumptions that led to the simple algorithm in the simple case.
+
+One possible strategy for dealing with the general case is to apply a set of transformations to an arbitrary taxonomy that result in a tree
+and then apply the simple algorithm to the tree. These transformations should be chosen in such a way that the disjointness policy is still satisfied: that every pair of classes without an explicit common subclass is disjoint. In the event we cannot find a transformation that preserves the policy, it is important to ensure that the transformed taxonomy does not result in spurious unsatisfiability. That is, the transformed (relaxed) taxonomy may generate weaker disjointness constraints than the original, but must not generate stronger constraints than implied by the original.
+
+### Transitive Reduction
+
+The subclass relation is _transitive_, that is, if _a_ is a subclass of _b_ and _b_ is a subclass of _c_, then _a_ is a subclass of _c_. It is true in this case that _a_ is a common subclass of _b_ and _c_, but so is _b_. The fact that _a_ is a subclass of _c_ does not rule out any disjointness not already ruled out. In the following discussions of algorithms, we will assume that the input has undergone [_transitive reduction_](https://en.wikipedia.org/wiki/Transitive_reduction) and is maintained in reduced state.
+
 # Two Algorithms
+
+This section will describe two algorithms for transforming an arbitrary rooted taxonomy into a tree such that every subclass relationship in the resulting tree is implied by the initial taxonomy (but not necessarily vice versa). The algorithms are designated _merge_ and _bypass-reduce-isolate_.
 
 ## Example Cases
 
+Before describing the algorithms, we introduce some example taxonomies as use cases.
+
 ### Simple Diamond
+
+This case is the simplest occurrence of a rooted tree with a class that subclasses two other classes.
 
 ```{r}
 plot_tree(diam_tree, diam_layout)
@@ -120,11 +138,15 @@ plot_tree(diam_tree, diam_layout)
 
 ### Symmetric 8
 
+This case is a deeper symmetric tree.
+
 ```{r}
 plot_tree(sym8_tree, sym8_layout)
 ```
 
 ### Asymmetric
+
+This case is similar but asymmetric. This case presents interesting complications for both algorithms.
 
 ```{r}
 plot_tree(asym_tree, asym_layout)
@@ -132,54 +154,143 @@ plot_tree(asym_tree, asym_layout)
 
 ### Up-Down-Left-Right
 
+This case is a somewhat contrived example that illustrates the cross of two orthogonal factors: up-down and left-right.
+
 ```{r}
 plot_tree(udlr_tree, udlr_layout)
 ```
 
 ## Merge
 
+The merge algorithm is based on the fact that, if _C_ is a subclass of both _A_ and _B_, then _C_ is a subclass of _A_ &cup; _B_. (Note: the converse is not true.) The merge algorithm merges the superclasses of any common subclass into their union. For this example, _A_ and _B_ cannot be disjoint because they no longer appear independently in the transformed tree.
+
 ### Simple Diamond
+
+For this simple case, the merge algorithm is simple. _b_ &sube; _a_ and _c_ &sube; _a_ imply (_b_ &cup; _c_) &sube; _a_; _d_ &sube; _b_ and _d_ &sube; _c_ imply _d_ &sube; (_b_ &cup; _c_). So the resulting transformed tree is:
 
 ```{r}
 plot_tree(diam_after_merge_tree)
 ```
 
+This tree contains no sibling subclasses. Hence, the set of disjointness axioms is empty.
+
 ### Symmetric 8
+
+A deeper tree illustrates some subtleties of the merge algorithm. It is simple enough to observe, as before that _h_ &sube; (_e_ &cup; _f_). But it is not necessarily the case that (_e_ &cup; _f_) &sube; _b_ or (_e_ &cup; _f_) &sube; _c_. In order to preserve the consistency of the transformed taxonomy with the input, we merge _e_ and _f_ by first merging their most distant non-common ancestors, in this case _b_ and _c_. If _e_ and _f_ share a common subclass (_h_), then every ancestor of _e_ shares a common subclass with every ancestor of _f_. So no ancestor of _e_ can be disjoint with any ancestor of _f_. In particular, _b_ and _c_ cannot be disjoint. Because _b_ and _c_ have all ancestors in common (namely _a_), we can replace _b_ and _c_ with _b_ &sube; _c_.
+
+Attempting to merge _e_ and _f_ results first in merging _b_ and _c_:
+
+```{r}
+plot_tree(sym8_after_merge_tree, sym8_after_merge_layout)
+```
+
+Now _e_ and _f_ have all ancestors in common and they can be merged:
 
 ```{r}
 plot_tree(sym8_after_treeify_using_merge_tree, sym8_after_treeify_using_merge_layout)
 ```
 
+This taxonomy is a tree and implies the following disjointness:
+
+```
+DisjointClasses( d (e ∪ f) g )
+```
+
 ### Asymmmetric
+
+Applying the same logic results in merging _b_ and _c_; the result is a tree:
 
 ```{r}
 plot_tree(asym_after_merge_tree)
 ```
 
+The implied disjointness is
+
+```
+DisjointClasses( d e f g )
+DisjointClasses( h i )
+```
+
 ### Up-Down-Left-Right
+
+Repeated merging results in this tree:
 
 ```{r}
 plot_tree(udlr_after_merge_tree, udlr_after_merge_layout)
 ```
 
+The implied disjointness is
+
+```
+DisjointClasses( ul ur dl dr )
+```
+
 ## Bypass-Reduce-Isolate
 
+The bypass-reduce-isolate algorithm exploits the fact that, for any two classes _A_ and _B_, _A_ \\ _B_ is disjoint from _B_, where _A_ \\ _B_ is the [_set difference_](https://en.wikipedia.org/wiki/Complement_(set_theory)).
+
 ### Simple Diamond
+
+The simple diamond implies by transitivity that _d_ &sube; _a_. By the rule above, _b_ \\ _d_ and _c_ \\ _d_ are both disjoint with _d_. The result is a tree:
 
 ```{r}
 plot_tree(diam_after_bypass_reduce_isolate_tree)
 ```
 
+The implied disjointness is
+
+```
+DisjointClasses( b\\d c\\d d )
+```
+
+Note that the merge algorithm produces no disjointness axioms for this case.
+
 ### Symmetric 8
- 
+
+Repeated application of the rule produces this result for the deeper symmetric taxonomy:
+
 ```{r}
 plot_tree(sym8_after_treeify_using_bypass_reduce_isolate_tree, sym8_after_treeify_using_bypass_reduce_isolate_layout)
 ```
 
+The implied disjointness is
+
+```
+DisjointClasses( b\\h h c\\h )
+DisjointClasses( d e\\h )
+DisjointClasses( f\\h g )
+```
+
 ### Asymmetric
+
+As its name implies, the bypass-reduce-isolate algorithm is implelemented with three fundamental operations.
+
+For a subclass with multiple superclasses, the _bypass_ operation moves the subclass "up" to the direct superclasses of its superclasses. In this case, the direct superclasses of _i_ are _c_ and _e_. After bypass, we have:
+
+```{r}
+plot_tree(asym_after_bypass_tree, asym_after_bypass_layout)
+```
+
+Note that this taxonomy is not in reduced form. The _reduce_ operation removes reduntant edges introduced by the bypass:
+
+```{r}
+plot_tree(asym_after_bypass_reduce_tree, asym_after_bypass_reduce_layout)
+```
+
+In principle, we could simply apply transitive reduction to the resulting taxonomy but that operation can be expensive on a large taxonomy. This implementation exploits the fact that all potentially reduntant edges are between the bypassing class and the root.
+
+Note that the taxonomy in this state has lost essential information (e.g., that _c_ and _e_ share a common subclass _i_), and would therefore produce spurious disjointness. The _isolate_ operation restores consistency with the original taxonomy:
 
 ```{r}
 plot_tree(asym_after_bypass_reduce_isolate_tree, asym_after_bypass_reduce_isolate_layout)
+```
+
+The implied disjointness is
+
+```
+DisjointClasses( b c\\i )
+DisjointClasses( d e\\i i )
+DisjointClasses( f g )
 ```
 
 ### Up-Down-Left-Right
