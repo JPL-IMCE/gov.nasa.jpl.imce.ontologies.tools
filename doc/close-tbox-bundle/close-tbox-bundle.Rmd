@@ -7,9 +7,13 @@ output:
   pdf_document: default
 ---
 
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+```
+
 # Introduction
 
-One of the key features of the Semantic Web (and its formal foundations in Description Logic) is the so-called _open-world semantics_, which means simply that any unasserted fact may be true or false. The real world is open in just this way, although we rarely think about. If I do not assert that I am an alumnus of UCLA, then (at least logically) I might or might not be.
+One of the key features of the Semantic Web (and its formal foundations in Description Logic) is the so-called _open-world semantics_, which means simply that any unasserted fact may be true or false. The real world is open in just this way, although we rarely think about. If I do not assert that I am a graduate of UCLA, then (at least logically) I might or might not be.
 
 Open-world semantics typically do not apply in traditional database applications. If my name does not appear in the table of customers, then an application is justified in concluding I am not (yet) a customer.
 
