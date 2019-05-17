@@ -1,7 +1,8 @@
 library(igraph)
+library(extrafont)
 
 plot_tree <- function(tree, layout=layout_as_tree) {
-  plot.igraph(tree, layout=layout, vertex.shape = "none", vertex.label.family="sans",
+  plot.igraph(tree, layout=layout, vertex.shape = "none", vertex.label.family="ArialUnicodeMS",
        edge.arrow.mode=1, edge.arrow.size=.7, edge.width=2, asp=0)
 }
 
