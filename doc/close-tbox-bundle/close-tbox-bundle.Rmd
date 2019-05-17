@@ -176,7 +176,7 @@ This tree contains no sibling subclasses. Hence, the set of disjointness axioms 
 
 ### Symmetric 8
 
-A deeper tree illustrates some subtleties of the merge algorithm. It is simple enough to observe, as before that _h_ &sube; (_e_ &cup; _f_). But it is not necessarily the case that (_e_ &cup; _f_) &sube; _b_ or (_e_ &cup; _f_) &sube; _c_. In order to preserve the consistency of the transformed taxonomy with the input, we merge _e_ and _f_ by first merging their most distant non-common ancestors, in this case _b_ and _c_. If _e_ and _f_ share a common subclass (_h_), then every ancestor of _e_ shares a common subclass with every ancestor of _f_. So no ancestor of _e_ can be disjoint with any ancestor of _f_. In particular, _b_ and _c_ cannot be disjoint. Because _b_ and _c_ have all ancestors in common (namely _a_), we can replace _b_ and _c_ with _b_ &sube; _c_.
+A deeper tree illustrates some subtleties of the merge algorithm. It is simple enough to observe, as before that _h_ &sube; (_e_ &cup; _f_). But it is not necessarily the case that (_e_ &cup; _f_) &sube; _b_ or (_e_ &cup; _f_) &sube; _c_. In order to preserve the consistency of the transformed taxonomy with the input, we merge _e_ and _f_ by first merging their most distant non-common ancestors, in this case _b_ and _c_. If _e_ and _f_ share a common subclass (_h_), then every ancestor of _e_ shares a common subclass with every ancestor of _f_. So no ancestor of _e_ can be disjoint with any ancestor of _f_. In particular, _b_ and _c_ cannot be disjoint. Because _b_ and _c_ have all ancestors in common (namely _a_), we can replace _b_ and _c_ with _b_ &cup; _c_.
 
 Attempting to merge _e_ and _f_ results first in merging _b_ and _c_:
 
@@ -227,7 +227,7 @@ DisjointClasses( ul ur dl dr )
 
 ## Bypass-Reduce-Isolate
 
-The bypass-reduce-isolate algorithm exploits the fact that, for any two classes _A_ and _B_, _A_ \\ _B_ is disjoint from _B_, where _A_ \\ _B_ is the [_set difference_](https://en.wikipedia.org/wiki/Complement_(set_theory)).
+The bypass-reduce-isolate algorithm exploits the fact that, for any two classes _A_ and _B_, _A_ \\ _B_ is disjoint from _B_, where _A_ \\ _B_ is the [_set difference_](https://en.wikipedia.org/wiki/Complement_(set_theory)). It also makes use of the identity _A_ \\ _B_ \\ _C_ = _A_ \\ (_B_ &cup; _C_).
 
 ### Simple Diamond
 
@@ -240,7 +240,7 @@ plot_tree(diam_after_bypass_reduce_isolate_tree)
 The implied disjointness is
 
 ```
-DisjointClasses( b\\d c\\d d )
+DisjointClasses( b\d c\d d )
 ```
 
 Note that the merge algorithm produces no disjointness axioms for this case.
@@ -256,9 +256,9 @@ plot_tree(sym8_after_treeify_using_bypass_reduce_isolate_tree, sym8_after_treeif
 The implied disjointness is
 
 ```
-DisjointClasses( b\\h h c\\h )
-DisjointClasses( d e\\h )
-DisjointClasses( f\\h g )
+DisjointClasses( b\h h c\h )
+DisjointClasses( d e\h )
+DisjointClasses( f\h g )
 ```
 
 ### Asymmetric
@@ -288,24 +288,43 @@ plot_tree(asym_after_bypass_reduce_isolate_tree, asym_after_bypass_reduce_isolat
 The implied disjointness is
 
 ```
-DisjointClasses( b c\\i )
-DisjointClasses( d e\\i i )
+DisjointClasses( b c\i )
+DisjointClasses( d e\i i )
 DisjointClasses( f g )
 ```
 
 ### Up-Down-Left-Right
 
+Application of bypass-reduce-isolate in this case yields the following tree:
+
 ```{r}
 plot_tree(udlr_after_bypass_reduce_isolate_tree, udlr_after_bypass_reduce_isolate_layout)
 ```
 
+
+The implied disjointness is
+
+```
+DisjointClasses(ul ur dl dr u\(ul∪ur) d\(dl∪dr) l\(ul∪dl) r\(ur∪dr))
+```
+
+Note that the latter four classes are empty, by definition. In practical terms, this means this algorithm yields the same result as the merge algorithm. Detecting and omitting empty classes may be a useful future optimization.
+
 # The General Procedure
 
-1. Excise Pure Aspects
-1. Excise Backbone Classes
-1. Perform Transitive Reduction
-1. Treeify
-1. Find Sibling Classes
-1. Assert Disjointness
+This section describes incorporation of either algorithm in a practical bundle closure application. For the purposes of this discussion, a bundle is a set of OML or OWL ontologies for which we want to assert disjointness in accordance with the policy state above.
+
+1. Excise Pure Aspects. IMCE practice (enforced in OML) is to distinguish different usages of the notion of _class_ in Description Logic. One usage in particular, known as _Aspects_, exist primarily to simplify the declarations of property domains and ranges and are not intended to represent a closed vocabulary. The first step in the process, therefore, is to excise all pure aspects. A pure aspect is any class that is a subclass of any aspect and is not also a subclass of any non-aspect. Excising a class means simply removing it from a taxonomy and making all its direct subclasses subclasses of its direct parents.
+1. Excise Backbone Classes. In OWL, class usage distinctions are indicated by subclass relations to so-called _backbone classes_. Backbone classes are also not intended to represent a closed vocabulary, so we excise those as well.
+1. Perform Transitive Reduction. As mentioned before, both algorithms assume the input taxonomy is in reduced form.
+1. Treeify. Apply either _merge_ or _bypass-reduce-isolate_ iteratively until the result is a tree.
+1. Find Sibling Subclasses. Traverse the tree and, for each vertex, enumerate its sibling subclasses.
+1. Assert Disjointness. For each set of sibling subclasses, asset a `DisjointClasses()` axiom. For the merge algorithm, the resulting disjointness axioms involve singleton classes and union expressions, which are created in OWL with `ObjectUnionOf()` expressions. For the bypass-reduce-isolate algorithm, the resulting expressions involve unions, intersections, and complements. The latter two are created in OWL with `ObjectIntersectionOf()` and `ObjectComplementOf()`.
 
 # Prototype Implementation
+
+The prototype implementation is a [JRuby](https://www.jruby.org/) [script](https://github.com/JPL-IMCE/gov.nasa.jpl.imce.ontologies.tools/blob/master/tools/close-tbox-bundle). Taxonomies are represented using the [Ruby Graph Library](https://www.rubydoc.info/github/monora/rgl), a pure Ruby package for graph operations. (JRuby is required for reading and writing OWL ontologies using the Java [OWLAPI](https://github.com/owlcs/owlapi).)
+
+The initial implementation is written in functional style: all graphs are immutable and iteration is achieved by recursion. For production use there is an iterative mode in which graphs are still immutable but references to them are mutable and iteration is achieved with conventional loops. The two modes pass identical unit tests.
+
+There is a runtime option to select between merge and bypass-reduce-isolate algorithms. The latter produces stronger disjointness conditions and runs faster in general. In general, bypass-reduce-isolate produces more complex class expressions in its disjointness axioms; if this presents computational complexity difficulties for reasoners the merge algorithm may provide relief.
