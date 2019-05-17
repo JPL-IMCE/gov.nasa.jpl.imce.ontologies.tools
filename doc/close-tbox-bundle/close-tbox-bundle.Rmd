@@ -3,10 +3,10 @@ title: "Two Algorithms for Taxonomy Disjointness Maintenance"
 author: "J S Jenkins"
 date: 2019-05-17
 output:
-  html_document:
-    df_print: paged
+  html_document: default
   pdf_document: default
 ---
+
 # Introduction
 
 One of the key features of the Semantic Web (and its formal foundations in Description Logic) is the so-called _open-world semantics_, which means simply that any unasserted fact may be true or false. The real world is open in just this way, although we rarely think about. If I do not assert that I am an alumnus of UCLA, then (at least logically) I might or might not be.
