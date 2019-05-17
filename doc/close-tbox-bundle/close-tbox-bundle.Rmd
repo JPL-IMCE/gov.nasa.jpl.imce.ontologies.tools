@@ -1,7 +1,7 @@
 ---
 title: "Two Algorithms for Taxonomy Disjointness Maintenance"
 author: "J S Jenkins"
-date: 2019-05-03
+date: 2019-05-17
 output:
   html_document:
     df_print: paged
@@ -11,7 +11,7 @@ output:
 
 One of the key features of the Semantic Web (and its formal foundations in Description Logic) is the so-called _open-world semantics_, which means simply that any unasserted fact may be true or false. The real world is open in just this way, although we rarely think about. If I do not assert that I am an alumnus of UCLA, then (at least logically) I might or might not be.
 
-Open-world semantics do not apply in traditional database applications. If my name does not appear in the table of customers, then an application is justified in concluding I am not (yet) a customer.
+Open-world semantics typically do not apply in traditional database applications. If my name does not appear in the table of customers, then an application is justified in concluding I am not (yet) a customer.
 
 Neither open- nor closed-world semantics are correct, per se. Each has its appropriate uses, and it is important to be aware of the semantics in effect and draw proper conclusions.
 
@@ -50,7 +50,7 @@ DisjointClasses(Vehicle Person)
 SubClassOf(Car Vehicle)
 ```
 
-Note that we do not need to assert `DisjointClasses(Car Person)`; that fact follows from the definition of disjointness; a DL reasoner will infer it. Note also that, while it probably not what we mean, it would not be logically inconsistent to assert `DisjointClasses(Car Vehicle)`; the reasoner would correctly include that the set of cars is _empty_, but the empty set is a perfectly valid set. A class that can have no members is said to be _unsatisfiable_.
+Note that we do not need to assert `DisjointClasses(Car Person)`; that fact follows from the definition of disjointness; a DL reasoner will infer it. Note also that, while it is probably not what we mean, it would not be logically inconsistent to assert `DisjointClasses(Car Vehicle)`; the reasoner would  include that the set of cars is _empty_, but the empty set is a perfectly valid set. A class that can have no members is said to be _unsatisfiable_.
 
 # Disjointness Maintenance
 
@@ -58,7 +58,11 @@ The general problem of disjointness maintenance is the augmentation of a taxonom
 
 The policy to be implemented here is simple: any two classes that have no common subclass are considered to be disjoint. A simple corollary is that, if _B_ is a subclass of _A_, then _A_ and _B_ are not disjoint because _A_ and _B_ have a common subclass, namely _B_. Also note that disjointness is inherited: if _A_ and _B_ are disjoint, then every subclass of _A_ is disjoint with every subclass of _B_. We can use this fact to make our generated disjointness axioms concise.
 
-The objectives of a disjointness maintenance algorithm, therefore, are threefold:
+This policy is inappropriate for, say, biological taxonomies in which we are trying to classify objects as they exist in the real world. In that case, disjointness is a feature to be discovered (or not). Developing a vocabulary for engineering, in contrast, involves identifying key concepts and noting that, in many cases, these concepts _are_ disjoint. By definition, an engineering requirement, the component bound by that requirement, and the supplier of that component, _cannot_ be the same thing; they belong to disjoint categories. It is perfectly appropriate in this cases to declare our intent that the classes _Requirement_, _Component_, and _Supplier_ and disjoint.
+
+The implemented policy simply makes disjointness the default. Exceptions must be stated explicitly.
+
+The objectives of a disjointness maintenance algorithm are threefold:
 
 1. to implement the disjointness policy,
 1. to minimize the number of disjointness axioms generated, and
@@ -227,11 +231,11 @@ DisjointClasses( ul ur dl dr )
 
 ## Bypass-Reduce-Isolate
 
-The bypass-reduce-isolate algorithm exploits the fact that, for any two classes _A_ and _B_, _A_ \\ _B_ is disjoint from _B_, where _A_ \\ _B_ is the [_set difference_](https://en.wikipedia.org/wiki/Complement_(set_theory)). It also makes use of the identity _A_ \\ _B_ \\ _C_ = _A_ \\ (_B_ &cup; _C_).
+The bypass-reduce-isolate algorithm exploits the fact that, for any two classes _A_ and _B_, _A_\\_B_ is disjoint from _B_, where _A_\\_B_ is the [_set difference_](https://en.wikipedia.org/wiki/Complement_(set_theory)). It also makes use of the identity _A_\\_B_\\_C_ = _A_\\(_B_ &cup; _C_).
 
 ### Simple Diamond
 
-The simple diamond implies by transitivity that _d_ &sube; _a_. By the rule above, _b_ \\ _d_ and _c_ \\ _d_ are both disjoint with _d_. The result is a tree:
+The simple diamond implies by transitivity that _d_ &sube; _a_. By the rule above, _b_\\_d_ and _c_\\_d_ are both disjoint with _d_. The result is a tree:
 
 ```{r}
 plot_tree(diam_after_bypass_reduce_isolate_tree)
@@ -308,7 +312,7 @@ The implied disjointness is
 DisjointClasses(ul ur dl dr u\(ul∪ur) d\(dl∪dr) l\(ul∪dl) r\(ur∪dr))
 ```
 
-Note that the latter four classes are empty, by definition. In practical terms, this means this algorithm yields the same result as the merge algorithm. Detecting and omitting empty classes may be a useful future optimization.
+Note that if every element belongs to one of the leaf classes _ul_, _ur_, _dl_, or _dr_, then _u_ = _ul_ &cup; _ur_, and therefore _u_\\(_ul_ &cup; _ur_) is empty, and likewise for the other set differences. In this case the disjointness axioms are equivalent to those produced by the merge algorithm.
 
 # The General Procedure
 
@@ -319,11 +323,13 @@ This section describes incorporation of either algorithm in a practical bundle c
 1. Perform Transitive Reduction. As mentioned before, both algorithms assume the input taxonomy is in reduced form.
 1. Treeify. Apply either _merge_ or _bypass-reduce-isolate_ iteratively until the result is a tree.
 1. Find Sibling Subclasses. Traverse the tree and, for each vertex, enumerate its sibling subclasses.
-1. Assert Disjointness. For each set of sibling subclasses, asset a `DisjointClasses()` axiom. For the merge algorithm, the resulting disjointness axioms involve singleton classes and union expressions, which are created in OWL with `ObjectUnionOf()` expressions. For the bypass-reduce-isolate algorithm, the resulting expressions involve unions, intersections, and complements. The latter two are created in OWL with `ObjectIntersectionOf()` and `ObjectComplementOf()`.
+1. Assert Disjointness. For each set of sibling subclasses, asset a `DisjointClasses()` axiom. For the merge algorithm, the resulting disjointness axioms involve singleton classes and union expressions, which are created in OWL with `ObjectUnionOf()` expressions. For the bypass-reduce-isolate algorithm, the resulting expressions involve unions, and differences. OWL does not have an expression for set difference, but differences can be expressed using `ObjectIntersectionOf()` and `ObjectComplementOf()`.
 
 # Prototype Implementation
 
 The prototype implementation is a [JRuby](https://www.jruby.org/) [script](https://github.com/JPL-IMCE/gov.nasa.jpl.imce.ontologies.tools/blob/master/tools/close-tbox-bundle). Taxonomies are represented using the [Ruby Graph Library](https://www.rubydoc.info/github/monora/rgl), a pure Ruby package for graph operations. (JRuby is required for reading and writing OWL ontologies using the Java [OWLAPI](https://github.com/owlcs/owlapi).)
+
+A key element of the implementation is a set of classes and methods for set expressions involving singletons, unions, intersections, and complements. The library does not perform general reasoning about sets, but exploits certain facts about set operations (e.g., set intersection is commutative and associative, set complement is involutory, etc.) to simplify the expressions.
 
 The initial implementation is written in functional style: all graphs are immutable and iteration is achieved by recursion. For production use there is an iterative mode in which graphs are still immutable but references to them are mutable and iteration is achieved with conventional loops. The two modes pass identical unit tests.
 
