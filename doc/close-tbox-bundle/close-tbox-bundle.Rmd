@@ -1,7 +1,7 @@
 ---
 title: "Two Algorithms for Taxonomy Disjointness Maintenance"
 author: "J S Jenkins"
-date: 2019-05-17
+date: 2019-05-20
 output:
   html_document: default
   pdf_document: default
@@ -287,7 +287,7 @@ plot_tree(asym_after_bypass_reduce_tree, asym_after_bypass_reduce_layout)
 
 In principle, we could simply apply transitive reduction to the resulting taxonomy but that operation can be expensive on a large taxonomy. This implementation exploits the fact that all potentially reduntant edges are between the bypassing class and the root.
 
-Note that the taxonomy in this state has lost essential information (e.g., that _c_ and _e_ share a common subclass _i_), and would therefore produce spurious disjointness. The _isolate_ operation restores consistency with the original taxonomy:
+Note that the taxonomy in this state has lost essential information (e.g., that _c_ and _e_ share a common subclass _i_), and would therefore produce spurious disjointness. The _isolate_ operation restores consistency with the original taxonomy by replacing _c_ with _c_\\_i_ and _e_ with _e_\\_i_.
 
 ```{r}
 plot_tree(asym_after_bypass_reduce_isolate_tree, asym_after_bypass_reduce_isolate_layout)
