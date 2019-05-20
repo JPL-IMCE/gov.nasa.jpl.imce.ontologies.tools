@@ -17,7 +17,7 @@ One of the key features of the Semantic Web (and its formal foundations in Descr
 
 Open-world semantics typically do not apply in traditional database applications. If my name does not appear in the table of customers, then an application is justified in concluding I am not (yet) a customer.
 
-Neither open- nor closed-world semantics are correct, per se. Each has its appropriate uses, and it is important to be aware of the semantics in effect and draw proper conclusions.
+Neither open- nor closed-world semantics are "correct", per se. Each has its appropriate uses, and it is important to be aware of the semantics in effect and draw proper conclusions.
 
 One aspect of open-world semantics that is sometimes surprising to people familiar with object-oriented software development has to do with implicit _disjointness_. If, for example, in Java, we declare classes as follows:
 
