@@ -1,10 +1,11 @@
 ---
 title: "Two Algorithms for Taxonomy Disjointness Maintenance"
 author: "J S Jenkins"
-date: 2019-05-20
+date: '2019-06-06'
 output:
-  html_document: default
+  word_document: default
   pdf_document: default
+  html_document: default
 ---
 
 ```{r global_options, include=FALSE}
@@ -325,7 +326,7 @@ This section describes incorporation of either algorithm in a practical bundle c
 1. Excise Pure Aspects. IMCE practice (enforced in OML) is to distinguish different usages of the notion of _class_ in Description Logic. One usage in particular, known as _Aspects_, exist primarily to simplify the declarations of property domains and ranges and are not intended to represent a closed vocabulary. The first step in the process, therefore, is to excise all pure aspects. A pure aspect is any class that is a subclass of any aspect and is not also a subclass of any non-aspect. Excising a class means simply removing it from a taxonomy and making all its direct subclasses subclasses of its direct parents.
 1. Excise Backbone Classes. In OWL, class usage distinctions are indicated by subclass relations to so-called _backbone classes_. Backbone classes are also not intended to represent a closed vocabulary, so we excise those as well.
 1. Perform Transitive Reduction. As mentioned before, both algorithms assume the input taxonomy is in reduced form.
-1. Treeify. Apply either _merge_ or _bypass-reduce-isolate_ iteratively until the result is a tree.
+1. Treeify. While there exists a vertex with multiple parents, apply either _merge_ or _bypass-reduce-isolate_. When no such vertex exists, the taxonomy is a tree.
 1. Find Sibling Subclasses. Traverse the tree and, for each vertex, enumerate its sibling subclasses.
 1. Assert Disjointness. For each set of sibling subclasses, asset a `DisjointClasses()` axiom. For the merge algorithm, the resulting disjointness axioms involve singleton classes and union expressions, which are created in OWL with `ObjectUnionOf()` expressions. For the bypass-reduce-isolate algorithm, the resulting expressions involve unions, and differences. OWL does not have an expression for set difference, but differences can be expressed using `ObjectIntersectionOf()` and `ObjectComplementOf()`.
 
