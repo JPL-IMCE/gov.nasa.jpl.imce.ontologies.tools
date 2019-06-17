@@ -41,6 +41,10 @@ class ValidateOwlApplication < PelletApplication
     option_parser.on('--id ID', 'identifier') do |v|
       @options.id = v
     end
+    @options.use_una = false
+    option_parser.on('--use-una', 'use Pellet unique name assumption') do
+      @options.use_una = true
+    end
     
     super
     
@@ -146,10 +150,10 @@ class ValidateOwlApplication < PelletApplication
     reasoner = reasoner_factory.createReasoner(collection_ontology)
     raise "couldn't create reasoner" unless reasoner
 
-    # Enable Unique Name Assumption.
+    # Enable Unique Name Assumption if specified.
 
     properties = PelletOptions.setOptions(Properties.new)
-    properties.setProperty("USE_UNIQUE_NAME_ASSUMPTION", "true")
+    properties.setProperty("USE_UNIQUE_NAME_ASSUMPTION", @options.use_una.to_s)
     PelletOptions.setOptions(properties)
     
     # Create GlassBoxExplanation.
