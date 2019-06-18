@@ -1,0 +1,1260 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass IEEEtran
+\begin_preamble
+% for subfigures/subtables
+\usepackage[caption=false,font=footnotesize]{subfig}
+\end_preamble
+\options conference
+\use_default_options false
+\maintain_unincluded_children false
+\language english
+\language_package none
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures false
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command bibtex
+\index_command default
+\float_placement tbh
+\paperfontsize default
+\spacing single
+\use_hyperref true
+\pdf_title "Your Title"
+\pdf_author "Your Name"
+\pdf_bookmarks true
+\pdf_bookmarksnumbered true
+\pdf_bookmarksopen true
+\pdf_bookmarksopenlevel 1
+\pdf_breaklinks false
+\pdf_pdfborder true
+\pdf_colorlinks false
+\pdf_backref false
+\pdf_pdfusetitle false
+\pdf_quoted_options "pdfpagelayout=OneColumn, pdfnewwindow=true, pdfstartview=XYZ, plainpages=false"
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 0
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 2
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+This is a template \SpecialChar LyX
+ file for conference articles of conferences organized
+ by the Institute of Electrical and Electronics Engineers (IEEE).
+ For IEEE journal articles, see the template file 
+\emph on
+IEEEtran-Journal.lyx
+\emph default
+.
+ For general info see 
+\begin_inset Flex URL
+status open
+
+\begin_layout Plain Layout
+
+https://wiki.lyx.org/Examples/IEEE
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+It is important that you use the correct document class options for your
+ document..
+ These are explained in the IEEEtran documentation: 
+\begin_inset Flex URL
+status open
+
+\begin_layout Plain Layout
+
+http://mirror.ctan.org/macros/latex/contrib/IEEEtran/IEEEtran_HOWTO.pdf
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Title
+Two Algorithms for
+\begin_inset Newline newline
+\end_inset
+
+Ontology Disjointness Maintenance
+\end_layout
+
+\begin_layout Author
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+the standard way: 
+\end_layout
+
+\end_inset
+
+
+\begin_inset Flex Author Name
+status open
+
+\begin_layout Plain Layout
+J.
+ Steven Jenkins
+\end_layout
+
+\end_inset
+
+
+\begin_inset Flex Author Affiliation
+status open
+
+\begin_layout Plain Layout
+Systems Engineering Division
+\begin_inset Newline newline
+\end_inset
+
+Jet Propulsion Laboratory
+\begin_inset Newline newline
+\end_inset
+
+California Institute of Technology
+\begin_inset Newline newline
+\end_inset
+
+j.s.jenkins@jpl.nasa.gov
+\end_layout
+
+\end_inset
+
+
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+and 
+\end_layout
+
+\end_inset
+
+
+\begin_inset Flex Author Name
+status open
+
+\begin_layout Plain Layout
+Nicolas F.
+ Rouquette
+\end_layout
+
+\end_inset
+
+
+\begin_inset Flex Author Affiliation
+status open
+
+\begin_layout Plain Layout
+Systems Architectures and Behaviors Section
+\begin_inset Newline newline
+\end_inset
+
+Systems Engineering Division
+\begin_inset Newline newline
+\end_inset
+
+Jet Propulsion Laboratory
+\begin_inset Newline newline
+\end_inset
+
+California Institute of Technology
+\begin_inset Newline newline
+\end_inset
+
+nicolas.f.rouquette@jpl.nasa.gov
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Abstract
+Under open-world semantics, classes in an ontology are not considered to
+ be disjoint unless explicitly declared so.
+ There are situations, however, in which it is convenient to adopt the interpret
+ation given to classes in object-oriented programming languages, namely,
+ that any two classes are disjoint unless there is an explicitly-named class
+ that extends each.
+ (This includes the case where one extends the other.) This paper describes
+ two algorithms for automated generation of disjointness axioms for an arbitrary
+ OWL2 taxonomy.
+ If the taxonomy is a tree (i.e., no class is subsumed by two or more classes,
+ the solution is straightforward: traverse the tree and declare all sibling
+ subclasses disjoint.
+ Otherwise, each algorithm applies a graph transformation repeatedly until
+ the resulting taxonomy is a tree.
+ The transformations are designed to ensure that subsumption relationships
+ in the transformed graphs are true, if weaker than those in the original.
+ Both algorithms have been applied succesfully to taxonomies consisting
+ of dozens of classes; the resulting disjointness axioms have been used
+ to reason over ontologies with millions of triples describing thousands
+ of named individuals.
+\end_layout
+
+\begin_layout Peer Review Title
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+Don't add text here!
+\end_layout
+
+\end_inset
+
+
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+required if you use the document class option 
+\family sans
+peerreview
+\family default
+, must otherwise not be used
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+One of the key features of the Semantic Web (and its formal foundations
+ in Description Logic) is the so-called 
+\emph on
+open-world semantics
+\emph default
+, which means simply that any unasserted claim may be true or false.
+ The world of ordinary human interaction is open in just this way; if neither
+ author of this paper is known to be a graduate of UCLA, then either might
+ be.
+ And in fact, one is and one is not.
+\end_layout
+
+\begin_layout Standard
+Open-world semantics typically do not apply in traditional database applications.
+ If my name does not appear in the table of customers, then an application
+ is justified in concluding I am not (yet) a customer.
+\end_layout
+
+\begin_layout Standard
+Neither open- nor closed-world semantics are 
+\begin_inset Quotes eld
+\end_inset
+
+correct
+\begin_inset Quotes erd
+\end_inset
+
+, 
+\emph on
+per se
+\emph default
+.
+ Each has its appropriate uses, and it is important to be aware of the semantics
+ in effect and draw proper conclusions.
+\end_layout
+
+\begin_layout Standard
+One aspect of open-world semantics that is sometimes surprising to people
+ familiar with object-oriented software development has to do with implicit
+ 
+\emph on
+disjointness
+\emph default
+.
+ Suppose, for example, in Java, we declare classes as follows:
+\begin_inset listings
+lstparams "language=Java,basicstyle={\ttfamily}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+public class Vehicle {}
+\end_layout
+
+\begin_layout Plain Layout
+
+public class Person {}
+\end_layout
+
+\end_inset
+
+We naturally expect that an object may be a 
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline true
+status open
+
+\begin_layout Plain Layout
+
+Vehicle
+\end_layout
+
+\end_inset
+
+ or it may be a 
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline true
+status open
+
+\begin_layout Plain Layout
+
+Person
+\end_layout
+
+\end_inset
+
+, but it cannot be both.
+ That is, the sets of objects of type 
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline true
+status open
+
+\begin_layout Plain Layout
+
+Vehicle
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline true
+status open
+
+\begin_layout Plain Layout
+
+Person
+\end_layout
+
+\end_inset
+
+ are 
+\emph on
+disjoint
+\emph default
+.
+ Formally, two sets are disjoint if their intersection is empty.
+\end_layout
+
+\begin_layout Standard
+If instead, however, we want to declare classes that are not disjoint because
+ one is a subclass of the other, Java requires us to declare the relation
+ explicitly:
+\begin_inset listings
+lstparams "language=Java,basicstyle={\ttfamily}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+public class Vehicle {}
+\end_layout
+
+\begin_layout Plain Layout
+
+public class Car extends Vehicle {}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The situation with OWL and the Semantic Web is somewhat different.
+ Suppose we declare OWL classes as follows:
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+Declaration(Class(Vehicle))
+\end_layout
+
+\begin_layout Plain Layout
+
+Declaration(Class(Person))
+\end_layout
+
+\begin_layout Plain Layout
+
+Declaration(Class(Car))
+\end_layout
+
+\end_inset
+
+If we assert nothing further, then any pair of classes may have a nonempty
+ intersection.
+ To assert the the situation from the Java example, we must add two axioms:
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+DisjointClasses(Vehicle Person)
+\end_layout
+
+\begin_layout Plain Layout
+
+SubClassOf(Car Vehicle)
+\end_layout
+
+\end_inset
+
+ Note that we do not need to assert 
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+DisjointClasses(Car Person)
+\end_layout
+
+\end_inset
+
+That fact follows from the definition of disjointness—a DL reasoner will
+ infer it.
+ Note also that, while it is probably not what we mean, it would not be
+ logically inconsistent to assert 
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline false
+status open
+
+\begin_layout Plain Layout
+
+DisjointClasses(Car Vehicle)
+\end_layout
+
+\end_inset
+
+A reasoner will include that the set of cars is 
+\emph on
+empty
+\emph default
+, but the empty set is a valid set.
+ A class that can have no members is said to be 
+\emph on
+unsatisfiable
+\emph default
+.
+\end_layout
+
+\begin_layout Section
+Disjointness Maintenance
+\end_layout
+
+\begin_layout Standard
+The general problem of disjointness maintenance is the augmentation of a
+ taxonomy with disjointness axioms that encode a specific policy for vocabulary
+ closure.
+ It is of utmost importance to note that these disjointness axioms are in
+ no sense 
+\emph on
+implied
+\emph default
+ by the taxonomy itself; indeed, the open world interpretation is that two
+ classes are not considered to be disjoint unless explicitly declared to
+ be so or if their disjointness is implied by mutually exclusive constraints
+ such as property range or cardinality restrictions.
+\end_layout
+
+\begin_layout Standard
+The policy to be implemented here is simple: any two classes that have no
+ common subclass are considered to be disjoint.
+ A simple corollary is that, if 
+\begin_inset Formula $B$
+\end_inset
+
+ is a subclass of 
+\begin_inset Formula $A$
+\end_inset
+
+, then 
+\begin_inset Formula $A$
+\end_inset
+
+ and 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\xout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $B$
+\end_inset
+
+
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\xout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+ are not disjoint because 
+\begin_inset Formula $A$
+\end_inset
+
+ and 
+\begin_inset Formula $B$
+\end_inset
+
+ have a common subclass, namely 
+\begin_inset Formula $B$
+\end_inset
+
+.
+ Also note that disjointness is inherited: if 
+\begin_inset Formula $A$
+\end_inset
+
+ and 
+\begin_inset Formula $B$
+\end_inset
+
+ are disjoint, then every subclass of 
+\begin_inset Formula $A$
+\end_inset
+
+ is disjoint with every subclass of 
+\begin_inset Formula $B$
+\end_inset
+
+.
+ We can use this fact to make our generated disjointness axioms concise.
+\end_layout
+
+\begin_layout Standard
+This policy is inappropriate for, say, biological taxonomies in which we
+ seel to classify objects as they exist in the real world, without teleological
+ context.
+ In that case, disjointness is a feature to be discovered (or not).
+ Developing a vocabulary for engineering, in contrast, involves identifying
+ key concepts and noting that, in many cases, these concepts 
+\emph on
+are
+\emph default
+ disjoint.
+ By definition, an engineering requirement, the system component bound by
+ that requirement, and the supplier of that component 
+\emph on
+cannot
+\emph default
+ be the same thing; they belong to disjoint categories.
+ It is perfectly appropriate in this cases to declare our intent that the
+ ontological classes 
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline true
+status open
+
+\begin_layout Plain Layout
+
+Requirement
+\end_layout
+
+\end_inset
+
+, 
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline true
+status open
+
+\begin_layout Plain Layout
+
+Component
+\end_layout
+
+\end_inset
+
+, and 
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline true
+status open
+
+\begin_layout Plain Layout
+
+Supplier
+\end_layout
+
+\end_inset
+
+ are disjoint.
+\end_layout
+
+\begin_layout Standard
+The implemented policy simply makes disjointness the default.
+ Exceptions must be stated explicitly.
+\end_layout
+
+\begin_layout Standard
+The objectives of a disjointness maintenance algorithm are threefold:
+\end_layout
+
+\begin_layout Enumerate
+to implement the disjointness policy,
+\end_layout
+
+\begin_layout Enumerate
+to minimize the number of disjointness axioms generated, and
+\end_layout
+
+\begin_layout Enumerate
+to generate disjointness axioms of tractable computational complexity for
+ a reasoner.
+\end_layout
+
+\begin_layout Standard
+The final item is beyond the expertise of the authors.
+ We focus on the first two and hope for the best with the third.
+\end_layout
+
+\begin_layout Subsection
+The Simplest Case
+\end_layout
+
+\begin_layout Standard
+Consider the case of a taxonomy that is a 
+\emph on
+directed rooted tree
+\emph default
+ in the graph-theoretic sense.
+ A 
+\emph on
+tree
+\emph default
+ is an undirected graph that is connected and acyclic.
+ (An equivalent formulation is that there is exactly one path between any
+ two vertices.) A 
+\emph on
+directed tree
+\emph default
+ is a tree in which the edges are directed, and a 
+\emph on
+rooted tree
+\emph default
+ is a directed tree in which a single vertex is designated the 
+\emph on
+root
+\emph default
+.
+ For this discussion we will take edge direction to be from subclass to
+ superclass; the parents of a vertex correspond to its superclasses and
+ its children correspond to its subclasses.
+ The root vertex is 
+\begin_inset listings
+lstparams "basicstyle={\ttfamily}"
+inline true
+status open
+
+\begin_layout Plain Layout
+
+owl:Thing
+\end_layout
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Theorem
+Declaring all sibling subclasses of every class disjoint satisfies the disjointn
+ess policy.
+\end_layout
+
+\begin_layout Lemma
+Necessity.
+\end_layout
+
+\begin_layout Proof
+Any two sibling subclasses 
+\begin_inset Formula $A$
+\end_inset
+
+ and 
+\begin_inset Formula $B$
+\end_inset
+
+ of a common superclass cannot share a common subclass.
+ If a common subclass existed, there would be two paths to the root from
+ it: one through 
+\begin_inset Formula $A$
+\end_inset
+
+ and one through 
+\begin_inset Formula $B$
+\end_inset
+
+.
+ Every tree contains exactly one path between any pair of vertices, so a
+ common subclass cannot exist.
+\end_layout
+
+\begin_layout Theorem
+Sufficiency.
+\end_layout
+
+\begin_layout Proof
+If two classes 
+\begin_inset Formula $A$
+\end_inset
+
+ and 
+\begin_inset Formula $B$
+\end_inset
+
+ do not share a common subclass, then neither one is a subclass of the other.
+ Consequently, the path from 
+\begin_inset Formula $A$
+\end_inset
+
+ to the root contains at least one edge not in the path from 
+\begin_inset Formula $B$
+\end_inset
+
+ to the root and vice versa.
+ Therefore, there must exist some vertex 
+\begin_inset Formula $C$
+\end_inset
+
+ (perhaps the root) where the paths from 
+\begin_inset Formula $A$
+\end_inset
+
+ to the root and from 
+\begin_inset Formula $B$
+\end_inset
+
+ to the root converge.
+ That is, there must exists sibling subclasses 
+\begin_inset Formula $C_{A}$
+\end_inset
+
+ and 
+\begin_inset Formula $C_{B}$
+\end_inset
+
+ such that 
+\begin_inset Formula $A$
+\end_inset
+
+ is a subclass of 
+\begin_inset Formula $C_{A}$
+\end_inset
+
+ and 
+\begin_inset Formula $B$
+\end_inset
+
+ is a subclass of 
+\begin_inset Formula $C_{B}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+The General Case
+\end_layout
+
+\begin_layout Standard
+In the general case, we cannot assume the taxonomy is a tree.
+ There may be explicitly-asserted common subclasses, and these invalidate
+ the assumptions that led to the simple algorithm in the simple case.
+\end_layout
+
+\begin_layout Standard
+One possible strategy for dealing with the general case is to apply a set
+ of transformations to an arbitrary taxonomy that result in a tree and then
+ apply the simple algorithm to the tree.
+ These transformations should be chosen in such a way that the disjointness
+ policy is still satisfied: that every pair of classes without an explicit
+ common subclass is disjoint.
+ In the event we cannot find a transformation that preserves the policy,
+ it is important to ensure that the transformed taxonomy does not result
+ in spurious unsatisfiability.
+ That is, the transformed (relaxed) taxonomy may generate weaker disjointness
+ constraints than the original, but must not generate stronger constraints
+ than implied by the original.
+\end_layout
+
+\begin_layout Subsubsection
+Transitive Reduction
+\end_layout
+
+\begin_layout Standard
+The subclass relation is 
+\emph on
+transitive
+\emph default
+, that is, if 
+\begin_inset Formula $A$
+\end_inset
+
+ is a subclass of 
+\begin_inset Formula $B$
+\end_inset
+
+ and 
+\begin_inset Formula $B$
+\end_inset
+
+ is a subclass of 
+\begin_inset Formula $C$
+\end_inset
+
+, then 
+\begin_inset Formula $A$
+\end_inset
+
+ is a subclass of 
+\begin_inset Formula $C$
+\end_inset
+
+.
+ It is true in this case that 
+\begin_inset Formula $A$
+\end_inset
+
+ is a common subclass of 
+\begin_inset Formula $B$
+\end_inset
+
+ and 
+\begin_inset Formula $C$
+\end_inset
+
+, but so is 
+\begin_inset Formula $B$
+\end_inset
+
+.
+ The fact that 
+\begin_inset Formula $A$
+\end_inset
+
+ is a subclass of 
+\begin_inset Formula $C$
+\end_inset
+
+ does not rule out any disjointness not already ruled out.
+ In the following discussions of algorithms, we will assume that the input
+ has undergone 
+\emph on
+transitive reduction
+\emph default
+ and is maintained in reduced state.
+\end_layout
+
+\begin_layout Section
+Two Algorithms
+\end_layout
+
+\begin_layout Standard
+This section will describe two algorithms for transforming an arbitrary
+ rooted taxonomy into a tree such that every subclass relationship in the
+ resulting tree is implied by the initial taxonomy (but not necessarily
+ vice versa).
+ The algorithms are designated 
+\emph on
+merge
+\emph default
+ and 
+\emph on
+bypass-reduce-isolate
+\emph default
+.
+\end_layout
+
+\begin_layout Section
+Results
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement htbp
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+
+\family sans
+A single column figure goes here
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Captions go 
+\emph on
+under
+\emph default
+ the figure
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset Float table
+placement htbp
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+Table captions go 
+\emph on
+above
+\emph default
+ the table
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="2" columns="2">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top" width="0pt">
+<column alignment="center" valignment="top" width="0pt">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+delete
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+this
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+example
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+table
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Conclusions
+\end_layout
+
+\begin_layout Standard
+bla bla
+\end_layout
+
+\begin_layout Appendices
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+Don't add text here!
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+First appendix
+\end_layout
+
+\begin_layout Standard
+Citation: 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "IEEEexample:beebe_archive"
+literal "true"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Second appendix
+\end_layout
+
+\begin_layout Section*
+Acknowlegment
+\end_layout
+
+\begin_layout Standard
+bla bla
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+Remember though that your final submission is supposed to have all the bibliogra
+phy entries embedded in the \SpecialChar LaTeX
+-file.
+ This means you eventually have to copy the .bbl file into the latex file
+ and remove the bibtex lines.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset CommandInset bibtex
+LatexCommand bibtex
+bibfiles "IEEEabrv,IEEEexample"
+options "IEEEtran"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Biography
+\begin_inset Argument 1
+status open
+
+\begin_layout Plain Layout
+\begin_inset Box Boxed
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "1in"
+special "none"
+height "1.25in"
+height_special "none"
+thickness "0.4pt"
+separation "3pt"
+shadowsize "4pt"
+framecolor "black"
+backgroundcolor "none"
+status open
+
+\begin_layout Plain Layout
+Replace this box by an image with a width of 1
+\begin_inset space \thinspace{}
+\end_inset
+
+in and a height of 1.25
+\begin_inset space \thinspace{}
+\end_inset
+
+in!
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset Argument 2
+status open
+
+\begin_layout Plain Layout
+Your Name
+\end_layout
+
+\end_inset
+
+ All about you and the what your interests are.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Separator plain
+\end_inset
+
+
+\end_layout
+
+\begin_layout Biography without photo
+\begin_inset Argument 1
+status open
+
+\begin_layout Plain Layout
+Coauthor
+\end_layout
+
+\end_inset
+
+Same again for the co-author, but without photo
+\end_layout
+
+\end_body
+\end_document
