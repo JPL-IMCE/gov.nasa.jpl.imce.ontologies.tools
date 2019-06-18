@@ -648,7 +648,7 @@ This policy is inappropriate for, say, biological taxonomies in which we
  context.
  In that case, disjointness is a feature to be discovered (or not).
  Developing a vocabulary for engineering, in contrast, involves identifying
- key concepts and noting that, in many cases, these concepts 
+ important concepts and noting that, in many cases, these concepts 
 \emph on
 are
 \emph default
@@ -659,8 +659,8 @@ are
 cannot
 \emph default
  be the same thing; they belong to disjoint categories.
- It is perfectly appropriate in this cases to declare our intent that the
- ontological classes 
+ It is appropriate in this cases to declare our intent that the ontological
+ classes 
 \begin_inset listings
 lstparams "basicstyle={\ttfamily}"
 inline true
@@ -782,7 +782,37 @@ Declaring all sibling subclasses of every class disjoint satisfies the disjointn
 ess policy.
 \end_layout
 
+\begin_layout Proof
+By Lemmas 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "lem:Necessity."
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "lem:Sufficiency."
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+
+\end_layout
+
 \begin_layout Lemma
+\begin_inset CommandInset label
+LatexCommand label
+name "lem:Necessity."
+
+\end_inset
+
 Necessity.
 \end_layout
 
@@ -810,7 +840,13 @@ Any two sibling subclasses
  common subclass cannot exist.
 \end_layout
 
-\begin_layout Theorem
+\begin_layout Lemma
+\begin_inset CommandInset label
+LatexCommand label
+name "lem:Sufficiency."
+
+\end_inset
+
 Sufficiency.
 \end_layout
 
@@ -871,6 +907,10 @@ If two classes
 \end_inset
 
 .
+\end_layout
+
+\begin_layout Standard
+Consider the following taxonomy:
 \end_layout
 
 \begin_layout Subsection
@@ -1001,7 +1041,12 @@ status open
 \align center
 
 \family sans
-A single column figure goes here
+\begin_inset Graphics
+	filename sym7_tree.pdf
+
+\end_inset
+
+
 \end_layout
 
 \begin_layout Plain Layout

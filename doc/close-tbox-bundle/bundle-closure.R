@@ -3,7 +3,7 @@ library(extrafont)
 
 plot_tree <- function(tree, layout=layout_as_tree) {
   plot.igraph(tree, layout=layout, vertex.shape = "none", vertex.label.family="ArialUnicodeMS",
-       edge.arrow.mode=1, edge.arrow.size=.7, edge.width=2, asp=0)
+       edge.arrow.mode=1, edge.arrow.size=.7, edge.width=2, asp=0, margin=c(0,0,0,0))
 }
 
 disjoint_classes_axioms <- function(l) {

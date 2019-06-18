@@ -3,9 +3,9 @@ title: "Two Algorithms for Taxonomy Disjointness Maintenance"
 author: "J S Jenkins"
 date: '2019-06-06'
 output:
+  html_document: default
   word_document: default
   pdf_document: default
-  html_document: default
 ---
 
 ```{r global_options, include=FALSE}
