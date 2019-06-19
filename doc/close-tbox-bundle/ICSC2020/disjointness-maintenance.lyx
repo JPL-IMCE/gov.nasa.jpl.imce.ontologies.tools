@@ -1007,27 +1007,23 @@ transitive reduction
 \end_layout
 
 \begin_layout Section
-Two Algorithms
+Example Cases
 \end_layout
 
-\begin_layout Standard
-This section will describe two algorithms for transforming an arbitrary
- rooted taxonomy into a tree such that every subclass relationship in the
- resulting tree is implied by the initial taxonomy (but not necessarily
- vice versa).
- The algorithms are designated 
-\emph on
-merge
-\emph default
- and 
-\emph on
-bypass-reduce-isolate
-\emph default
-.
+\begin_layout Subsection
+Symmetric
+\end_layout
+
+\begin_layout Subsection
+Asymmetric
 \end_layout
 
 \begin_layout Section
-Results
+Merge Algorithm
+\end_layout
+
+\begin_layout Section
+Bypass-Reduce-Isolate Algorithm
 \end_layout
 
 \begin_layout Standard
@@ -1150,52 +1146,11 @@ table
 \end_layout
 
 \begin_layout Section
-Conclusions
-\end_layout
-
-\begin_layout Standard
-bla bla
-\end_layout
-
-\begin_layout Appendices
-\begin_inset Note Note
-status open
-
-\begin_layout Plain Layout
-Don't add text here!
-\end_layout
-
-\end_inset
-
-
+General Procedure
 \end_layout
 
 \begin_layout Section
-First appendix
-\end_layout
-
-\begin_layout Standard
-Citation: 
-\begin_inset CommandInset citation
-LatexCommand citet
-key "IEEEexample:beebe_archive"
-literal "true"
-
-\end_inset
-
-
-\end_layout
-
-\begin_layout Section
-Second appendix
-\end_layout
-
-\begin_layout Section*
-Acknowlegment
-\end_layout
-
-\begin_layout Standard
-bla bla
+Prototype Implementation
 \end_layout
 
 \begin_layout Standard
@@ -1273,7 +1228,7 @@ in!
 status open
 
 \begin_layout Plain Layout
-Your Name
+Steven Jenkins
 \end_layout
 
 \end_inset
@@ -1293,12 +1248,65 @@ Your Name
 status open
 
 \begin_layout Plain Layout
-Coauthor
+\begin_inset Box Boxed
+position "t"
+hor_pos "c"
+has_inner_box 1
+inner_pos "t"
+use_parbox 0
+use_makebox 0
+width "1in"
+special "none"
+height "1.25in"
+height_special "none"
+thickness "0.4pt"
+separation "3pt"
+shadowsize "4pt"
+framecolor "black"
+backgroundcolor "none"
+status open
+
+\begin_layout Plain Layout
+Replace this box by an image with a width of 1
+\begin_inset space \thinspace{}
+\end_inset
+
+in and a height of 1.25
+\begin_inset space \thinspace{}
+\end_inset
+
+in!
 \end_layout
 
 \end_inset
 
-Same again for the co-author, but without photo
+
+\end_layout
+
+\end_inset
+
+
+\begin_inset Argument 2
+status open
+
+\begin_layout Plain Layout
+Nicolas Rouquette
+\end_layout
+
+\end_inset
+
+ All about you and the what your interests are.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Separator plain
+\end_inset
+
+
+\end_layout
+
+\begin_layout Biography without photo
+
 \end_layout
 
 \end_body
