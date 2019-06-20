@@ -1022,8 +1022,73 @@ Asymmetric
 Merge Algorithm
 \end_layout
 
+\begin_layout Standard
+The merge algorithm is based on the fact that, if 
+\begin_inset Formula $C\subseteq A$
+\end_inset
+
+ and 
+\begin_inset Formula $C\subseteq B$
+\end_inset
+
+, then 
+\begin_inset Formula $C\subseteq A\cup B$
+\end_inset
+
+.
+ It replaces selected groups of superclasses with their unions.
+ The superclasses are chosen so that all subsumption relations implied by
+ the replacement are true.
+ The replacement procedure continues until the resulting taxonomy is a tree.
+ The resulting disjointness axioms involve singleton classes and unions.
+\end_layout
+
 \begin_layout Section
 Bypass-Reduce-Isolate Algorithm
+\end_layout
+
+\begin_layout Standard
+The bypass-reduce-isolate algorithm exploits the fact that, if 
+\begin_inset Formula $C\subseteq A$
+\end_inset
+
+ and 
+\begin_inset Formula $C\subseteq B$
+\end_inset
+
+, then 
+\begin_inset Formula $A\setminus C$
+\end_inset
+
+, 
+\begin_inset Formula $B\setminus C$
+\end_inset
+
+, and 
+\begin_inset Formula $C$
+\end_inset
+
+ are mutually disjoint.
+ The notation 
+\begin_inset Formula $A\setminus C$
+\end_inset
+
+ denotes 
+\emph on
+set difference
+\emph default
+: 
+\begin_inset Formula $A\setminus C\equiv A\cap C'$
+\end_inset
+
+.
+ The algorithm replaces selected groups of superclasses with set differences
+ of parent and child.
+ It also makes use of the identity 
+\begin_inset Formula $A\setminus B\setminus C=A\setminus\left(B\cup C\right)$
+\end_inset
+
+.
 \end_layout
 
 \begin_layout Standard
@@ -1032,18 +1097,6 @@ placement htbp
 wide false
 sideways false
 status open
-
-\begin_layout Plain Layout
-\align center
-
-\family sans
-\begin_inset Graphics
-	filename sym7_tree.pdf
-
-\end_inset
-
-
-\end_layout
 
 \begin_layout Plain Layout
 \begin_inset Caption Standard
@@ -1151,6 +1204,22 @@ General Procedure
 
 \begin_layout Section
 Prototype Implementation
+\end_layout
+
+\begin_layout Standard
+Citation: 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "IEEEexample:beebe_archive"
+literal "true"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Appendices
+
 \end_layout
 
 \begin_layout Standard
@@ -1302,10 +1371,6 @@ Nicolas Rouquette
 \begin_inset Separator plain
 \end_inset
 
-
-\end_layout
-
-\begin_layout Biography without photo
 
 \end_layout
 
