@@ -24,7 +24,7 @@
 # such that any two classes that do not have an explicit intersection are disjoint.
 
 require 'OWLAPIApplication'
-require 'taxonomy'
+require 'owl-ce-taxonomy'
 
 java_import 'uk.ac.manchester.cs.owl.owlapi.OWLDataFactoryImpl'
 java_import 'org.coode.xml.XMLWriterPreferences'
@@ -79,6 +79,17 @@ class CloseBundleApplication < OWLAPIApplication
     option_parser.on('--concrete "stem1 stem2 ... " ', '') do |v|
       @options.backbone_stems[:concrete] = v.split(/\s+/)
     end
+    @options.algorithm = :bypass_reduce_isolate
+    option_parser.on('--merge', 'use weaker merge algorithm') do
+      @options.algorithm = :merge
+    end
+    option_parser.on('--bypass-reduce-isolate', 'use stronger bypass-reduce-isolate algorithm') do
+      @options.algorithm = :bypass_reduce_isolate
+    end
+    @options.recursive = false
+    option_parser.on('--recursive', 'use recursive (functional) implementation') do
+      @options.recursive = true
+    end
 
     super
     
@@ -109,6 +120,19 @@ class CloseBundleApplication < OWLAPIApplication
         return 1
       end
     end
+    
+    # Select implementation methods
+
+    if @options.recursive
+      excise_vertices_method = :r_excise_vertices
+      excise_pattern_method = :r_excise_pattern
+      treeify_method = @options.algorithm == :merge ? :r_treeify_with_merge : :r_treeify_with_bypass_reduce_isolate
+    else
+      excise_vertices_method = :excise_vertices
+      excise_pattern_method = :excise_pattern
+      treeify_method = @options.algorithm == :merge ? :treeify_with_merge : :treeify_with_bypass_reduce_isolate
+    end
+    log(INFO, "treeify_method: #{treeify_method}")
     
     # Axiom storage.
     
@@ -245,13 +269,13 @@ class CloseBundleApplication < OWLAPIApplication
         o.getClassesInSignature(true).each do |klass|
           unless klass.isAnonymous
             klass_iri = klass.asOWLClass.getIRI.toString
-            klass_set[klass_iri] ||= Union.new([klass_iri])
+            klass_set[klass_iri] ||= ClassExpression::Singleton.new(klass_iri)
             klass.getSubClasses(imports_set).reject do |sc|
               sc.isAnonymous
             end.map do |sc|
               sc.asOWLClass.getIRI.toString
             end.each do |sub_iri|
-              sub_set = (klass_set[sub_iri] ||= Union.new([sub_iri]))
+              sub_set = (klass_set[sub_iri] ||= ClassExpression::Singleton.new(sub_iri))
               log(DEBUG, "#{sub_iri} subclass of #{klass_iri}")
               taxonomy_stage0.add_edge(klass_set[klass_iri], sub_set)
             end
@@ -264,7 +288,8 @@ class CloseBundleApplication < OWLAPIApplication
 
       log(Logger::INFO, 'root tree at OWL:Thing')
       thing = factory.getOWLClass('owl:Thing', format)
-      taxonomy_stage1 = taxonomy_stage0.root_at(Union.new([thing]))
+      thing_iri = thing.getIRI.toString
+      taxonomy_stage1 = taxonomy_stage0.root_at(ClassExpression::Singleton.new(thing_iri))
       raise 'rooted class taxonomy is cyclic' unless taxonomy_stage1.acyclic?
 
       # Find all aspects (non-concrete classes).
@@ -277,22 +302,21 @@ class CloseBundleApplication < OWLAPIApplication
             Regexp.new('\A' + @options.backbone_iri + '[^#]*#' + s + '\z')
           end
           bb_classes = taxonomy_stage1.vertices.select do |v|
-            pats.any? { |p| v.first =~ p }
+            pats.any? { |p| v.to_s =~ p }
           end
           all_classes[type] = bb_classes.flat_map do |c|
-            taxonomy_stage1.descendants_of(c)
+            taxonomy_stage1.descendants_of(c).to_a
           end
         end
-        aspects = all_classes[:abstract] - all_classes[:concrete]
+        aspects = Set.new(all_classes[:abstract]) - Set.new(all_classes[:concrete])
 
         # Excise aspects.
 
         log(Logger::INFO, "excise #{aspects.length} aspects")
-        taxonomy_stage2 = taxonomy_stage1.excise_vertices(aspects) do |msg, klass, done|
+        taxonomy_stage2 = taxonomy_stage1.send(excise_vertices_method, aspects) do |msg, klass, done|
           case msg
           when :excising
-            ks = '[' + klass.to_a.join(',') + ']'
-            log(Logger::DEBUG, "excise #{ks}, #{done} done")
+            log(Logger::DEBUG, "excise #{klass}, #{done} done")
           when :excised
             log(Logger::INFO, "excised #{done} aspects")
           end
@@ -306,11 +330,10 @@ class CloseBundleApplication < OWLAPIApplication
 
       if pat = @options.excise_pattern
         log(Logger::INFO, 'excise backbone classes')
-        taxonomy_stage3 = taxonomy_stage2.excise_pattern(pat) do |msg, klass, done|
+        taxonomy_stage3 = taxonomy_stage2.send(excise_pattern_method, pat) do |msg, klass, done|
           case msg
           when :excising
-            ks = '[' + klass.to_a.join(',') + ']'
-            log(Logger::DEBUG, "excise #{ks}, #{done} done")
+            log(Logger::DEBUG, "excise #{klass}, #{done} done")
           when :excised
             log(Logger::INFO, "excised #{done} backbone classes")
           end
@@ -329,15 +352,13 @@ class CloseBundleApplication < OWLAPIApplication
       # Treeify class taxonomy.
 
       log(Logger::INFO, 'treeify class taxonomy')
-      tree = taxonomy_stage4.treeify do |msg, tree, child, parents, done|
+      tree = taxonomy_stage4.send(treeify_method, 0) do |msg, tree, child, parents, done|
+        log(Logger::DEBUG, "processed #{done} vertices")
         case msg
-        when :merging
-          log(Logger::DEBUG, "merge #{parents.length} parents of #{child.to_a.join(',') }")
-          parents.each do |p|
-            log(Logger::DEBUG, "parent: #{p.to_a.join(',') }")
-          end
-        when :mergedp
-          log(Logger::INFO, "merged #{done} vertices")
+        when :treeifying
+          log(Logger::DEBUG, "processing #{parents.length} parents of #{child}")
+        when :treeified
+          log(Logger::INFO, "treeify complete after processing #{done} vertices")
         end
       end
       raise 'merged tree is cyclic' unless tree.acyclic?
@@ -345,13 +366,18 @@ class CloseBundleApplication < OWLAPIApplication
       # Create sibling groups.
       
       log(Logger::INFO, 'create sibling groups')
-      sibling_groups = tree.sibling_groups
+      sibling_map = tree.sibling_map
 
       # Create disjointness axioms.
 
       log(Logger::INFO, 'create disjointness axioms')
-      sibling_groups.each do |sibs|
-        expression = class_expression(sibs, factory)
+      sibling_map.each do |parent, sibs|
+        log(Logger::DEBUG, "children of #{parent}")
+        expression = sibs.inject(java.util.HashSet.new) do |h, s|
+          log(Logger::DEBUG, "class expression for #{s}")
+          h << s.to_owl_class_expression(factory)
+          h
+        end
         axioms << factory.getOWLDisjointClassesAxiom(expression)
       end
 
@@ -389,26 +415,7 @@ class CloseBundleApplication < OWLAPIApplication
     return 0
           
   end
-  
-  # Create an OWL Class or a union of Classes from a list.
-  
-  def class_expression(disjoint_set, factory)
-    result = java.util.HashSet.new
-    disjoint_set.each do |union_list|
-      case union_list.length
-      when 1
-        result << factory.getOWLClass(IRI.create(union_list.first.to_s))
-      else
-        union_hash = union_list.inject(java.util.HashSet.new) do |m, c|
-          m << factory.getOWLClass(IRI.create(c.to_s))
-          m
-        end
-        result << factory.getOWLObjectUnionOf(union_hash)
-      end
-    end
-    result
-  end
-  
+
 end
 
 exit(CloseBundleApplication.new(APPLICATION_NAME).start)

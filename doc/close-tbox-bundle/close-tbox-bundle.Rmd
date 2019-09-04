@@ -1,0 +1,341 @@
+---
+title: "Two Algorithms for Taxonomy Disjointness Maintenance"
+author: "J S Jenkins"
+date: '2019-06-06'
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+# Introduction
+
+One of the key features of the Semantic Web (and its formal foundations in Description Logic) is the so-called _open-world semantics_, which means simply that any unasserted fact may be true or false. The real world is open in just this way, although we rarely think about. If I do not assert that I am a graduate of UCLA, then (at least logically) I might or might not be.
+
+Open-world semantics typically do not apply in traditional database applications. If my name does not appear in the table of customers, then an application is justified in concluding I am not (yet) a customer.
+
+Neither open- nor closed-world semantics are "correct", per se. Each has its appropriate uses, and it is important to be aware of the semantics in effect and draw proper conclusions.
+
+One aspect of open-world semantics that is sometimes surprising to people familiar with object-oriented software development has to do with implicit _disjointness_. If, for example, in Java, we declare classes as follows:
+
+```
+// Java
+public class Vehicle {}
+public class Person {}
+```
+
+we naturally expect that an object may be a `Vehicle` or it may be a `Person`, but it cannot be both. That is, the sets of objects of type `Vehicle` and `Person` are _disjoint_. Formally, two sets are disjoint if their intersection is empty.
+
+If instead, however, we want to declare classes that are not disjoint because one is a subclass of the other, Java requires us to declare the relation explicitly:
+
+```
+// Java
+public class Vehicle {}
+public class Car extends Vehicle {}
+```
+
+The situation with OWL and the Semantic Web is somewhat different. If we declare OWL classes
+
+```
+# OWL
+Declaration(Class(Vehicle))
+Declaration(Class(Person))
+Declaration(Class(Car))
+```
+
+and assert nothing further, then any pair of classes may have a nonempty intersection. To assert the the situation from the Java example, we must add two axioms:
+
+```
+# OWL
+DisjointClasses(Vehicle Person)
+SubClassOf(Car Vehicle)
+```
+
+Note that we do not need to assert `DisjointClasses(Car Person)`; that fact follows from the definition of disjointness; a DL reasoner will infer it. Note also that, while it is probably not what we mean, it would not be logically inconsistent to assert `DisjointClasses(Car Vehicle)`; the reasoner would  include that the set of cars is _empty_, but the empty set is a perfectly valid set. A class that can have no members is said to be _unsatisfiable_.
+
+# Disjointness Maintenance
+
+The general problem of disjointness maintenance is the augmentation of a taxonomy with disjointness axioms that encode a specific policy for vocabulary closure. It is of utmost importance to note that these disjointness axioms are in no sense _implied_ by the taxonomy itself; indeed, the open world interpretation is that two classes are not considered to be disjoint unless explicitly declared to be so or if their disjointness is implied by mutually exclusive constraints such as property range or cardinality restrictions.
+
+The policy to be implemented here is simple: any two classes that have no common subclass are considered to be disjoint. A simple corollary is that, if _B_ is a subclass of _A_, then _A_ and _B_ are not disjoint because _A_ and _B_ have a common subclass, namely _B_. Also note that disjointness is inherited: if _A_ and _B_ are disjoint, then every subclass of _A_ is disjoint with every subclass of _B_. We can use this fact to make our generated disjointness axioms concise.
+
+This policy is inappropriate for, say, biological taxonomies in which we are trying to classify objects as they exist in the real world. In that case, disjointness is a feature to be discovered (or not). Developing a vocabulary for engineering, in contrast, involves identifying key concepts and noting that, in many cases, these concepts _are_ disjoint. By definition, an engineering requirement, the component bound by that requirement, and the supplier of that component, _cannot_ be the same thing; they belong to disjoint categories. It is perfectly appropriate in this cases to declare our intent that the classes _Requirement_, _Component_, and _Supplier_ and disjoint.
+
+The implemented policy simply makes disjointness the default. Exceptions must be stated explicitly.
+
+The objectives of a disjointness maintenance algorithm are threefold:
+
+1. to implement the disjointness policy,
+1. to minimize the number of disjointness axioms generated, and
+1. to generate disjointness axioms of tractable computational complexity for a reasoner.
+
+The last item is beyond the expertise of the author. We focus on the first two and hope for the best with the third.
+
+```{r message=FALSE, warning=FALSE}
+source("bundle-closure.R")
+```
+
+## The Simplest Case
+
+Consider the case of a taxonomy that is a _directed rooted tree_ in the graph-theoretic sense. A _tree_ is an undirected
+graph that is connected and acyclic. (An equivalent formulation is that there is exactly one path between any two vertices.)
+A _directed tree_ is a tree in which the edges are directed, and a _rooted tree_ is a directed tree in which a single vertex is
+designated the _root_. For this discussion we will take edge direction to be from subclass to superclass; the root vertex corresponds
+to `owl:Thing`.
+```{r}
+plot_tree(sym7_tree, sym7_layout)
+```
+
+It is easy to show that declaring all sibling subclasses of any common superclass disjoint satisfies the disjointness policy. We prove it
+in two steps:
+
+1. *Necessity*: Any two sibling subclasses 
+_A_ and _B_ of a common superclass cannot share a common subclass. If a common subclass existed, there would be two
+paths to the root from it: one through _A_ and one through _B_. Every tree contains exactly one path between any pair of vertices,
+so a common subclass cannot exist.
+
+1. *Sufficiency*: If two classes _A_ and _B_ do not share a common subclass, then neither one is a subclass of the other. Consequently,
+the path from _A_ to the root contains at least one edge not in the path from _B_ to the root and vice versa. Therefore, there must
+exist some vertex _C_ (perhaps the root) where the paths from _A_ to the root and from _B_ to the root converge. That is, there must exists sibling
+subclasses _C<sub>A</sub>_ and _C<sub>B</sub>_ such that _A_ is a subclass of _C<sub>A</sub>_ and _B_ is a subclass of _C<sub>B</sub>_.
+
+The disjointness algorithm for a tree is therefore simple:
+
+1. Traverse the tree
+2. Declare the sibling subclasses of each parent class disjoint
+
+For our example problem, the result is
+```
+DisjointClasses( b c )
+DisjointClasses( d e )
+DisjointClasses( f g )
+DisjointClasses( h i )
+```
+
+## The General Case
+
+In the general case, we cannot assume the taxonomy is a tree. There may be explicitly-asserted common subclasses, and these invalidate the
+assumptions that led to the simple algorithm in the simple case.
+
+One possible strategy for dealing with the general case is to apply a set of transformations to an arbitrary taxonomy that result in a tree
+and then apply the simple algorithm to the tree. These transformations should be chosen in such a way that the disjointness policy is still satisfied: that every pair of classes without an explicit common subclass is disjoint. In the event we cannot find a transformation that preserves the policy, it is important to ensure that the transformed taxonomy does not result in spurious unsatisfiability. That is, the transformed (relaxed) taxonomy may generate weaker disjointness constraints than the original, but must not generate stronger constraints than implied by the original.
+
+### Transitive Reduction
+
+The subclass relation is _transitive_, that is, if _a_ is a subclass of _b_ and _b_ is a subclass of _c_, then _a_ is a subclass of _c_. It is true in this case that _a_ is a common subclass of _b_ and _c_, but so is _b_. The fact that _a_ is a subclass of _c_ does not rule out any disjointness not already ruled out. In the following discussions of algorithms, we will assume that the input has undergone [_transitive reduction_](https://en.wikipedia.org/wiki/Transitive_reduction) and is maintained in reduced state.
+
+# Two Algorithms
+
+This section will describe two algorithms for transforming an arbitrary rooted taxonomy into a tree such that every subclass relationship in the resulting tree is implied by the initial taxonomy (but not necessarily vice versa). The algorithms are designated _merge_ and _bypass-reduce-isolate_.
+
+## Example Cases
+
+Before describing the algorithms, we introduce some example taxonomies as use cases.
+
+### Simple Diamond
+
+This case is the simplest occurrence of a rooted tree with a class that subclasses two other classes.
+
+```{r}
+plot_tree(diam_tree, diam_layout)
+```
+
+
+### Symmetric 8
+
+This case is a deeper symmetric tree.
+
+```{r}
+plot_tree(sym8_tree, sym8_layout)
+```
+
+### Asymmetric
+
+This case is similar but asymmetric. This case presents interesting complications for both algorithms.
+
+```{r}
+plot_tree(asym_tree, asym_layout)
+```
+
+### Up-Down-Left-Right
+
+This case is a somewhat contrived example that illustrates the cross of two orthogonal factors: up-down and left-right.
+
+```{r}
+plot_tree(udlr_tree, udlr_layout)
+```
+
+## Merge
+
+The merge algorithm is based on the fact that, if _C_ is a subclass of both _A_ and _B_, then _C_ is a subclass of _A_ &cup; _B_. (Note: the converse is not true.) The merge algorithm merges the superclasses of any common subclass into their union. For this example, _A_ and _B_ cannot be disjoint because they no longer appear independently in the transformed tree.
+
+### Simple Diamond
+
+For this simple case, the merge algorithm is simple. _b_ &sube; _a_ and _c_ &sube; _a_ imply (_b_ &cup; _c_) &sube; _a_; _d_ &sube; _b_ and _d_ &sube; _c_ imply _d_ &sube; (_b_ &cup; _c_). So the resulting transformed tree is:
+
+```{r}
+plot_tree(diam_after_merge_tree)
+```
+
+This tree contains no sibling subclasses. Hence, the set of disjointness axioms is empty.
+
+### Symmetric 8
+
+A deeper tree illustrates some subtleties of the merge algorithm. It is simple enough to observe, as before that _h_ &sube; (_e_ &cup; _f_). But it is not necessarily the case that (_e_ &cup; _f_) &sube; _b_ or (_e_ &cup; _f_) &sube; _c_. In order to preserve the consistency of the transformed taxonomy with the input, we merge _e_ and _f_ by first merging their most distant non-common ancestors, in this case _b_ and _c_. If _e_ and _f_ share a common subclass (_h_), then every ancestor of _e_ shares a common subclass with every ancestor of _f_. So no ancestor of _e_ can be disjoint with any ancestor of _f_. In particular, _b_ and _c_ cannot be disjoint. Because _b_ and _c_ have all ancestors in common (namely _a_), we can replace _b_ and _c_ with _b_ &cup; _c_.
+
+Attempting to merge _e_ and _f_ results first in merging _b_ and _c_:
+
+```{r}
+plot_tree(sym8_after_merge_tree, sym8_after_merge_layout)
+```
+
+Now _e_ and _f_ have all ancestors in common and they can be merged:
+
+```{r}
+plot_tree(sym8_after_treeify_using_merge_tree, sym8_after_treeify_using_merge_layout)
+```
+
+This taxonomy is a tree and implies the following disjointness:
+
+```
+DisjointClasses( d (e ∪ f) g )
+```
+
+### Asymmmetric
+
+Applying the same logic results in merging _b_ and _c_; the result is a tree:
+
+```{r}
+plot_tree(asym_after_merge_tree)
+```
+
+The implied disjointness is
+
+```
+DisjointClasses( d e f g )
+DisjointClasses( h i )
+```
+
+### Up-Down-Left-Right
+
+Repeated merging results in this tree:
+
+```{r}
+plot_tree(udlr_after_merge_tree, udlr_after_merge_layout)
+```
+
+The implied disjointness is
+
+```
+DisjointClasses( ul ur dl dr )
+```
+
+## Bypass-Reduce-Isolate
+
+The bypass-reduce-isolate algorithm exploits the fact that, for any two classes _A_ and _B_, _A_\\_B_ is disjoint from _B_, where _A_\\_B_ is the [_set difference_](https://en.wikipedia.org/wiki/Complement_(set_theory)). It also makes use of the identity _A_\\_B_\\_C_ = _A_\\(_B_ &cup; _C_).
+
+### Simple Diamond
+
+The simple diamond implies by transitivity that _d_ &sube; _a_. By the rule above, _b_\\_d_ and _c_\\_d_ are both disjoint with _d_. The result is a tree:
+
+```{r}
+plot_tree(diam_after_bypass_reduce_isolate_tree)
+```
+
+The implied disjointness is
+
+```
+DisjointClasses( b\d c\d d )
+```
+
+Note that the merge algorithm produces no disjointness axioms for this case.
+
+### Symmetric 8
+
+Repeated application of the rule produces this result for the deeper symmetric taxonomy:
+
+```{r}
+plot_tree(sym8_after_treeify_using_bypass_reduce_isolate_tree, sym8_after_treeify_using_bypass_reduce_isolate_layout)
+```
+
+The implied disjointness is
+
+```
+DisjointClasses( b\h h c\h )
+DisjointClasses( d e\h )
+DisjointClasses( f\h g )
+```
+
+### Asymmetric
+
+As its name implies, the bypass-reduce-isolate algorithm is implelemented with three fundamental operations.
+
+For a subclass with multiple superclasses, the _bypass_ operation moves the subclass "up" to the direct superclasses of its superclasses. In this case, the direct superclasses of _i_ are _c_ and _e_. After bypass, we have:
+
+```{r}
+plot_tree(asym_after_bypass_tree, asym_after_bypass_layout)
+```
+
+Note that this taxonomy is not in reduced form. The _reduce_ operation removes reduntant edges introduced by the bypass:
+
+```{r}
+plot_tree(asym_after_bypass_reduce_tree, asym_after_bypass_reduce_layout)
+```
+
+In principle, we could simply apply transitive reduction to the resulting taxonomy but that operation can be expensive on a large taxonomy. This implementation exploits the fact that all potentially reduntant edges are between the bypassing class and the root.
+
+Note that the taxonomy in this state has lost essential information (e.g., that _c_ and _e_ share a common subclass _i_), and would therefore produce spurious disjointness. The _isolate_ operation restores consistency with the original taxonomy by replacing _c_ with _c_\\_i_ and _e_ with _e_\\_i_.
+
+```{r}
+plot_tree(asym_after_bypass_reduce_isolate_tree, asym_after_bypass_reduce_isolate_layout)
+```
+
+The implied disjointness is
+
+```
+DisjointClasses( b c\i )
+DisjointClasses( d e\i i )
+DisjointClasses( f g )
+```
+
+### Up-Down-Left-Right
+
+Application of bypass-reduce-isolate in this case yields the following tree:
+
+```{r}
+plot_tree(udlr_after_bypass_reduce_isolate_tree, udlr_after_bypass_reduce_isolate_layout)
+```
+
+
+The implied disjointness is
+
+```
+DisjointClasses(ul ur dl dr u\(ul∪ur) d\(dl∪dr) l\(ul∪dl) r\(ur∪dr))
+```
+
+Note that if every element belongs to one of the leaf classes _ul_, _ur_, _dl_, or _dr_, then _u_ = _ul_ &cup; _ur_, and therefore _u_\\(_ul_ &cup; _ur_) is empty, and likewise for the other set differences. In this case the disjointness axioms are equivalent to those produced by the merge algorithm.
+
+# The General Procedure
+
+This section describes incorporation of either algorithm in a practical bundle closure application. For the purposes of this discussion, a bundle is a set of OML or OWL ontologies for which we want to assert disjointness in accordance with the policy state above.
+
+1. Excise Pure Aspects. IMCE practice (enforced in OML) is to distinguish different usages of the notion of _class_ in Description Logic. One usage in particular, known as _Aspects_, exist primarily to simplify the declarations of property domains and ranges and are not intended to represent a closed vocabulary. The first step in the process, therefore, is to excise all pure aspects. A pure aspect is any class that is a subclass of any aspect and is not also a subclass of any non-aspect. Excising a class means simply removing it from a taxonomy and making all its direct subclasses subclasses of its direct parents.
+1. Excise Backbone Classes. In OWL, class usage distinctions are indicated by subclass relations to so-called _backbone classes_. Backbone classes are also not intended to represent a closed vocabulary, so we excise those as well.
+1. Perform Transitive Reduction. As mentioned before, both algorithms assume the input taxonomy is in reduced form.
+1. Treeify. While there exists a vertex with multiple parents, apply either _merge_ or _bypass-reduce-isolate_. When no such vertex exists, the taxonomy is a tree.
+1. Find Sibling Subclasses. Traverse the tree and, for each vertex, enumerate its sibling subclasses.
+1. Assert Disjointness. For each set of sibling subclasses, asset a `DisjointClasses()` axiom. For the merge algorithm, the resulting disjointness axioms involve singleton classes and union expressions, which are created in OWL with `ObjectUnionOf()` expressions. For the bypass-reduce-isolate algorithm, the resulting expressions involve unions, and differences. OWL does not have an expression for set difference, but differences can be expressed using `ObjectIntersectionOf()` and `ObjectComplementOf()`.
+
+# Prototype Implementation
+
+The prototype implementation is a [JRuby](https://www.jruby.org/) [script](https://github.com/JPL-IMCE/gov.nasa.jpl.imce.ontologies.tools/blob/master/tools/close-tbox-bundle). Taxonomies are represented using the [Ruby Graph Library](https://www.rubydoc.info/github/monora/rgl), a pure Ruby package for graph operations. (JRuby is required for reading and writing OWL ontologies using the Java [OWLAPI](https://github.com/owlcs/owlapi).)
+
+A key element of the implementation is a set of classes and methods for set expressions involving singletons, unions, intersections, and complements. The library does not perform general reasoning about sets, but exploits certain facts about set operations (e.g., set intersection is commutative and associative, set complement is involutory, etc.) to simplify the expressions.
+
+The initial implementation is written in functional style: all graphs are immutable and iteration is achieved by recursion. For production use there is an iterative mode in which graphs are still immutable but references to them are mutable and iteration is achieved with conventional loops. The two modes pass identical unit tests.
+
+There is a runtime option to select between merge and bypass-reduce-isolate algorithms. The latter produces stronger disjointness conditions and runs faster in general. In general, bypass-reduce-isolate produces more complex class expressions in its disjointness axioms; if this presents computational complexity difficulties for reasoners the merge algorithm may provide relief.
