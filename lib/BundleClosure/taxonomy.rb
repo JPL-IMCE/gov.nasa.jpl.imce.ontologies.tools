@@ -138,12 +138,6 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   def initialize(g = RGL::DirectedAdjacencyGraph.new)
     super(g)
-    @c = {}
-    @d = {}
-    @dc = {}
-    @p = {}
-    @dp = {}
-    @a = {}
   end
 
   def self.[](*a)
@@ -159,58 +153,47 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   # Find children of a vertex.
   
   def children_of(v)
-    @c[v] ||= Set.new(edges.select { |e| e.source == v }.map { |e| e.target })
+    Set.new(edges.select { |e| e.source == v }.map { |e| e.target })
   end
 
   # Find descendants of a vertex.
   
   def descendants_of(v)
-    @d[v] = 
-      if (c = children_of(v)).empty?
-        Set.new
-      else
-        Set.new(c + c.flat_map { |x| descendants_of(x).to_a })
-      end
+    if (c = children_of(v)).empty?
+      Set.new
+    else
+      Set.new(c + c.flat_map { |x| descendants_of(x).to_a })
+    end
   end
 
   # Find direct children of a vertex.
   
   def direct_children_of(v)
-    if @dc[v]
-      @dc[v]
-    else
-      c = children_of(v)
-      Set.new(c - c.flat_map { |x| descendants_of(x).to_a })
-    end
+    c = children_of(v)
+    Set.new(c - c.flat_map { |x| descendants_of(x).to_a })
   end
   
   # Find parents of a vertex.
   
   def parents_of(v)
-    @p[v] ||=
-      Set.new(edges.select { |e| e.target == v }.map { |e| e.source })
+    Set.new(edges.select { |e| e.target == v }.map { |e| e.source })
   end
 
   # Find ancestors of a vertex.
   
   def ancestors_of(v)
-    @a[v] ||=
-      if (p = parents_of(v)).empty?
-        Set.new
-      else
-        Set.new(p + p.flat_map { |x| ancestors_of(x).to_a })
-      end
+    if (p = parents_of(v)).empty?
+      Set.new
+    else
+      Set.new(p + p.flat_map { |x| ancestors_of(x).to_a })
+    end
   end
 
   # Find direct parents of a vertex.
   
   def direct_parents_of(v)
-    if @dp[v]
-      @dp[v]
-    else
-      p = parents_of(v)
-      Set.new(p - p.flat_map { |x| ancestors_of(x).to_a })
-    end
+    p = parents_of(v)
+    Set.new(p - p.flat_map { |x| ancestors_of(x).to_a })
   end
   
   # Form transitive reduction
