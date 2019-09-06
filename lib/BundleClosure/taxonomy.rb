@@ -138,6 +138,12 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
 
   def initialize(g = RGL::DirectedAdjacencyGraph.new)
     super(g)
+    @c = {}
+    @d = {}
+    @dc = {}
+    @p = {}
+    @dp = {}
+    @a = {}
   end
 
   def self.[](*a)
@@ -153,47 +159,53 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   # Find children of a vertex.
   
   def children_of(v)
-    Set.new(edges.select { |e| e.source == v }.map { |e| e.target })
+    @c[v] ||= Set.new(edges.select { |e| e.source == v }.map { |e| e.target })
   end
 
   # Find descendants of a vertex.
   
   def descendants_of(v)
-    if (c = children_of(v)).empty?
-      Set.new
-    else
-      Set.new(c + c.flat_map { |x| descendants_of(x).to_a })
-    end
+    @d[v] ||= 
+      if (c = children_of(v)).empty?
+        Set.new
+      else
+        Set.new(c + c.flat_map { |x| descendants_of(x).to_a })
+      end
   end
 
   # Find direct children of a vertex.
   
   def direct_children_of(v)
-    c = children_of(v)
-    Set.new(c - c.flat_map { |x| descendants_of(x).to_a })
+    @dc[v] ||= begin
+      c = children_of(v)
+      Set.new(c - c.flat_map { |x| descendants_of(x).to_a })
+    end
   end
   
   # Find parents of a vertex.
   
   def parents_of(v)
-    Set.new(edges.select { |e| e.target == v }.map { |e| e.source })
+    @p[v] ||= Set.new(edges.select { |e| e.target == v }.map { |e| e.source })
   end
 
   # Find ancestors of a vertex.
   
   def ancestors_of(v)
-    if (p = parents_of(v)).empty?
-      Set.new
-    else
-      Set.new(p + p.flat_map { |x| ancestors_of(x).to_a })
-    end
+    @a[v] ||=
+      if (p = parents_of(v)).empty?
+        Set.new
+      else
+        Set.new(p + p.flat_map { |x| ancestors_of(x).to_a })
+      end
   end
 
   # Find direct parents of a vertex.
   
   def direct_parents_of(v)
-    p = parents_of(v)
-    Set.new(p - p.flat_map { |x| ancestors_of(x).to_a })
+    @dp[v] ||= begin
+      p = parents_of(v)
+      Set.new(p - p.flat_map { |x| ancestors_of(x).to_a })
+    end
   end
   
   # Form transitive reduction
