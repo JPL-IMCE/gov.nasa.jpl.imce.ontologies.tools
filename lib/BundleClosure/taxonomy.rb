@@ -165,7 +165,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   # Find descendants of a vertex.
   
   def descendants_of(v)
-    @d[v] = 
+    @d[v] ||= 
       if (c = children_of(v)).empty?
         Set.new
       else
@@ -176,9 +176,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   # Find direct children of a vertex.
   
   def direct_children_of(v)
-    if @dc[v]
-      @dc[v]
-    else
+    @dc[v] ||= begin
       c = children_of(v)
       Set.new(c - c.flat_map { |x| descendants_of(x).to_a })
     end
@@ -187,8 +185,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   # Find parents of a vertex.
   
   def parents_of(v)
-    @p[v] ||=
-      Set.new(edges.select { |e| e.target == v }.map { |e| e.source })
+    @p[v] ||= Set.new(edges.select { |e| e.target == v }.map { |e| e.source })
   end
 
   # Find ancestors of a vertex.
@@ -205,9 +202,7 @@ class Taxonomy < DelegateClass(RGL::DirectedAdjacencyGraph)
   # Find direct parents of a vertex.
   
   def direct_parents_of(v)
-    if @dp[v]
-      @dp[v]
-    else
+    @dp[v] ||= begin
       p = parents_of(v)
       Set.new(p - p.flat_map { |x| ancestors_of(x).to_a })
     end
