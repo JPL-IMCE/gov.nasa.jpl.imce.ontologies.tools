@@ -1149,7 +1149,7 @@ Suppose there exists a class
 \end_inset
 
  is a tree.
- (See 
+ (See Figure 
 \begin_inset CommandInset ref
 LatexCommand ref
 reference "fig:Multi-parent-class"
