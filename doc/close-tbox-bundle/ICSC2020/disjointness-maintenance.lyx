@@ -1507,14 +1507,9 @@ Note that after this step
 \end_inset
 
  will converge.
- Because the procedure eliminated one multi-parent child 
-\begin_inset Formula $C$
-\end_inset
-
- but added no new net multi-parent children, repeated applications to all
- multi-parent children meeting the initial criteria will eliminate all multi-par
-ent children.
- The final result is a tree.
+ The procedure adds no net multi-parent children, so repeated applications
+ to each multi-parent child will converge.
+ The resulting transformed graph is a tree.
 \begin_inset Float figure
 placement h
 wide false

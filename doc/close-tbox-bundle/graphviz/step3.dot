@@ -5,6 +5,7 @@ digraph g {
   
   c [label="C"]
 
+  
   bimc [label=<BiMC>]
 
   ai1 [label=<Ai1>]
@@ -25,21 +26,21 @@ digraph g {
   d1 -> c
   d2 -> c
   ddots -> c
-  dl -> c
-
-  bimc -> ai1
-  bimc -> ai2
-  bimc -> aidots
-  bimc -> aij
-
-  ei1 -> bimc
-  ei2 -> bimc
-  eidots -> bimc
-  eim -> bimc
+  dl-> c
 
   c -> ai1
   c -> ai2
   c -> aidots
   c -> aij
+
+  bimc -> ai1
+  bimc -> ai2
+  bimc -> aidots
+  bimc -> aij
+  
+  ei1 -> bimc
+  ei2 -> bimc
+  eidots -> bimc
+  eim -> bimc
 
 }
