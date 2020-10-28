@@ -1,0 +1,42 @@
+digraph g {
+  rankdir = BT
+  node [shape=plain]
+  edge [arrowhead=none]
+  
+  c [label="C"]
+
+  bi [label=<Bi>]
+
+  ai1 [label=<Ai1>]
+  ai2 [label=<Ai2>]
+  aidots [label="..."]
+  aij [label=<Aij>]
+  
+  d1 [label=<D1>]
+  d2 [label=<D2>]
+  ddots [label="..."]
+  dl [label=<Dl>]
+
+  ei1 [label=<Ei1>]
+  ei2 [label=<Ei2>]
+  eidots [label="..."]
+  eim [label=<Eim>]
+  
+  d1 -> c
+  d2 -> c
+  ddots -> c
+  dl -> c
+
+  c -> bi
+
+  bi -> ai1
+  bi -> ai2
+  bi -> aidots
+  bi -> aij
+
+  ei1 -> bi
+  ei2 -> bi
+  eidots -> bi
+  eim -> bi
+
+}

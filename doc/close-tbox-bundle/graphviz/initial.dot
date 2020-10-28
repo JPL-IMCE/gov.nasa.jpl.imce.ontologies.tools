@@ -1,0 +1,28 @@
+digraph g {
+  rankdir = BT
+  node [shape=plain]
+  edge [arrowhead=none]
+  
+  c [label="C"]
+
+  b1 [label=<B1>]
+  b2 [label=<B2>]
+  bdots [label="..."]
+  bn [label=<Bn>]
+
+  d1 [label=<D1>]
+  d2 [label=<D2>]
+  ddots [label="..."]
+  dl [label=<Dl>]
+
+  d1 -> c
+  d2 -> c
+  ddots -> c
+  dl -> c
+
+  c -> b1
+  c -> b2
+  c -> bdots
+  c -> bn
+
+}

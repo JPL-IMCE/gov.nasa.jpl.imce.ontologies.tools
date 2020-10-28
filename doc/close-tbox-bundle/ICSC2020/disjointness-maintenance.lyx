@@ -938,10 +938,6 @@ One possible strategy for dealing with the general case is to apply a set
  than implied by the original.
 \end_layout
 
-\begin_layout Subsubsection
-Transitive Reduction
-\end_layout
-
 \begin_layout Standard
 The subclass relation is 
 \emph on
@@ -1047,91 +1043,504 @@ The merge algorithm is based on the fact that, if
 Bypass-Reduce-Isolate Algorithm
 \end_layout
 
+\begin_layout Subsection
+Theory
+\end_layout
+
 \begin_layout Standard
-The bypass-reduce-isolate algorithm exploits the fact that, if 
-\begin_inset Formula $C\subseteq A$
+Let 
+\begin_inset Formula $T$
 \end_inset
 
- and 
-\begin_inset Formula $C\subseteq B$
+ be a rooted taxonomy and let 
+\begin_inset Formula $G$
 \end_inset
 
-, then 
-\begin_inset Formula $A\setminus C$
+ be the transitive reduction of a graph whose edges represent the 
+\emph on
+is-subclass-of 
+\emph default
+relation.
+ Further suppose that G is a directed acyclic graph.
+ Then the ancestors of a class 
+\begin_inset Formula $A$
 \end_inset
 
-, 
-\begin_inset Formula $B\setminus C$
+ in 
+\begin_inset Formula $G$
 \end_inset
 
-, and 
+ correspond to the superclasses of 
+\begin_inset Formula $A$
+\end_inset
+
+ (omitting 
+\begin_inset Formula $A$
+\end_inset
+
+) in 
+\begin_inset Formula $T$
+\end_inset
+
+ and the descendants of 
+\begin_inset Formula $A$
+\end_inset
+
+ in 
+\begin_inset Formula $G$
+\end_inset
+
+ correspond to the subclasses of 
+\begin_inset Formula $A$
+\end_inset
+
+ (omitting 
+\begin_inset Formula $A$
+\end_inset
+
+) in 
+\begin_inset Formula $T$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Suppose there exists a class 
 \begin_inset Formula $C$
 \end_inset
 
- are mutually disjoint.
- The notation 
-\begin_inset Formula $A\setminus C$
+ such that 
+\begin_inset Formula $C\subseteq B_{1}$
 \end_inset
 
- denotes 
-\emph on
-set difference
-\emph default
-: 
-\begin_inset Formula $A\setminus C\equiv A\cap C'$
+, 
+\begin_inset Formula $C\subseteq B_{2}$
+\end_inset
+
+, \SpecialChar ldots
+, 
+\begin_inset Formula $C\subseteq B_{k}$
+\end_inset
+
+ (where 
+\begin_inset Formula $k>1$
+\end_inset
+
+), 
+\begin_inset Formula $D_{1}\subseteq C$
+\end_inset
+
+, 
+\begin_inset Formula $D_{2}\subseteq C$
+\end_inset
+
+, \SpecialChar ldots
+, 
+\begin_inset Formula $D_{l}\subseteq C$
+\end_inset
+
+ (where 
+\begin_inset Formula $l\geqq0$
+\end_inset
+
+), and the sub-taxonomy rooted at 
+\begin_inset Formula $C$
+\end_inset
+
+ is a tree.
+ (See 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Multi-parent-class"
+plural "false"
+caps "false"
+noprefix "false"
+
 \end_inset
 
 .
- The algorithm replaces selected groups of superclasses with set differences
- of parent and child.
- It also makes use of the identity 
-\begin_inset Formula $A\setminus B\setminus C=A\setminus\left(B\cup C\right)$
+ Note that there may be other vertices and edges not shown, but there are
+ no edges from any ancestor of 
+\begin_inset Formula $C$
+\end_inset
+
+ to any descendant of 
+\begin_inset Formula $C$
+\end_inset
+
+.)
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename /Users/sjenkins/git/JPL-IMCE/gov.nasa.jpl.imce.ontologies.tools/doc/close-tbox-bundle/graphviz/initial.pdf
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Multi-parent-class"
+
+\end_inset
+
+Multi-parent class 
+\begin_inset Formula $C.$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Consider a particular parent of 
+\begin_inset Formula $C$
+\end_inset
+
+, 
+\begin_inset Formula $B_{i}$
+\end_inset
+
+, and its parents 
+\begin_inset Formula $A_{1}$
+\end_inset
+
+, 
+\begin_inset Formula $A_{2}$
+\end_inset
+
+, \SpecialChar ldots
+, 
+\begin_inset Formula $A_{j}$
+\end_inset
+
+.
+ Because 
+\begin_inset Formula $T$
+\end_inset
+
+ is rooted, 
+\begin_inset Formula $j>0.$
+\end_inset
+
+ (See 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Detail-for-parent"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+.) Note that the fact that T is in reduced form implies that no 
+\begin_inset Formula $B_{n}$
+\end_inset
+
+ is a sub- or superclass of 
+\begin_inset Formula $B_{i}$
+\end_inset
+
+ for 
+\begin_inset Formula $n\neq i$
+\end_inset
+
+.
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename /Users/sjenkins/git/JPL-IMCE/gov.nasa.jpl.imce.ontologies.tools/doc/close-tbox-bundle/graphviz/bidetail.pdf
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Detail-for-parent"
+
+\end_inset
+
+Detail for parent 
+\begin_inset Formula $B_{i}$
+\end_inset
+
+.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The first step of the procedure makes use of the identity 
+\begin_inset Formula $B_{i}\equiv(B_{i}\setminus C)\cup(B_{i}\cap C)$
+\end_inset
+
+.
+ Because there are no edges from 
+\begin_inset Formula $C$
+\end_inset
+
+ or any of its descendants to any 
+\begin_inset Formula $E_{i.}$
+\end_inset
+
+, we can use the disjointness policy to rewrite the graph as shown in Figure
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Bypass-step-1"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+.
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename /Users/sjenkins/git/JPL-IMCE/gov.nasa.jpl.imce.ontologies.tools/doc/close-tbox-bundle/graphviz/step1.pdf
+
+\end_inset
+
+
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Bypass-step-1"
+
+\end_inset
+
+Step 1.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Now observe that if 
+\begin_inset Formula $C\subseteq B_{i}\cap C$
+\end_inset
+
+ and (by definition) 
+\begin_inset Formula $B_{i}\cap C\subseteq C$
+\end_inset
+
+, then 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\xout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $C\equiv B_{i}\cap C$
+\end_inset
+
+.
+ We can therefore substitute as shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Bypass-step-2"
+plural "false"
+caps "false"
+noprefix "false"
+
+\end_inset
+
+.
+\begin_inset Float figure
+placement h
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename /Users/sjenkins/git/JPL-IMCE/gov.nasa.jpl.imce.ontologies.tools/doc/close-tbox-bundle/graphviz/step2.pdf
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\xout off
+\uuline off
+\uwave off
+\noun off
+\color none
+\begin_inset Caption Standard
+
+\begin_layout Plain Layout
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Bypass-step-2"
+
+\end_inset
+
+Step 2.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Finally we note that the sibling subclasses of 
+\begin_inset Formula $B_{i}$
+\end_inset
+
+ are disjoint by definition, so the presence of 
+\begin_inset Formula $B_{i}$
+\end_inset
+
+ in the graph is redundant for the purpose of applying the disjointness
+ policy.
+ We can therefore remove it as shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Reduce-step-3"
+plural "false"
+caps "false"
+noprefix "false"
+
 \end_inset
 
 .
 \end_layout
 
 \begin_layout Standard
+Note that after this step 
+\begin_inset Formula $C$
+\end_inset
+
+ may still have multiple parents, but each of its paths to the root has
+ now been shortened by one edge.
+ Because by assumption 
+\begin_inset Formula $G$
+\end_inset
+
+ is rooted, 
+\begin_inset Formula $C$
+\end_inset
+
+ must eventually have a single parent, which may be the root.
+ Therefore, repeated applications of the algorithm to 
+\begin_inset Formula $C$
+\end_inset
+
+ will converge.
+ Because the procedure eliminated one multi-parent child 
+\begin_inset Formula $C$
+\end_inset
+
+ but added no new net multi-parent children, repeated applications to all
+ multi-parent children meeting the initial criteria will eliminate all multi-par
+ent children.
+ The final result is a tree.
 \begin_inset Float figure
-placement htbp
+placement h
 wide false
 sideways false
 status open
 
 \begin_layout Plain Layout
-\begin_inset Caption Standard
-
-\begin_layout Plain Layout
-Captions go 
-\emph on
-under
-\emph default
- the figure
-\end_layout
+\begin_inset Graphics
+	filename /Users/sjenkins/git/JPL-IMCE/gov.nasa.jpl.imce.ontologies.tools/doc/close-tbox-bundle/graphviz/step3.pdf
 
 \end_inset
 
 
 \end_layout
-
-\end_inset
-
-
-\begin_inset Float table
-placement htbp
-wide false
-sideways false
-status open
 
 \begin_layout Plain Layout
 \begin_inset Caption Standard
 
 \begin_layout Plain Layout
-Table captions go 
-\emph on
-above
-\emph default
- the table
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Reduce-step-3"
+
+\end_inset
+
+Step 3.
 \end_layout
 
 \end_inset
@@ -1140,56 +1549,6 @@ above
 \end_layout
 
 \begin_layout Plain Layout
-\align center
-\begin_inset Tabular
-<lyxtabular version="3" rows="2" columns="2">
-<features tabularvalignment="middle">
-<column alignment="center" valignment="top" width="0pt">
-<column alignment="center" valignment="top" width="0pt">
-<row>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-delete
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-this
-\end_layout
-
-\end_inset
-</cell>
-</row>
-<row>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-example
-\end_layout
-
-\end_inset
-</cell>
-<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
-\begin_inset Text
-
-\begin_layout Plain Layout
-table
-\end_layout
-
-\end_inset
-</cell>
-</row>
-</lyxtabular>
-
-\end_inset
-
 
 \end_layout
 

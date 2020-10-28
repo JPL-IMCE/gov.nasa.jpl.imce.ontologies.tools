@@ -36,3 +36,5 @@ local.*
 R/unsats-analysis.nb.html
 **/#*#
 **/.#*
+**/*.svg
+**/*.pdf
